@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://yoonjintar2-ctrl.github.io/adsnews/sitemap.xml
