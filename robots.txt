@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /bb/
 
 Sitemap: https://yoonjintar2-ctrl.github.io/adsnews/sitemap.xml
