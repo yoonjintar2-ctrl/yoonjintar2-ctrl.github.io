@@ -41,14 +41,14 @@
     const volR = (v[L] / (frac || 1)) / avgVol;
     const hi20 = Math.max(...h.slice(L - 20, L));
     const rng = h[L] - l[L], pos = rng > 0 ? (px - l[L]) / rng : 0.5;
-    const liq = clamp(Math.log10(avgAmt / (kr ? 2e10 : 3e8)) * 10, 0, 10);
+    // 거래대금은 최소 기준(필터)만 보고 점수에는 넣지 않는다 — 큰 회사일수록 유리해지지 않게
     const trend = clamp((ma20 / ma60 - 1) * 400, 0, 20);
     const res = [];
     // A 눌림 반등: 상승 추세 속 RSI(2) 과매도
     if (px > ma100 && ma20 > ma60 && r2 <= 10) {
       const stop = Math.max(px - 1.5 * a, px * 0.94), tgt = Math.max(ma5, px + 1.0 * a), rr = (tgt - px) / (px - stop);
       const above100 = (px / ma100 - 1) * 100;
-      const score = clamp((10 - r2) * 3, 0, 30) + trend + clamp(rr * 15, 0, 20) + liq + (above100 > 2 && above100 < 25 ? 15 : above100 <= 2 ? 5 : 8) + (chg > -6 ? 5 : 0);
+      const score = clamp((10 - r2) * 3, 0, 30) + trend + clamp(rr * 15, 0, 20) + (above100 > 2 && above100 < 25 ? 15 : above100 <= 2 ? 5 : 8) + (chg > -6 ? 5 : 0);
       res.push({ setup: 'A', score, px, chg, stop, tgt, rr, why: `RSI(2) ${r2.toFixed(0)} 과매도 · 상승 추세 속 눌림` });
     }
     // B 거래량 돌파: 20일 고가 돌파 + 거래량
@@ -56,7 +56,7 @@
       const stop = Math.max(hi20 * 0.985, px - 1.5 * a, px * 0.95);
       if (stop < px) {
         const ext = (px / hi20 - 1) * 100;
-        const score = clamp((volR - 1.8) * 12, 0, 30) + clamp((pos - 0.6) * 37, 0, 15) + clamp(15 - ext * 3, 0, 15) + trend + liq + (chg >= 2 && chg <= 6 ? 10 : 4);
+        const score = clamp((volR - 1.8) * 12, 0, 30) + clamp((pos - 0.6) * 37, 0, 15) + clamp(15 - ext * 3, 0, 15) + trend + (chg >= 2 && chg <= 6 ? 10 : 4);
         res.push({ setup: 'B', score, px, chg, stop, tgt: px + 2 * (px - stop), rr: 2, why: `20일 고가 돌파 · 거래량 ${volR.toFixed(1)}배` });
       }
     }
@@ -78,7 +78,7 @@
           const buy = Math.min(px * 1.003, BL + 0.25 * W), tgt = BL + 0.75 * W, stop = BL * 0.98, cost = buy * 0.0025;
           const rr = (tgt - buy - cost) / (buy - stop + cost);
           if (rr >= 2) {
-            const score = clamp(25 - position * 80, 5, 25) + clamp((ts + tr - 4) * 3 + 5, 5, 15) + (width >= 12 && width <= 25 ? 15 : 8) + clamp((rr - 2) * 7.5 + 5, 5, 20) + (Math.abs(drift) < 4 ? 15 : 8) + liq;
+            const score = clamp(25 - position * 80, 5, 25) + clamp((ts + tr - 4) * 3 + 5, 5, 15) + (width >= 12 && width <= 25 ? 15 : 8) + clamp((rr - 2) * 7.5 + 5, 5, 20) + (Math.abs(drift) < 4 ? 15 : 8);
             res.push({ setup: 'C', score, px, chg, stop, tgt, rr, buyCap: buy, why: `65일 박스 ${fx2(BL, kr)}~${fx2(BH, kr)} · 하단 ${(position * 100).toFixed(0)}% · 지지 ${ts}회` });
           }
         }
