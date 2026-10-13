@@ -25,16 +25,9 @@
   // 발행: 매수 의견(S·A)이 있으면 알림. 같은 날 같은 카드로 이미 알렸으면 화면만 갱신(quiet).
   window.__d6Publish = async function () {
     const A = window.__D6; if (!A) throw new Error('no __D6');
-    // 이미 추천해 계속 남아 있는 카드(같은 종목·같은 규칙)는 다시 알리지 않는다. 새 카드가 생길 때만 알림.
-    // 카드가 3일 넘게 사라졌다가 다시 뜨면 새 신호로 본다.
-    const now = Date.now();
-    let seen = {}; try { seen = JSON.parse(localStorage.getItem('d6seen') || '{}'); } catch (e) {}
-    const key = (c) => c.n + '|' + c.s;
-    const fresh = A.cards.filter(c => !(seen[key(c)] && now - seen[key(c)] < 3 * 86400e3));
-    const loud = fresh.length > 0;
-    A.fresh = fresh.map(c => c.g + '등급 ' + c.n);
-    const st = await window.__berryPublish(A, loud ? [] : ['quiet']);
-    if (st === 200) { A.cards.forEach(c => { seen[key(c)] = now; }); for (const k in seen) if (now - seen[k] > 30 * 86400e3) delete seen[k]; try { localStorage.setItem('d6seen', JSON.stringify(seen)); } catch (e) {} }
+    // 중복 알림 막기는 __berryPublish(scanner.js)가 한다: 새 카드가 있을 때만 울림
+    const st = await window.__berryPublish(A, []);
+    const loud = (A.fresh || []).length > 0;
     return st + (loud ? ' 알림(새 카드 ' + A.fresh.join(', ') + ')' : ' 조용히');
   };
   window.__daily6 = async function (opt) {

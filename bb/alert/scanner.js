@@ -224,7 +224,16 @@
     let body = JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs });
     while (enc.encode(body).length > 3800 && cs.length > 1) { cs.pop(); body = JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs }); }
     const tags = [alert.level || 'info'].concat(extraTags || []);
+    // 알림 중복 막기(정시·요청 모두): 이미 추천해 계속 남아 있는 카드(같은 종목·같은 규칙)는 다시 울리지 않는다.
+    // 새 카드가 있을 때만 울림. 3일 넘게 사라졌다 다시 뜬 카드는 새 신호로 본다.
+    const now = Date.now(), key = (c) => c.n + '|' + c.s;
+    let seen = {}; try { seen = JSON.parse(localStorage.getItem('d6seen') || '{}'); } catch (e) {}
+    const all = alert.cards || [];
+    const fresh = all.filter(c => !(seen[key(c)] && now - seen[key(c)] < 3 * 86400e3));
+    alert.fresh = fresh.map(c => c.g + '등급 ' + c.n);
+    if (!fresh.length && tags.indexOf('quiet') < 0) tags.push('quiet');
     const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: alert.title, message: body, tags, priority: (alert.sPlus || []).length ? 4 : 2 }) });
+    if (r.status === 200 && all.length) { all.forEach(c => { seen[key(c)] = now; }); for (const k in seen) if (now - seen[k] > 30 * 86400e3) delete seen[k]; try { localStorage.setItem('d6seen', JSON.stringify(seen)); } catch (e) {} }
     return r.status;
   };
   // 2026-10-13부터 검색은 6개 규칙(daily6.js)으로 한다. 옛 스캐너는 __berryScanOld로 남겨 둠.
