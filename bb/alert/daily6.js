@@ -33,7 +33,8 @@
     const Q = qqq.map(x => x.close), S = spy.map(x => x.close), nQ = Q.length, nS = S.length;
     const qUp200 = Q[nQ - 1] > ma(Q, 200);
     const sDn = S[nS - 1] < S[nS - 2];
-    const card = (g, rule, n, kn, p, o) => Object.assign({ g, m: 'US', n, kn, s: rule, px: p ? fu(p) : '-', buy: p ? fu(p * 1.01) : '-', when: '오늘 밤 정규장(또는 지금 데이마켓)' }, o);
+    const card = (g, rule, n, kn, p, o) => { const c = Object.assign({ g, m: 'US', n, kn, s: rule, px: p ? fu(p) : '-', ch: '', buy: p ? fu(p * 1.01) : '-', tp: '', sp: '', rr: '', when: '오늘 밤 정규장(또는 지금 데이마켓)' }, o);
+      const num = (x) => /^\$[0-9.]+$/.test(x) ? +x.slice(1) : null; if (p && num(c.tgt)) c.tp = pct(num(c.tgt) / p - 1); if (p && num(c.stop)) c.sp = pct(num(c.stop) / p - 1); return c; };
 
     // ① 급락 초입 → QQQ 40일
     { const hi60 = (t) => Math.max(...S.slice(t - 60, t + 1)); const dd = (t) => 1 - S[t] / hi60(t);
@@ -121,11 +122,11 @@
 
     const ord = { S: 0, A: 1, B: 2 }; cards.sort((a, b) => ord[a.g] - ord[b.g]);
     const kst = new Date(Date.now() + 9 * 3600e3), hhmm = String(kst.getUTCHours()).padStart(2, '0') + ':' + String(kst.getUTCMinutes()).padStart(2, '0');
-    const title = cards.length ? '매수 의견: ' + cards.map(c => c.g + ' ' + c.n).join(' · ') : '오늘은 매수 의견 없음';
+    const title = (cards.length ? '매수 의견: ' + cards.map(c => c.g + ' ' + c.n).join(' · ') : '매수 의견 없음') + (near.length ? ' · 참고(B): ' + near.map(c => c.n).join(', ') : '') + (cards.length ? '' : ' · ' + state.slice(0, 3).join(' · '));
     const line = (c) => `${c.g} · ${c.n} (${c.s}) — 매수 상한 ${c.buy} · ${c.stop !== '-' ? '손절/자동매도 ' + c.stop + ' · ' : ''}${c.hold}\n   ${c.why}`;
     const text = `[${(kst.getUTCMonth() + 1)}/${kst.getUTCDate()} ${hhmm} · 미국 ${lastDay} 마감 기준]\n` + (cards.length ? cards.map(line).join('\n') : '매수 의견 없음') + (near.length ? '\n참고(B, 매수 안 함): ' + near.map(c => c.n + ' ' + c.s).join(', ') : '') + '\n상태: ' + state.join(' · ');
-    const alert = { v: 3, slot: '18시', time: (kst.getUTCMonth() + 1) + '/' + kst.getUTCDate() + ' ' + hhmm, cards: cards.concat(near), sPlus: cards.map(c => c.g + ' ' + c.n), title, level: 'info', text, lastDay };
-    alert.body = JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: alert.cards });
+    const alert = { v: 3, slot: opt.slot || '18시', time: (kst.getUTCMonth() + 1) + '/' + kst.getUTCDate() + ' ' + hhmm, cards, near, sPlus: cards.map(c => c.g + ' ' + c.n), title, level: 'info', text, lastDay };
+    alert.body = JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards });
     window.__D6 = alert;
     return text;
   };

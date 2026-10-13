@@ -227,6 +227,15 @@
     const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: alert.title, message: body, tags, priority: (alert.sPlus || []).length ? 4 : 2 }) });
     return r.status;
   };
+  // 2026-10-13부터 검색은 6개 규칙(daily6.js)으로 한다. 옛 스캐너는 __berryScanOld로 남겨 둠.
+  if (window.__berryScan && !window.__berryScanOld) window.__berryScanOld = window.__berryScan;
+  window.__berryScan = async function (opt) {
+    opt = opt || {};
+    try { (0, eval)(await window.__berryLoad('bb/alert/daily6.js')); } catch (e) { if (!window.__daily6) throw e; }
+    await window.__daily6({ slot: opt.slot });
+    window.__ALERT = window.__D6;
+    return 'ok ' + window.__D6.cards.length + ' cards (S·A)';
+  };
   window.__berryLoad = async function (path) {
     try { const r = await fetch('https://api.github.com/repos/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/contents/' + path + '?ref=main', { headers: { Accept: 'application/vnd.github.raw' }, cache: 'no-store' }); if (r.ok) return await r.text(); } catch (e) {}
     return await (await fetch('https://raw.githubusercontent.com/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/main/' + path, { cache: 'no-store' })).text();
@@ -248,7 +257,7 @@
       if (Date.now() / 1000 - (m.time || 0) > 600 || busy || Date.now() - lastRun < 45000) return;
       busy = true; lastRun = Date.now();
       try {
-        await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: '맥에서 지금 시세로 검색 중이에요 (30초~1분)', tags: ['ack'] }) });
+        await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: '맥에서 지금 시세로 검색 중이에요 (1~2분)', tags: ['ack'] }) });
         try { (0, eval)(await window.__berryLoad('bb/alert/scanner.js')); } catch (e) {} // 항상 최신 규칙으로
         await window.__berryScan({ slot: '요청' });
         await window.__berryPublish(window.__ALERT, ['req']);
