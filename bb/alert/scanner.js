@@ -18,8 +18,13 @@
   const fx2 = (p, kr) => kr ? fk(p) : fu(p);
   const pct = (x) => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(1) + '%';
 
-  // ── 등급 기준: 지난 6개월 백테스트로 맞춤 (S ≈ 하루 1개, SS ≈ 주 1개, SSS ≈ 월 1개 나올까 말까)
-  const GRADES = window.__BERRY_GRADES || [['SSS', 92], ['SS', 86], ['S', 79], ['A+', 72], ['A', 65], ['A-', 58], ['B+', 51], ['B', 0]];
+  // ── 등급 기준 (2026-10-13 백테스트: 국내 200 + 미국 150종목, 최근 137거래일)
+  // 셋업별 원점수 → 그 셋업 과거 분포에서의 백분위(0~100)로 바꾼 뒤, 하루 평균 등장 수로 끊는다.
+  //   SSS ≈ 0.045개/일(월 1회 나올까 말까) · SS ≈ 0.2개/일(주 1회) · S ≈ 0.7개/일(하루 1개 나올까 말까)
+  //   A+ 1.5 · A 2.5 · A- 4 · B+ 6개/일
+  const QT = {"A":[28.6,49.3,54.6,57.5,59.8,61.6,63.5,65,66.5,68.3,70.1,71.4,73.1,74.8,76.3,78.2,80.2,82.3,85,89.2,98.2],"B":[16.4,24.9,28,30,32.7,35,36.3,37.5,39.4,41.6,43,44.8,46.5,47.7,48.5,50.6,52.6,56,59,65.8,85.8],"C":[44.5,54.2,57.3,59,60.6,62.4,63.9,65.4,67,68.2,69.3,70.6,71.5,73.5,74.7,76.1,77.8,79.8,81.8,86.9,96.2]};
+  const norm = (setup, x) => { const q = QT[setup]; if (x <= q[0]) return 0; if (x >= q[20]) return 100; for (let k = 0; k < 20; k++) if (x <= q[k + 1]) return (k + (x - q[k]) / ((q[k + 1] - q[k]) || 1)) * 5; return 100; };
+  const GRADES = [['SSS', 99.26], ['SS', 97.3], ['S', 95.04], ['A+', 89.46], ['A', 82.38], ['A-', 71.74], ['B+', 57.44], ['B', 0]];
   const grade = (x) => GRADES.find(g => x >= g[1])[0];
   const GORDER = ['SSS', 'SS', 'S', 'A+', 'A', 'A-', 'B+', 'B'];
 
@@ -81,7 +86,7 @@
     }
     return res;
   };
-  window.__berryAnalyze = analyze;
+  window.__berryAnalyze = analyze; window.__berryNorm = norm;
 
   window.__berryScan = async function (opt) {
     opt = opt || {};
@@ -119,7 +124,7 @@
     const run = async (nation, mk, n, reg) => {
       const uni = await screen(nation, n);
       const kr = mk === 'kr-s';
-      const rows = await pool(uni, 8, async (s) => analyze(await candles(mk, s.code), kr, kr ? krFrac : 1).map(x => Object.assign(x, { name: s.name, code: s.code, kr, score: x.score - penalty(reg) })));
+      const rows = await pool(uni, 8, async (s) => analyze(await candles(mk, s.code), kr, kr ? krFrac : 1).map(x => Object.assign(x, { name: s.name, code: s.code, kr, raw: x.score, score: norm(x.setup, x.score) - penalty(reg) })));
       let all = rows.filter(Boolean).flat();
       if (reg === '위험회피') all = all.filter(x => x.setup !== 'B'); // 위험회피엔 돌파 추격 안 함
       const best = {}; all.forEach(x => { if (!best[x.code] || best[x.code].score < x.score) best[x.code] = x; });
@@ -136,7 +141,7 @@
       if (kr) buy = rk(buy, 'down');
       const stop = kr ? rk(x.stop, 'down') : x.stop, tgt = kr ? rk(x.tgt, 'up') : x.tgt;
       return {
-        g: grade(x.score), sc: Math.round(x.score), m: kr ? 'KR' : 'US', n: x.name, code: x.code, s: SETUP[x.setup],
+        g: grade(x.score), sc: Math.round(x.score * 10) / 10, m: kr ? 'KR' : 'US', n: x.name, code: x.code, s: SETUP[x.setup],
         px: f(x.px), ch: pct(x.chg), buy: f(buy), tgt: f(tgt), stop: f(stop),
         tp: pct(100 * (tgt / buy - 1)), sp: pct(100 * (stop / buy - 1)), rr: x.rr.toFixed(1), why: x.why,
         hold: x.setup === 'A' ? '1~5일 · 종가가 5일선 위면 매도' : x.setup === 'B' ? '1~5일 · 목표/손절 도달 시' : '박스 상단(목표)까지 · 20거래일 부진 시 재평가',
