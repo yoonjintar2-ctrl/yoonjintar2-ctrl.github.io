@@ -23,6 +23,8 @@ window.__berryScan = async function (opt) {
   const etParts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false }).formatToParts(now);
   const ep = Object.fromEntries(etParts.map(x => [x.type, x.value]));
   const etDate = ep.year + '-' + ep.month + '-' + ep.day, etHour = +ep.hour % 24;
+  // 마지막으로 끝난 미국 정규장 날짜(ET): 16시 이후면 오늘, 아니면 직전 평일
+  const usDone = (() => { const d = new Date(etDate + 'T12:00:00Z'); if (etHour < 16) d.setUTCDate(d.getUTCDate() - 1); while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() - 1); return d.toISOString().slice(0, 10); })();
   const krOpen = kstMin >= 540 && kstMin < 930;
   const krFrac = krOpen ? Math.max(0.08, (kstMin - 540) / 390) : 1;
 
@@ -38,7 +40,7 @@ window.__berryScan = async function (opt) {
   const candles = async (mk, code, n) => {
     const j = await get(`${INFO}/api/v1/c-chart/${mk}/${code}/day:1?count=${n || 130}&useAdjustedRate=true`);
     let cs = (j.result.candles || []).slice().reverse();
-    if (mk === 'us-s' && cs.length && cs[cs.length - 1].dt.slice(0, 10) === etDate && etHour < 16) cs = cs.slice(0, -1); // 미완성 미국 봉 제외
+    if (mk === 'us-s') cs = cs.filter(x => x.dt.slice(0, 10) <= usDone); // 끝난 정규장 봉만 (데이마켓·프리장 봉 제외)
     return cs;
   };
   const screen = async (nation, n) => { const out = []; for (let p = 1; out.length < n && p <= 5; p++) { const j = await post(CERT + '/api/v2/screener/screen', { pagingParam: { key: null, number: p, size: 100 }, filters: [], sort: { column: 'C_시가총액', label: '시가총액', order: 'DESC' }, nation }); (j.result.stocks || []).forEach(s => out.push({ code: s.stockCode, name: s.name })); if (j.result.lastPage) break; } return out.slice(0, n); };
