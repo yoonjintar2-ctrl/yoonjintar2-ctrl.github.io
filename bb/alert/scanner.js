@@ -118,7 +118,9 @@
         const oi = (await post(`${INFO}/api/v2/stock-infos/operating-income/${code}`, {})).result;
         const gr = (oi.graph || []).slice(-4).map(x => x.operatingIncome);
         const rf = (await get(`${CERT}/api/v1/stock-infos/${code}/red-flags`)).result || [];
-        return { ok: oi.recentOperatingIncome > 0 && gr.reduce((a, b) => a + b, 0) > 0 && rf.length === 0 };
+        let sym = '';
+        if (code.startsWith('US')) { try { sym = (await get(`${INFO}/api/v2/stock-infos/${code}`)).result.symbol || ''; } catch (e) {} }
+        return { ok: oi.recentOperatingIncome > 0 && gr.reduce((a, b) => a + b, 0) > 0 && rf.length === 0, sym };
       } catch (e) { return { ok: false }; }
     };
     const run = async (nation, mk, n, reg) => {
@@ -130,6 +132,7 @@
       const best = {}; all.forEach(x => { if (!best[x.code] || best[x.code].score < x.score) best[x.code] = x; });
       all = Object.values(best).sort((a, b) => b.score - a.score).slice(0, 12);
       const q = await pool(all, 6, (x) => quality(x.code));
+      all.forEach((x, i) => { if (q[i] && q[i].sym) x.sym = q[i].sym; });
       return { list: all.filter((x, i) => q[i] && q[i].ok), scanned: uni.length };
     };
     const [KR, US] = await Promise.all([run('kr', 'kr-s', opt.krN || 200, krReg), run('us', 'us-s', opt.usN || 150, usReg)]);
@@ -141,7 +144,7 @@
       if (kr) buy = rk(buy, 'down');
       const stop = kr ? rk(x.stop, 'down') : x.stop, tgt = kr ? rk(x.tgt, 'up') : x.tgt;
       return {
-        g: grade(x.score), sc: Math.round(x.score * 10) / 10, m: kr ? 'KR' : 'US', n: x.name, code: x.code, s: SETUP[x.setup],
+        g: grade(x.score), sc: Math.round(x.score * 10) / 10, m: kr ? 'KR' : 'US', n: kr ? x.name : (x.sym || x.name), kn: x.name, code: x.code, s: SETUP[x.setup],
         px: f(x.px), ch: pct(x.chg), buy: f(buy), tgt: f(tgt), stop: f(stop),
         tp: pct(100 * (tgt / buy - 1)), sp: pct(100 * (stop / buy - 1)), rr: x.rr.toFixed(1), why: x.why,
         hold: x.setup === 'A' ? '1~5일 · 종가가 5일선 위면 매도' : x.setup === 'B' ? '1~5일 · 목표/손절 도달 시' : '박스 상단(목표)까지 · 20거래일 부진 시 재평가',
