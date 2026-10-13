@@ -145,4 +145,49 @@ window.__berryScan = async function (opt) {
   window.__ALERT_JSON = JSON.stringify(alert);
   return 'ok ' + window.__ALERT_JSON.length;
 };
+
+// ── ntfy 발행 / 요청 대기 ─────────────────────────────
+window.__BERRY = { alerts: 'berry-3059012bcc6b7db9-a', requests: 'berry-3059012bcc6b7db9-r' };
+window.__berryPublish = async function (alert, extraTags) {
+  let body = alert.body || '';
+  const enc = new TextEncoder();
+  while (enc.encode(body).length > 3800) body = body.slice(0, body.lastIndexOf('\n', body.length - 2)) + '\n…(생략)';
+  const tags = [alert.level || 'info'].concat(extraTags || []);
+  const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: alert.title, message: body, tags, priority: alert.level === 'warn' ? 4 : 3 }) });
+  return r.status;
+};
+// 블랙베리 "종목 찾기" 요청을 기다렸다가 바로 검색해서 보낸다. 탭 하나에서만 돈다.
+window.__berryWatch = function () {
+  const me = Math.random().toString(36).slice(2), KEY = 'berryWatcher';
+  const live = () => { try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); return o.id && o.id !== me && Date.now() - o.ts < 25000; } catch (e) { return false; } };
+  if (window.__berryWatchState && window.__berryWatchState.alive) return 'already running here';
+  if (live()) return 'running in another tab';
+  const st = window.__berryWatchState = { alive: true, me, started: new Date().toISOString(), handled: 0, last: '' };
+  const beat = setInterval(() => { try { localStorage.setItem(KEY, JSON.stringify({ id: me, ts: Date.now() })); } catch (e) {} }, 10000);
+  try { localStorage.setItem(KEY, JSON.stringify({ id: me, ts: Date.now() })); } catch (e) {}
+  let busy = false, lastRun = 0;
+  const seen = new Set();
+  const es = new EventSource('https://ntfy.sh/' + window.__BERRY.requests + '/sse');
+  st.es = es;
+  es.onmessage = async (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (m.event !== 'message' || seen.has(m.id) || !/^scan/.test(m.message || '')) return;
+    seen.add(m.id);
+    if (Date.now() / 1000 - (m.time || 0) > 600) return; // 10분 지난 요청은 무시
+    if (busy || Date.now() - lastRun < 45000) return;
+    busy = true; lastRun = Date.now();
+    try {
+      await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: '맥에서 지금 시세로 검색 중이에요 (30초~1분)', tags: ['ack'] }) });
+      await window.__berryScan({ slot: '요청' });
+      await window.__berryPublish(window.__ALERT, ['req']);
+      st.handled++; st.last = new Date().toISOString();
+    } catch (e) {
+      st.last = 'ERR ' + e;
+      try { await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 실패', message: '맥에서 검색하다 오류가 났어요: ' + String(e).slice(0, 200), tags: ['warn', 'req'] }) }); } catch (e2) {}
+    } finally { busy = false; }
+  };
+  es.onerror = () => { st.err = new Date().toISOString(); };
+  window.addEventListener('beforeunload', () => { clearInterval(beat); try { localStorage.removeItem(KEY); } catch (e) {} });
+  return 'watching';
+};
 'scanner loaded';
