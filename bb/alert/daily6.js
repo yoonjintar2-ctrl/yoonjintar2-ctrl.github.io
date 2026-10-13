@@ -22,18 +22,33 @@
   const last30 = async (c) => { try { const j = await get(`${INFO}/api/v1/c-chart/us-s/${c}/min:30?count=3&useAdjustedRate=true`); const k = j.result.candles || []; return k.length ? k[0].close : null; } catch (e) { return null; } };
   const byDate = (cs) => { const m = {}; cs.forEach(x => m[x.dt.slice(0, 10)] = x); return m; };
 
+  // 발행: 매수 의견(S·A)이 있으면 알림. 같은 날 같은 카드로 이미 알렸으면 화면만 갱신(quiet).
+  window.__d6Publish = async function () {
+    const A = window.__D6; if (!A) throw new Error('no __D6');
+    const kst = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+    const sig = kst + '|' + A.cards.map(c => c.g + c.n + c.s).join(',');
+    let prev = ''; try { prev = localStorage.getItem('d6sig') || ''; } catch (e) {}
+    const loud = A.cards.length > 0 && sig !== prev;
+    const st = await window.__berryPublish(A, loud ? [] : ['quiet']);
+    if (loud && st === 200) { try { localStorage.setItem('d6sig', sig); } catch (e) {} }
+    return st + (loud ? ' 알림' : ' 조용히');
+  };
   window.__daily6 = async function (opt) {
     opt = opt || {};
     const sym = ['SPY', 'QQQ', 'TQQQ', 'UGL', 'GLD', 'SLV', 'IEF', 'USO', 'SOXX'];
     const C = {}; for (const s of sym) C[s] = await code(s);
     const [spy, qqq, gld, slv, ief, uso, soxx] = await Promise.all([candles(C.SPY, 330), candles(C.QQQ, 330), candles(C.GLD, 300), candles(C.SLV, 300), candles(C.IEF, 300), candles(C.USO, 30), candles(C.SOXX, 30)]);
     const px = {}; for (const s of ['QQQ', 'TQQQ', 'UGL']) px[s] = await last30(C[s]);
+    // 카드용 최근 40거래일 종가(꺾은선) + 전일 종가 대비 등락
+    const LN = {}, PC = {}; const keep = (cs) => cs.slice(-40).map(x => Math.round(x.close * 100) / 100);
+    LN.QQQ = keep(qqq); const tq = await candles(C.TQQQ, 40), ug = await candles(C.UGL, 40); LN.TQQQ = keep(tq); LN.UGL = keep(ug);
+    PC.QQQ = qqq[qqq.length - 1].close; PC.TQQQ = tq[tq.length - 1].close; PC.UGL = ug[ug.length - 1].close;
     const lastDay = qqq[qqq.length - 1].dt.slice(0, 10);
     const cards = [], near = [], state = [];
     const Q = qqq.map(x => x.close), S = spy.map(x => x.close), nQ = Q.length, nS = S.length;
     const qUp200 = Q[nQ - 1] > ma(Q, 200);
     const sDn = S[nS - 1] < S[nS - 2];
-    const card = (g, rule, n, kn, p, o) => { const c = Object.assign({ g, m: 'US', n, kn, s: rule, px: p ? fu(p) : '-', ch: '', buy: p ? fu(p * 1.01) : '-', tp: '', sp: '', rr: '', when: '오늘 밤 정규장(또는 지금 데이마켓)' }, o);
+    const card = (g, rule, n, kn, p, o) => { const c = Object.assign({ g, m: 'US', n, kn, s: rule, px: p ? fu(p) : '-', ch: p && PC[n] ? pct(p / PC[n] - 1) : '', ln: LN[n], buy: p ? fu(p * 1.01) : '-', tp: '', sp: '', rr: '', when: '오늘 밤 정규장(또는 지금 데이마켓)' }, o);
       const num = (x) => /^\$[0-9.]+$/.test(x) ? +x.slice(1) : null; if (p && num(c.tgt)) c.tp = pct(num(c.tgt) / p - 1); if (p && num(c.stop)) c.sp = pct(num(c.stop) / p - 1); return c; };
 
     // ① 급락 초입 → QQQ 40일
@@ -89,8 +104,8 @@
     if (!opt.skipD) { try {
       const U = []; for (let p = 1; p <= 5; p++) { const j = await post(CERT + '/api/v2/screener/screen', { pagingParam: { key: null, number: p, size: 100 }, filters: [], sort: { column: 'C_시가총액', label: '시가총액', order: 'DESC' }, nation: 'us' }); (j.result.stocks || []).forEach(s => U.push({ code: s.stockCode, name: s.name })); }
       const uni = U.filter(x => !/우선주|ADR|만기|%/.test(x.name)).slice(0, 400);
-      const drops = (await pool(uni, 8, async (s) => { const cs = await candles(s.code, 30); const n = cs.length; if (n < 25) return null; const c = cs.map(x => x.close); const r3 = (t) => c[t] / c[t - 3] - 1; if (r3(n - 1) > -0.08) return null;
-        for (let t = n - 21; t < n - 1; t++) if (r3(t) <= -0.08) return null; let am = 0; for (let k = n - 21; k < n - 1; k++) am += cs[k].amount; if (am / 20 < 2e7 || c[n - 1] < 5) return null; return { ...s, r3: r3(n - 1), px: c[n - 1], d: cs[n - 1].dt.slice(0, 10) }; })).filter(Boolean);
+      const drops = (await pool(uni, 8, async (s) => { const cs = await candles(s.code, 40); const n = cs.length; if (n < 25) return null; const c = cs.map(x => x.close); const r3 = (t) => c[t] / c[t - 3] - 1; if (r3(n - 1) > -0.08) return null;
+        for (let t = n - 21; t < n - 1; t++) if (r3(t) <= -0.08) return null; let am = 0; for (let k = n - 21; k < n - 1; k++) am += cs[k].amount; if (am / 20 < 2e7 || c[n - 1] < 5) return null; return { ...s, r3: r3(n - 1), px: c[n - 1], d: cs[n - 1].dt.slice(0, 10), ln: keep(cs) }; })).filter(Boolean);
       const EMO = /무섭|무서워|무서운|말이\s?되|말이\s?돼|말이\s?됨|말이냐|한강|눈물|울고|운다|끝났|끝남|망했|망함|패닉|공포/;
       const BUY = /줍줍|추매|담았|분할\s?매수|물타|낙폭|과매도|바겐|세일|하따|정찰병/;
       const WRY = /어디까지|끝이\s?없|바닥이\s?없|이정도|이렇게까지|꼬라박|처박|쳐박|떨어질까|더\s?빠지|살려|제발|멘붕|어떡|어쩌/;
@@ -114,7 +129,7 @@
         const sh = (re) => all.filter(m => re.test(m)).length / all.length; const emo = sh(EMO), buy = sh(BUY), wry = sh(WRY), fear = sh(FEAR);
         let g = null; if (emo >= 0.05 && buy < emo && wry < emo) g = 'S'; else if (emo >= 0.03 && buy < emo) g = 'A'; else if (fear >= 0.07) g = 'B';
         if (!g) continue;
-        const c = card(g, 'D 실적주 공포 여론', s.name, s.name, s.px, { code: s.code, tgt: '20~60일 보유', stop: '없음(검증 기준)', hold: '20~60일', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%` });
+        LN[s.name] = s.ln; const c = card(g, 'D 실적주 공포 여론', s.name, s.name, s.px, { code: s.code, tgt: '20~60일 보유', stop: '없음(검증 기준)', hold: '20~60일', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%` });
         (g === 'B' ? near : cards).push(c);
       }
       state.push(`D 급락 후보 ${drops.length}개`);
