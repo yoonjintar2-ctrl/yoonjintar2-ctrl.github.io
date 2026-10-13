@@ -140,7 +140,11 @@ window.__berryScan = async function (opt) {
   if (warnHold.length) head.push('보유 경고 ' + warnHold.join('·'));
   if (krReg !== '정상') head.push('국내 ' + krReg + ' ' + pct(ks.ch));
   head.push('국내 ' + krPick.length + ' · 미국 ' + usPick.length);
+  // 지금 실제로 들어갈 수 있는 후보 수 (국내 위험회피 14시 전 '관찰만'은 제외)
+  const krActionable = krReg === '위험회피' && kstMin < 840 ? 0 : krPick.length;
+  const actionable = krActionable + usPick.length;
   const alert = {
+    actionable, krActionable, usActionable: usPick.length,
     id: kst.toISOString().slice(0, 16).replace('T', ' '),
     time: md + ' ' + hhmm,
     slot: opt.slot || hhmm,
