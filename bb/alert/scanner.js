@@ -57,12 +57,12 @@ window.__berryScan = async function (opt) {
     const res = [];
     // A 눌림 반등: 상승 추세 속 RSI(2) 과매도
     if (px > ma100 && ma20 > ma60 && r2 <= 10) {
-      const stop = px - 1.5 * a, tgt = Math.max(ma5, px + 1.0 * a);
+      const stop = Math.max(px - 1.5 * a, px * 0.94), tgt = Math.max(ma5, px + 1.0 * a);
       res.push({ setup: 'A', score: 10 - r2 + (ma20 / ma60 - 1) * 50, name: s.name, code: s.code, px, chg, r2, stop, tgt, tgt2: px + 1.5 * a, volR });
     }
     // B 돌파: 20일 고가 돌파 + 거래량
     if (px > hi20 && px > ma60 && volR >= 1.8 && pos >= 0.6 && chg <= (kr ? 8 : 10) && chg > 0) {
-      const stop = Math.max(hi20 * 0.985, px - 1.5 * a);
+      const stop = Math.max(hi20 * 0.985, px - 1.5 * a, px * 0.95);
       if (stop < px) res.push({ setup: 'B', score: volR + chg / 4, name: s.name, code: s.code, px, chg, r2, stop, tgt: px + 2 * (px - stop), volR, hi20 });
     }
     return res;
@@ -78,7 +78,8 @@ window.__berryScan = async function (opt) {
   const [KR, US] = await Promise.all([run('kr', 'kr-s', opt.krN || 200), run('us', 'us-s', opt.usN || 150)]);
 
   // ── 보유 종목
-  const pos = opt.positions || [];
+  let pos = opt.positions;
+  if (!pos) { try { pos = (await (await fetch('https://raw.githubusercontent.com/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/main/bb/a/5543763cc4-pos.json?' + Date.now())).json()).positions; } catch (e) { pos = []; } }
   const holdLines = [], warnHold = [];
   for (const p of pos) {
     try {
