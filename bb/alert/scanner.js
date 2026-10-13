@@ -135,31 +135,49 @@
       all.forEach((x, i) => { if (q[i] && q[i].sym) x.sym = q[i].sym; });
       return { list: all.filter((x, i) => q[i] && q[i].ok), scanned: uni.length };
     };
-    // 2026-10-13 결정: 추천은 미국 주식만 (국내는 백테스트에서 규칙이 잘 안 맞음). opt.withKR 로만 국내 포함
-    const KR = opt.withKR ? await run('kr', 'kr-s', opt.krN || 200, krReg) : { list: [], scanned: 0 };
-    const US = await run('us', 'us-s', opt.usN || 150, usReg);
-
-    const SETUP = { A: '눌림 반등', B: '거래량 돌파', C: '박스 하단' };
-    const card = (x) => {
-      const kr = x.kr, f = kr ? fk : fu;
-      let buy = x.setup === 'C' ? x.buyCap : x.px * (x.setup === 'B' && !kr ? 1.01 : 1.003);
-      if (kr) buy = rk(buy, 'down');
-      const stop = kr ? rk(x.stop, 'down') : x.stop, tgt = kr ? rk(x.tgt, 'up') : x.tgt;
-      return {
-        g: grade(x.score), sc: Math.round(x.score * 10) / 10, m: kr ? 'KR' : 'US', n: kr ? x.name : (x.sym || x.name), kn: x.name, code: x.code, s: SETUP[x.setup],
-        px: f(x.px), ch: pct(x.chg), buy: f(buy), tgt: f(tgt), stop: f(stop),
-        tp: pct(100 * (tgt / buy - 1)), sp: pct(100 * (stop / buy - 1)), rr: x.rr.toFixed(1), why: x.why,
-        hold: x.setup === 'A' ? '1~5일 · 종가가 5일선 위면 매도' : x.setup === 'B' ? '1~5일 · 목표/손절 도달 시' : '박스 상단(목표)까지 · 20거래일 부진 시 재평가',
-        when: kr ? '지금(장중)' : '오늘 밤 정규장',
-      };
-    };
-    const cards = (krAllowed && opt.withKR ? KR.list : []).concat(US.list).map(card)
-      .sort((a, b) => GORDER.indexOf(a.g) - GORDER.indexOf(b.g) || b.sc - a.sc).slice(0, 6);
+    // 2026-10-13 결정: 백테스트를 통과한 규칙만 추천한다(규칙 장부). 현재 채택 규칙은 ① 하나.
+    // ① 미국장 급락 때 업종 대비 덜 빠진 종목
+    //   SPY가 60일 고점 대비 −7% 이상이면 발동. 지수 고점일부터 지금까지 수익률이
+    //   같은 업종 중간값보다 5%p↑, 지수보다 3%p↑ 덜 빠지고 100일선 위인 종목 중 상위 5개.
+    //   다음 날 시가 매수, 20~40일 보유, −12% 손절. (2021-12~2026-10 급락 7회: 40일 평균 +9.9%, 지수 +0.9%)
+    const SPY = 'US19930122001';
+    const spy = await candles('us-s', SPY, 130);
+    const sc = spy.map(k => k.close), sL = sc.length - 1;
+    let hi = -1, hiI = 0; for (let k = Math.max(0, sL - 60); k <= sL; k++) if (sc[k] > hi) { hi = sc[k]; hiI = k; }
+    const dd = 1 - sc[sL] / hi, hiDate = spy[hiI].dt.slice(0, 10), ri = sc[sL] / hi - 1;
+    let crash = dd >= 0.07, crashStart = '';
+    if (crash) { for (let k = sL; k > hiI; k--) { let h2 = -1; for (let j = Math.max(0, k - 60); j <= k; j++) h2 = Math.max(h2, sc[j]); if (1 - sc[k] / h2 >= 0.07) crashStart = spy[k].dt.slice(0, 10); else break; } }
+    let list = [], scanned = 0;
+    if (crash) {
+      const out = []; for (let p = 1; out.length < (opt.usN || 150) && p <= 2; p++) { const j = await post(CERT + '/api/v2/screener/screen', { pagingParam: { key: null, number: p, size: 100 }, filters: [], sort: { column: 'C_시가총액', label: '시가총액', order: 'DESC' }, nation: 'us' }); (j.result.stocks || []).forEach(s => { const cat = (s.columns || []).find(c => c.id === 'C_CUSTOM_TICS'); out.push({ code: s.stockCode, name: s.name, cat: cat ? cat.value : '' }); }); }
+      const uni = out.slice(0, opt.usN || 150); scanned = uni.length;
+      const rows = (await pool(uni, 8, async (s) => {
+        const cs = await candles('us-s', s.code, 130); const i = cs.length - 1; const a0 = cs.findIndex(k => k.dt.slice(0, 10) === hiDate);
+        if (a0 < 0 || i < 100) return null; const c = cs.map(k => k.close);
+        const am = cs.slice(i - 19, i + 1).reduce((x, k) => x + k.amount, 0) / 20; if (c[i] < 10 || am < 3e8) return null;
+        const ma100 = c.slice(i - 99, i + 1).reduce((x, y) => x + y, 0) / 100;
+        return Object.assign(s, { r: c[i] / c[a0] - 1, px: c[i], chg: 100 * (c[i] / cs[i].base - 1), above: c[i] > ma100 });
+      })).filter(Boolean);
+      const med = (arr) => { const x = arr.slice().sort((p, q) => p - q); return x[Math.floor(x.length / 2)]; };
+      const byCat = {}; rows.forEach(x => (byCat[x.cat] = byCat[x.cat] || []).push(x));
+      const mkMed = med(rows.map(x => x.r));
+      rows.forEach(x => { const peers = (byCat[x.cat] || []).length >= 4 ? byCat[x.cat].filter(y => y !== x) : rows; x.rp = peers.length ? med(peers.map(y => y.r)) : mkMed; x.rs = x.r - x.rp; });
+      list = rows.filter(x => x.above && x.r - ri >= 0.03 && x.rs >= 0.05).sort((p, q) => q.rs - p.rs).slice(0, 5);
+      const q = await pool(list, 5, (x) => quality(x.code)); list.forEach((x, k) => { if (q[k] && q[k].sym) x.sym = q[k].sym; });
+    }
+    const cards = list.map((x, k) => ({
+      g: 'S', sc: Math.round(x.rs * 1000) / 10, m: 'US', n: x.sym || x.name, kn: x.name, code: x.code, s: '급락장 상대강도',
+      px: fu(x.px), ch: pct(x.chg), buy: fu(x.px * 1.01), tgt: '20~40일', stop: fu(x.px * 0.88),
+      tp: '보유', sp: pct(-12), rr: '-',
+      why: `S&P 고점(${hiDate}) 대비 이 종목 ${pct(100 * x.r)} · 업종 중간 ${pct(100 * x.rp)} · S&P ${pct(100 * ri)}`,
+      hold: '20~40일 보유 · −12% 손절 (검증 규칙 ①)', when: '오늘 밤 정규장',
+    }));
+    const KR = { scanned: 0 }, US = { scanned };
     const sPlus = cards.filter(c => ['SSS', 'SS', 'S'].includes(c.g));
     const hhmm = String(kst.getUTCHours()).padStart(2, '0') + ':' + String(kst.getUTCMinutes()).padStart(2, '0');
     const slot = opt.slot || hhmm;
-    const title = sPlus.length ? sPlus.map(c => c.g + ' ' + c.n).join(' · ') : cards.length ? `추천 ${cards.length}종목 (S 미만)` : '지금은 추천 종목 없음';
-    const alert = { v: 3, slot, time: (kst.getUTCMonth() + 1) + '/' + kst.getUTCDate() + ' ' + hhmm, cards, sPlus: sPlus.map(c => c.g + ' ' + c.n), actionable: cards.length, title, level: 'info', scanned: KR.scanned + US.scanned, krReg, usReg };
+    const title = sPlus.length ? '급락장 상대강도: ' + sPlus.map(c => c.n).join(' · ') : crash ? '급락 발동 · 조건 맞는 종목 없음' : '지금은 추천 없음 (S&P 고점 대비 ' + pct(-100 * dd) + ', 발동 −7%)';
+    const alert = { v: 3, slot, time: (kst.getUTCMonth() + 1) + '/' + kst.getUTCDate() + ' ' + hhmm, cards, sPlus: sPlus.map(c => c.g + ' ' + c.n), actionable: cards.length, title, level: 'info', scanned: KR.scanned + US.scanned, krReg, usReg, crash, dd: Math.round(dd * 1000) / 10, crashStart };
     alert.body = JSON.stringify({ v: 3, slot, time: alert.time, cards });
     window.__ALERT = alert;
     return 'ok ' + cards.length + ' cards, S+ ' + sPlus.length;
