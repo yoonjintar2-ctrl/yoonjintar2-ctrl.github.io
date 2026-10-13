@@ -238,14 +238,17 @@
   };
   window.__berryLoad = async function (path) {
     try { const r = await fetch('https://api.github.com/repos/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/contents/' + path + '?ref=main', { headers: { Accept: 'application/vnd.github.raw' }, cache: 'no-store' }); if (r.ok) return await r.text(); } catch (e) {}
-    return await (await fetch('https://raw.githubusercontent.com/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/main/' + path, { cache: 'no-store' })).text();
+    return await (await fetch('https://raw.githubusercontent.com/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/main/' + path + '?v=' + Date.now(), { cache: 'no-store' })).text();
   };
   window.__berryWatch = function () {
     const me = Math.random().toString(36).slice(2), KEY = 'berryWatcher';
     const live = () => { try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); return o.id && o.id !== me && Date.now() - o.ts < 25000; } catch (e) { return false; } };
-    if (window.__berryWatchState && window.__berryWatchState.alive) return 'already running here';
+    if (window.__berryWatchState && window.__berryWatchState.alive) {
+      if (window.__berryWatchState.v === 4) return 'already running here';
+      try { window.__berryWatchState.es.close(); } catch (e) {} window.__berryWatchState.alive = false; try { localStorage.removeItem(KEY); } catch (e) {} // 옛 버전 감시를 새 버전으로 교체
+    }
     if (live()) return 'running in another tab';
-    const st = window.__berryWatchState = { alive: true, me, started: new Date().toISOString(), handled: 0, last: '' };
+    const st = window.__berryWatchState = { v: 4, alive: true, me, started: new Date().toISOString(), handled: 0, last: '' };
     const beat = setInterval(() => { try { localStorage.setItem(KEY, JSON.stringify({ id: me, ts: Date.now() })); } catch (e) {} }, 10000);
     try { localStorage.setItem(KEY, JSON.stringify({ id: me, ts: Date.now() })); } catch (e) {}
     let busy = false, lastRun = 0; const seen = new Set();
@@ -257,10 +260,12 @@
       if (Date.now() / 1000 - (m.time || 0) > 600 || busy || Date.now() - lastRun < 45000) return;
       busy = true; lastRun = Date.now();
       try {
-        await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: '맥에서 지금 시세로 검색 중이에요 (1~2분)', tags: ['ack'] }) });
+        if (!/^scan sched/.test(m.message || '')) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: '맥에서 지금 시세로 검색 중이에요 (1~2분)', tags: ['ack'] }) });
         try { (0, eval)(await window.__berryLoad('bb/alert/scanner.js')); } catch (e) {} // 항상 최신 규칙으로
-        await window.__berryScan({ slot: '요청' });
-        await window.__berryPublish(window.__ALERT, ['req']);
+        const sched = /^scan sched/.test(m.message || '');
+        await window.__berryScan({ slot: sched ? new Date(Date.now() + 9 * 3600e3).getUTCHours() + '시' : '요청' });
+        if (sched && window.__d6Publish) await window.__d6Publish(); // 정시 검색: 새 매수 의견일 때만 알림
+        else await window.__berryPublish(window.__ALERT, ['req']);
         st.handled++; st.last = new Date().toISOString();
       } catch (e) {
         st.last = 'ERR ' + e;
