@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>박스권 헌터</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="박스권 헌터">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="a/icon180.png">
+<link rel="icon" href="a/icon180.png">
+<link rel="manifest" href="manifest.json">
+<style>
+:root{--bg:#fff;--ink:#1d232a;--muted:#6b7580;--warn:#d9480f;--info:#1c6fc9;--good:#2b8a3e;--bad:#d6336c;--box:#f3f4f6;--line:#e6e9ec;--body:#495057}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;-webkit-text-size-adjust:100%}
+body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.wrap{max-width:560px;margin:0 auto;padding:0 14px 24px}
+.clock{text-align:center;font-size:11px;color:var(--muted);padding-top:8px;font-variant-numeric:tabular-nums}
+.clock span{margin:0 8px;white-space:nowrap}
+.head{display:flex;align-items:center;gap:8px;padding:6px 0 10px}
+.head h1{flex:1;margin:0;font-size:22px;font-weight:800;letter-spacing:-.3px}
+.right{display:flex;flex-direction:column;align-items:flex-end}
+.icons{display:flex;gap:8px}
+.icons button{width:34px;height:34px;border:0;padding:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.icons button img{width:100%;height:100%;display:block}
+.icons button:active{transform:scale(.92)}
+.upd{font-size:11px;color:var(--muted);padding-top:3px}
+.prog{padding:0 0 10px}
+.prog .lab{font-size:12px;color:var(--info);padding-bottom:5px}
+.prog .bar{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.prog .fill{height:100%;width:0;background:var(--info);border-radius:3px;transition:width .25s linear}
+.note{font-size:13px;color:var(--muted);padding:14px 4px;line-height:1.5}
+.card{position:relative;margin:4px 0 16px;padding-top:14px}
+.card .badge{position:absolute;left:14px;top:0;height:32px;z-index:2}
+.frame{border:22px solid transparent;border-image:var(--fr) 80 / 22px stretch;background:#fff;background-clip:padding-box;margin:0}
+.inner{margin:-10px -6px -11px;padding:0}
+.top{display:flex;align-items:flex-end;gap:8px;padding-top:12px}
+.tk{flex:1;font-size:19px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flag{font-size:16px;line-height:1;padding-bottom:4px}
+.sub{font-size:12px;color:var(--muted);padding-top:4px;line-height:1.4}
+.now{font-size:13px;color:var(--body);padding:4px 0;font-variant-numeric:tabular-nums}
+.spark{display:flex;align-items:center;gap:10px;padding:2px 0 8px}
+.spark svg{flex:1;height:34px;min-width:0}
+.spark .lab{font-size:10px;color:var(--muted);line-height:1.3}
+.spark .lab b{display:block;font-size:12px}
+.tbl{display:flex;background:var(--box);border-radius:8px}
+.cell{flex:1;text-align:center;padding:7px 2px 6px;min-width:0}
+.cell+.cell{border-left:1px solid #dfe3e7}
+.cell .l{font-size:11px;color:#8a96a3}
+.cell .v{font-size:15px;font-weight:800;padding-top:2px;font-variant-numeric:tabular-nums;word-break:keep-all}
+.cell .s{font-size:11px;padding-top:1px}
+.why{font-size:12px;color:var(--body);padding-top:8px;line-height:1.45;white-space:pre-line}
+.status{text-align:center;font-size:11px;color:var(--muted);padding:14px 0 4px}
+.status.bad{color:var(--warn)}
+/* 시트(상담·규칙) */
+.sheet{position:fixed;inset:0;background:#f4f5f7;display:none;flex-direction:column;z-index:50}
+.sheet.on{display:flex}
+.sbar{display:flex;align-items:center;background:#fff;padding:calc(10px + env(safe-area-inset-top,0)) 14px 10px;border-bottom:1px solid #e3e6ea}
+.sbar .t{flex:1}
+.sbar .t b{font-size:17px;display:block}
+.sbar .t small{font-size:11px;color:var(--muted)}
+.sbar button{border:0;background:none;color:var(--info);font-weight:700;font-size:15px;padding:6px 4px;cursor:pointer}
+.msgs{flex:1;overflow-y:auto;padding:10px 12px;-webkit-overflow-scrolling:touch}
+.msg{display:flex;margin:6px 0}
+.msg.me{justify-content:flex-end}
+.bub{max-width:80%;padding:9px 12px;border-radius:16px;font-size:15px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.me .bub{background:#1c6fc9;color:#fff;border-bottom-right-radius:5px}
+.bot .bub{background:#fff;color:var(--ink);border-bottom-left-radius:5px;box-shadow:0 1px 1px rgba(0,0,0,.05)}
+.tm{font-size:10px;color:#9aa3ad;align-self:flex-end;margin:0 5px 2px}
+.wait{font-size:12px;color:var(--muted);padding:4px 6px}
+.inrow{display:flex;gap:8px;align-items:flex-end;background:#fff;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0))}
+.inrow textarea{flex:1;resize:none;border:0;background:#f1f3f5;border-radius:18px;padding:9px 13px;font:inherit;font-size:16px;color:var(--ink);max-height:120px;outline:none}
+.inrow button{border:0;background:#1c6fc9;color:#fff;font-weight:700;font-size:15px;border-radius:16px;padding:9px 15px;cursor:pointer}
+.rules{flex:1;overflow-y:auto;padding:14px 16px 30px;font-size:14px;line-height:1.6;white-space:pre-line;background:#fff}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0));transform:translateX(-50%);background:#1d232a;color:#fff;font-size:13px;padding:8px 14px;border-radius:16px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:60}
+.toast.on{opacity:.92}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="clock" id="clock"></div>
+  <div class="head">
+    <h1>박스권 헌터</h1>
+    <div class="right">
+      <div class="icons">
+        <button id="bChat" aria-label="상담"><img src="a/icons/chat.png" alt=""></button>
+        <button id="bScan" aria-label="새로고침"><img src="a/icons/refresh.png" alt=""></button>
+        <button id="bInfo" aria-label="규칙"><img src="a/icons/info.png" alt=""></button>
+      </div>
+      <div class="upd" id="upd"></div>
+    </div>
+  </div>
+  <div class="prog" id="prog" hidden><div class="lab" id="progLab"></div><div class="bar"><div class="fill" id="progFill"></div></div></div>
+  <div id="list"></div>
+  <div class="status" id="status">연결 준비 중</div>
+</div>
+
+<div class="sheet" id="chat">
+  <div class="sbar"><div class="t"><b>박스권 헌터 상담</b><small>집 맥북의 Claude가 장부·규칙·최근 결과를 보고 답해요</small></div><button id="chatClose">닫기</button></div>
+  <div class="msgs" id="msgs"></div>
+  <div class="inrow"><textarea id="q" rows="1" placeholder="메시지 입력"></textarea><button id="send">보내기</button></div>
+</div>
+<div class="sheet" id="info">
+  <div class="sbar"><div class="t"><b>매수 규칙</b><small>백테스트를 통과한 규칙만 매수 의견을 내요</small></div><button id="infoClose">닫기</button></div>
+  <div class="rules" id="rules"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+var T = { alerts: 'berry-3059012bcc6b7db9-a', req: 'berry-3059012bcc6b7db9-r', chat: 'berry-3059012bcc6b7db9-c' };
+var NT = 'https://ntfy.sh/';
+var $ = function(id){ return document.getElementById(id); };
+var LS = { get: function(k, d){ try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
+           set: function(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} } };
+var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+
+var state = { result: LS.get('bh_result', null), resultTime: LS.get('bh_resultTime', 0), title: LS.get('bh_title', ''),
+  chat: LS.get('bh_chat', []), seen: {}, reqAt: 0, ackAt: 0, doneAt: 0, fail: '', chatWaitAt: LS.get('bh_chatWait', 0) };
+
+// ── 시계 · n분 전 업데이트
+function fmt(tz){ var p = new Intl.DateTimeFormat('ko-KR', { timeZone: tz, month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()); var g = function(t){ var x = p.find(function(y){ return y.type === t; }); return x ? x.value : ''; }; return g('month') + '/' + g('day') + '(' + g('weekday') + ') ' + g('hour') + ':' + g('minute'); }
+function tick(){
+  $('clock').innerHTML = '<span>🇰🇷 ' + esc(fmt('Asia/Seoul')) + '</span><span>🇺🇸 ' + esc(fmt('America/New_York')) + '</span>';
+  if (state.resultTime) {
+    var m = Math.max(0, Math.floor((Date.now()/1000 - state.resultTime) / 60));
+    $('upd').textContent = m < 1 ? '방금 업데이트' : m < 60 ? m + '분 전 업데이트' : m < 1440 ? Math.floor(m/60) + '시간 전 업데이트' : Math.floor(m/1440) + '일 전 업데이트';
+    $('upd').style.color = m > 240 ? 'var(--warn)' : '';
+  }
+}
+
+// ── 카드
+var RANK = ['SSS','SS','S','A+','A','A-','B+','B'];
+var key = function(g){ return String(g).replace('+','p').replace('-','m'); };
+function lineColor(g){ g = String(g); if (g[0] === 'S') return '#6f86a3'; if (g[0] === 'A') return '#b8862b'; if (g === 'B+') return '#a86b45'; return '#7d838a'; }
+function spark(v, g){
+  if (!v || v.length < 2) return '';
+  var W = 300, H = 34, p = 3, lo = Math.min.apply(null, v), hi = Math.max.apply(null, v); if (hi === lo) hi = lo + 1;
+  var pts = v.map(function(x, i){ return [p + (W - 2*p) * i / (v.length - 1), p + (H - 2*p) * (1 - (x - lo) / (hi - lo))]; });
+  var d = pts.map(function(q){ return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' ');
+  var e = pts[pts.length - 1], ch = v[v.length-1] / v[0] - 1;
+  return '<div class="spark"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none"><line x1="0" y1="' + (H-1) + '" x2="' + W + '" y2="' + (H-1) + '" stroke="#e6e9ec" stroke-width="1" vector-effect="non-scaling-stroke"/>' +
+    '<polyline points="' + d + '" fill="none" stroke="' + lineColor(g) + '" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+    '<circle cx="' + e[0].toFixed(1) + '" cy="' + e[1].toFixed(1) + '" r="2.6" fill="#1d232a"/></svg>' +
+    '<div class="lab">' + v.length + '일<b style="color:' + (ch >= 0 ? 'var(--good)' : 'var(--bad)') + '">' + (ch >= 0 ? '+' : '−') + Math.abs(ch*100).toFixed(1) + '%</b></div></div>';
+}
+function cell(l, v, s, col){ return '<div class="cell"><div class="l">' + esc(l) + '</div><div class="v" style="color:' + col + '">' + esc(v || '-') + '</div>' + (s ? '<div class="s" style="color:' + col + '">' + esc(s) + '</div>' : '') + '</div>'; }
+function card(c){
+  var g = c.g || 'B', kr = c.m === 'KR';
+  var sub = (c.s || '') + (c.when ? ' · ' + c.when : '') + (!kr && c.kn && c.kn !== c.n ? ' · ' + c.kn : '');
+  var why = (c.why || '') + '\n보유 ' + (c.hold || '-') + (c.rr && c.rr !== '-' ? ' · 손익비 ' + c.rr : '');
+  return '<div class="card"><img class="badge" src="a/grades/' + key(g) + '.png" alt="' + esc(g) + '등급">' +
+    '<div class="frame" style="--fr:url(a/frames/' + key(g) + '.png)"><div class="inner">' +
+    '<div class="top"><div class="tk">' + esc(c.n) + '</div><div class="flag">' + (kr ? '🇰🇷' : '🇺🇸') + '</div></div>' +
+    '<div class="sub">' + esc(sub) + '</div>' +
+    '<div class="now">현재가&nbsp; ' + esc(c.px || '-') + '&nbsp;&nbsp; ' + esc(c.ch || '') + '</div>' +
+    spark(c.ln, g) +
+    '<div class="tbl">' + cell('매수 상한', c.buy, '', 'var(--ink)') + cell('목표가', c.tgt, c.tp, '#2b8a3e') + cell('손절가', c.stop, c.sp, '#e03131') + '</div>' +
+    '<div class="why">' + esc(why) + '</div></div></div></div>';
+}
+function render(){
+  var L = $('list'), html = '';
+  if (state.fail) html += '<div class="note" style="color:var(--warn)">' + esc(state.fail) + '</div>';
+  var r = state.result;
+  if (!r) html += '<div class="note">아직 받은 결과가 없어요. 새로고침을 눌러 맥에 검색을 요청해 보세요.<br>(평일 18~23시 정각에는 자동으로 검색해요)</div>';
+  else {
+    var cs = (r.cards || []).slice().sort(function(a, b){ return RANK.indexOf(a.g) - RANK.indexOf(b.g); });
+    if (!cs.length) html += '<div class="note">' + esc(state.title || '지금은 매수 의견이 없어요.') + '</div>';
+    cs.forEach(function(c){ html += card(c); });
+  }
+  L.innerHTML = html;
+  tick();
+}
+
+// ── ntfy 메시지 처리
+function handle(m, live){
+  if (!m || m.event !== 'message' || state.seen[m.id]) return;
+  state.seen[m.id] = 1;
+  var tags = m.tags || [], body = String(m.message || '');
+  if (m.topic === T.chat) { addChat({ id: m.id, who: 'me', t: m.time, text: body }); return; }
+  if (tags.indexOf('chat') >= 0) { addChat({ id: m.id, who: 'bot', t: m.time, text: body }); state.chatWaitAt = 0; LS.set('bh_chatWait', 0); return; }
+  if (tags.indexOf('ack') >= 0) { if (m.time * 1000 >= state.reqAt - 5000) state.ackAt = m.time * 1000; return; }
+  if (body.charAt(0) === '{') {
+    try { var j = JSON.parse(body); } catch(e) { return; }
+    if ((j.v || 0) >= 2 && m.time >= (state.resultTime || 0)) {
+      state.result = j; state.resultTime = m.time; state.title = m.title || '';
+      LS.set('bh_result', j); LS.set('bh_resultTime', m.time); LS.set('bh_title', state.title);
+      if (tags.indexOf('req') >= 0 && state.reqAt && m.time * 1000 >= state.reqAt - 5000) finishProg(true);
+      render();
+    }
+  } else if (tags.indexOf('warn') >= 0 && tags.indexOf('req') >= 0 && state.reqAt) { finishProg(false, body); }
+}
+function poll(topic, since){
+  return fetch(NT + topic + '/json?poll=1&since=' + since).then(function(r){ return r.text(); }).then(function(t){
+    t.split('\n').forEach(function(l){ if (!l) return; try { var m = JSON.parse(l); if (!m.topic) m.topic = topic; handle(m, false); } catch(e){} });
+  });
+}
+function setStatus(txt, bad){ var s = $('status'); s.textContent = txt; s.className = 'status' + (bad ? ' bad' : ''); }
+var es = null;
+function connect(){
+  if (es) try { es.close(); } catch(e){}
+  try {
+    es = new EventSource(NT + T.alerts + ',' + T.chat + '/sse');
+    es.onopen = function(){ setStatus('실시간 연결됨 · ' + new Date().toTimeString().slice(0,5)); };
+    es.onmessage = function(ev){ try { handle(JSON.parse(ev.data), true); } catch(e){} };
+    es.onerror = function(){ setStatus('연결 다시 시도 중…', true); };
+  } catch(e) { setStatus('실시간 연결 실패', true); }
+}
+function refresh(){
+  return Promise.all([poll(T.alerts, '12h'), poll(T.chat, '12h')]).then(function(){ render(); renderChat(); setStatus('실시간 연결됨 · ' + new Date().toTimeString().slice(0,5)); })
+    .catch(function(e){ setStatus('확인 실패 · 인터넷 연결을 확인해 주세요', true); });
+}
+
+// ── 새로고침(맥에 검색 요청) + 진행 막대
+var progTimer = null;
+function toast(t){ var e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(function(){ e.classList.remove('on'); }, 2200); }
+function requestScan(){
+  if (state.reqAt && Date.now() - state.reqAt < 180000 && !state.doneAt) { toast('검색 중이에요. 진행 막대를 확인해 주세요'); return; }
+  state.reqAt = Date.now(); state.ackAt = 0; state.doneAt = 0; state.fail = ''; state.sending = true; showProg();
+  fetch(NT, { method: 'POST', body: JSON.stringify({ topic: T.req, title: '검색 요청', message: 'scan iPhone' }) })
+    .then(function(r){ if (!r.ok) throw new Error(r.status); state.sending = false; })
+    .catch(function(e){ state.sending = false; finishProg(false, '요청 실패 · ' + e.message); });
+}
+function showProg(){ $('prog').hidden = false; clearInterval(progTimer); progTimer = setInterval(updProg, 250); updProg(); }
+function updProg(){
+  var now = Date.now(), p, lab;
+  if (state.doneAt) return;
+  if (now - state.reqAt > 180000) { finishProg(false, '3분째 응답 없음 · 맥이나 크롬이 꺼져 있을 수 있어요'); return; }
+  if (state.sending) { p = .06; lab = '맥에 검색 요청 보내는 중…'; }
+  else if (!state.ackAt) { var e1 = (now - state.reqAt) / 1000; p = .12 + .13 * Math.min(1, e1 / 30); lab = '맥이 요청을 받는 중… ' + Math.floor(e1) + '초'; }
+  else { var e2 = (now - state.ackAt) / 1000; p = .3 + .65 * (1 - Math.exp(-e2 / 40)); lab = '맥에서 지금 시세로 검색 중… ' + Math.floor(e2) + '초'; }
+  $('progFill').style.width = (p * 100).toFixed(1) + '%'; $('progLab').textContent = lab; $('progLab').style.color = 'var(--info)';
+}
+function finishProg(ok, msg){
+  if (!state.reqAt || state.doneAt) return;
+  state.doneAt = Date.now(); clearInterval(progTimer);
+  if (ok) { $('progFill').style.width = '100%'; $('progLab').textContent = '검색 완료'; $('progLab').style.color = 'var(--good)'; }
+  else { $('progLab').textContent = msg || '검색 실패'; $('progLab').style.color = 'var(--warn)'; }
+  setTimeout(function(){ $('prog').hidden = true; $('progFill').style.width = '0'; }, ok ? 1500 : 5000);
+}
+
+// ── 상담
+function addChat(c){
+  for (var i = 0; i < state.chat.length; i++) {
+    var x = state.chat[i];
+    if (x.id === c.id) return;
+    if (c.who === 'me' && x.who === 'me' && x.local && x.text === c.text && Math.abs(x.t - c.t) < 120) { x.id = c.id; x.local = false; LS.set('bh_chat', state.chat); return; }
+  }
+  state.chat.push(c); state.chat.sort(function(a, b){ return a.t - b.t; });
+  if (state.chat.length > 120) state.chat = state.chat.slice(-120);
+  LS.set('bh_chat', state.chat); renderChat();
+}
+function renderChat(){
+  if (!$('chat').classList.contains('on')) return;
+  var h = '';
+  if (!state.chat.length) h = '<div class="wait">무엇이든 물어보세요. 예: "오늘 TQQQ 사도 돼?", "⑥번 규칙 설명해줘", "새 대화"</div>';
+  state.chat.forEach(function(c){
+    var t = new Date(c.t * 1000).toTimeString().slice(0, 5);
+    h += '<div class="msg ' + c.who + '">' + (c.who === 'me' ? '<span class="tm">' + t + '</span>' : '') + '<div class="bub">' + esc(c.text) + (c.fail ? ' ⚠️' : '') + '</div>' + (c.who === 'bot' ? '<span class="tm">' + t + '</span>' : '') + '</div>';
+  });
+  if (state.chatWaitAt) h += '<div class="wait">' + (Date.now() - state.chatWaitAt > 240000 ? '4분째 답이 없어요. 맥이 꺼져 있을 수 있어요.' : '답장 쓰는 중…') + '</div>';
+  var box = $('msgs'); box.innerHTML = h; box.scrollTop = box.scrollHeight;
+}
+function sendChat(){
+  var q = $('q').value.trim(); if (!q) return;
+  $('q').value = ''; autoGrow();
+  var c = { id: 'me' + Date.now(), who: 'me', t: Math.floor(Date.now() / 1000), text: q, local: true };
+  state.chat.push(c); state.chatWaitAt = Date.now(); LS.set('bh_chatWait', state.chatWaitAt); LS.set('bh_chat', state.chat); renderChat();
+  fetch(NT, { method: 'POST', body: JSON.stringify({ topic: T.chat, title: 'chat', message: q }) })
+    .then(function(r){ if (!r.ok) throw new Error(r.status); })
+    .catch(function(){ c.fail = true; state.chatWaitAt = 0; LS.set('bh_chat', state.chat); renderChat(); toast('보내지 못했어요. 다시 보내 주세요'); });
+}
+function autoGrow(){ var t = $('q'); t.style.height = 'auto'; t.style.height = Math.min(120, t.scrollHeight) + 'px'; }
+
+// ── 규칙
+var RULES = "■ 원칙\n백테스트를 통과한 규칙만 매수 의견을 내요. 신호가 없는 날이 대부분이고 \"매수 의견 없음\"이 정상이에요. 무기는 QQQ·TQQQ·UGL(④만 개별 종목).\n\n■ 등급\n· S 강력 매수: 과거 승률 약 90%, 비중 크게\n· A 매수: 승률 약 73%, 비중 보통\n· B 참고: 기준보다 못해서 매수 안 함(제목에만 표시)\n(2011~2026 신호 236건 검증: S·A는 같은 종목 아무 날보다 +5~6%p, B는 −1.4%p)\n\n■ ① 급락 초입 → QQQ 40일\nS&P가 60일 고점 대비 −7% 이상, 단 직전 25일 안에 고점 근처였던 '초입'만. 23회 40일 +7.1% 승 74%. 며칠 늦게 사도 됨.\n\n■ ② 나스닥 박스 하단 → TQQQ (최대 15일)\nQQQ가 60일간 +12% 오른 뒤 폭 4~12% 박스, 15일 이상, 바닥 2번 확인, 하단 20% 안, 200일선 위. QQQ가 50일선 −3% 이내면 S. 목표 박스 75%, QQQ 박스 바닥 −4% 닿으면 바로 자동매도. 2일 안에 사야 함.\n\n■ ③ 유가 급등 + S&P 하락 → TQQQ 20~30일\n유가(USO) 하루 +5% 이상인데 S&P는 하락, QQQ 200일선 위. TQQQ 20일 +13.5% 승 78%.\n\n■ ④ 실적주 급락 + 공포 여론 → 개별주 20~60일\n3일 −8% 이상 급락, 매출 증가·흑자·부채비율 200% 미만. 토스 댓글에 '무섭·말이 되냐·한강·눈물·끝났·패닉' 같은 감정형 공포가 많고, '줍줍·물타기'나 '어디까지·살려' 같은 말보다 많을 때. 20일 +12~19% 승 79~87%(표본 작음).\n\n■ ⑤ 금리·금·은 동반 하락 → UGL 20일\n하루에 금리(IEF로 판단)·금·은이 모두 평소보다 크게 빠진 '다 팔아치우는 날'. 그날 S&P도 하락이면 A, 금이 50일선 위면 S. UGL 20일 +7.0% 승 77%.\n\n■ ⑥ 반도체만 급락 → TQQQ 20일(−15% 손절)\nQQQ는 200일선 위인데 반도체(SOXX)가 5일 −7% 이상. 34건 +8.7% 승 74%. 다음 날 시가까지 사야 함.\n\n■ 이 웹 화면\n블랙베리 앱과 같은 결과를 보여 줘요. 새로고침(↻)은 집 맥에 지금 시세로 다시 찾아 달라고 요청해요(1~2분). 알림은 블랙베리 앱으로만 와요.\n아이폰 사파리에서 공유 → '홈 화면에 추가'하면 앱처럼 쓸 수 있어요.\n\n※ 참고용 신호예요. 주문은 직접 판단하세요.";
+
+// ── 연결
+$('bScan').onclick = requestScan;
+$('bChat').onclick = function(){ $('chat').classList.add('on'); renderChat(); poll(T.chat, '12h').then(renderChat).catch(function(){}); setTimeout(function(){ $('q').focus(); }, 50); };
+$('chatClose').onclick = function(){ $('chat').classList.remove('on'); };
+$('bInfo').onclick = function(){ $('rules').textContent = RULES; $('info').classList.add('on'); };
+$('infoClose').onclick = function(){ $('info').classList.remove('on'); };
+$('send').onclick = sendChat;
+$('q').addEventListener('input', autoGrow);
+$('q').addEventListener('keydown', function(e){ if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); } });
+document.addEventListener('keydown', function(e){
+  if (e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) return;
+  var k = e.key.toLowerCase();
+  if (k === 'l' || k === 's') requestScan(); else if (k === 'c') $('bChat').onclick(); else if (k === 'i') $('bInfo').onclick(); else if (k === 'r') refresh();
+  else if (k === 'escape') { $('chat').classList.remove('on'); $('info').classList.remove('on'); }
+});
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) { refresh(); connect(); } });
+setInterval(function(){ tick(); if (state.chatWaitAt) renderChat(); }, 30000);
+render(); refresh().then(connect);
+})();
+</script>
+</body>
+</html>
