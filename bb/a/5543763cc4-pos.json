@@ -1,4 +1,25 @@
-{"note":"보유 종목 — 바뀌면 이 파일을 고친다","positions":[
-{"code":"A051600","name":"한전KPS","qty":4,"avg":42850,"stop":41700,"support":42556,"target":47350},
-{"code":"A010120","name":"LS ELECTRIC","qty":1,"avg":181300,"stop":171500,"support":175024,"target":209500}
-]}
+{
+ "note": "보유 종목 — since=매수 시각(손절 터치는 이 시각 이후 저가로만 판정). 바뀌면 이 파일을 고친다",
+ "positions": [
+  {
+   "code": "A051600",
+   "name": "한전KPS",
+   "qty": 4,
+   "avg": 42850,
+   "stop": 41700,
+   "support": 42556,
+   "target": 47350,
+   "since": "2026-10-13T09:30:00+09:00"
+  },
+  {
+   "code": "A010120",
+   "name": "LS ELECTRIC",
+   "qty": 1,
+   "avg": 181300,
+   "stop": 171500,
+   "support": 175024,
+   "target": 209500,
+   "since": "2026-10-13T10:00:00+09:00"
+  }
+ ]
+}

@@ -83,14 +83,22 @@ window.__berryScan = async function (opt) {
   const holdLines = [], warnHold = [];
   for (const p of pos) {
     try {
-      const cs = await candles(p.code.startsWith('US') ? 'us-s' : 'kr-s', p.code, 3);
-      const k = cs[cs.length - 1]; const px = k.close; const us = p.code.startsWith('US'); const f = us ? fu : fk;
+      const us = p.code.startsWith('US'), mk = us ? 'us-s' : 'kr-s', f = us ? fu : fk;
+      const day = (await get(`${INFO}/api/v1/c-chart/${mk}/${p.code}/day:1?count=30&useAdjustedRate=true`)).result.candles.slice().reverse();
+      const mins = (await get(`${INFO}/api/v1/c-chart/${mk}/${p.code}/min:1?count=400&useAdjustedRate=true`)).result.candles || [];
+      const px = mins.length ? mins[0].close : day[day.length - 1].close;
+      // 매수 시각(since) 이후 저가만 본다 — 매수 전에 찍은 저가는 손절 터치가 아님
+      const since = p.since || '1970-01-01T00:00:00+09:00', sinceT = Date.parse(since);
+      const minFirst = mins.length ? Date.parse(mins[mins.length - 1].dt) : Infinity;
+      let low = Infinity, lowAt = '';
+      mins.forEach(m => { if (Date.parse(m.dt) >= sinceT && m.low < low) { low = m.low; lowAt = m.dt.slice(5, 16).replace('T', ' '); } });
+      day.forEach(d => { const t = Date.parse(d.dt); if (t > sinceT && t + 86400e3 <= minFirst && d.low < low) { low = d.low; lowAt = d.dt.slice(5, 10); } });
       const flags = [];
-      if (px <= p.stop) flags.push('손절선 이탈'); else if (k.low <= p.stop) flags.push('장중 손절선 터치');
+      if (px <= p.stop) flags.push('손절선 이탈'); else if (low <= p.stop) flags.push('매수 후 손절선 터치(' + lowAt + ')');
       else if (p.support && px < p.support) flags.push('지지선 아래');
       if (p.target && px >= p.target) flags.push('목표 도달');
       if (flags.length) warnHold.push(p.name);
-      holdLines.push(`${p.name} ${f(px)} (${pct(100 * (px / p.avg - 1))} 평단비) ${flags.length ? '⚠' + flags.join('·') : '유지'} · 손절 ${f(p.stop)} / 목표 ${f(p.target)}`);
+      holdLines.push(`${p.name} ${f(px)} (${pct(100 * (px / p.avg - 1))} 평단비) ${flags.length ? '⚠' + flags.join('·') : '유지'} · 매수 후 저가 ${low < Infinity ? f(low) : '-'} · 손절 ${f(p.stop)} / 목표 ${f(p.target)}`);
     } catch (e) { holdLines.push(p.name + ' 시세 확인 실패'); }
   }
 
