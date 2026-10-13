@@ -135,7 +135,9 @@
       all.forEach((x, i) => { if (q[i] && q[i].sym) x.sym = q[i].sym; });
       return { list: all.filter((x, i) => q[i] && q[i].ok), scanned: uni.length };
     };
-    const [KR, US] = await Promise.all([run('kr', 'kr-s', opt.krN || 200, krReg), run('us', 'us-s', opt.usN || 150, usReg)]);
+    // 2026-10-13 결정: 추천은 미국 주식만 (국내는 백테스트에서 규칙이 잘 안 맞음). opt.withKR 로만 국내 포함
+    const KR = opt.withKR ? await run('kr', 'kr-s', opt.krN || 200, krReg) : { list: [], scanned: 0 };
+    const US = await run('us', 'us-s', opt.usN || 150, usReg);
 
     const SETUP = { A: '눌림 반등', B: '거래량 돌파', C: '박스 하단' };
     const card = (x) => {
@@ -151,7 +153,7 @@
         when: kr ? '지금(장중)' : '오늘 밤 정규장',
       };
     };
-    const cards = (krAllowed ? KR.list : []).concat(US.list).map(card)
+    const cards = (krAllowed && opt.withKR ? KR.list : []).concat(US.list).map(card)
       .sort((a, b) => GORDER.indexOf(a.g) - GORDER.indexOf(b.g) || b.sc - a.sc).slice(0, 6);
     const sPlus = cards.filter(c => ['SSS', 'SS', 'S'].includes(c.g));
     const hhmm = String(kst.getUTCHours()).padStart(2, '0') + ':' + String(kst.getUTCMinutes()).padStart(2, '0');
