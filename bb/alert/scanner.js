@@ -1,5 +1,5 @@
 // 베리 알럿 스캐너 v1.0 — tossinvest.com 탭에서 실행 (credentials 포함 fetch)
-// 사용: await window.__berryScan({slot:'11시', positions:[...]}) → window.__ALERT (알럿 1건 객체)
+// 사용: await window.__berryScan({slot:'11시'}) → window.__ALERT {title, cards:[{g 등급, n 종목, buy 매수상한, tgt 목표, stop 손절…}], body(JSON)}
 // 규칙: 「국내 우량주 박스권 순환매 v1.3」 3장(단기 스윙) 기준. 주문 기능 없음.
 // 저장소 파일을 캐시 없이 읽기(GitHub API, 실패하면 raw)
 window.__berryLoad = async function (path) {
@@ -62,15 +62,25 @@ window.__berryScan = async function (opt) {
     const hi20 = Math.max(...h.slice(L - 20, L));
     const rng = h[L] - l[L], pos = rng > 0 ? (px - l[L]) / rng : 0.5;
     const res = [];
+    const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+    const liq = clamp(Math.log10(avgAmt / (kr ? 2e10 : 3e8)) * 10, 0, 10); // 거래대금 여유 0~10
+    const trend = clamp((ma20 / ma60 - 1) * 400, 0, 20);                     // 20일선이 60일선 위로 얼마나 0~20
     // A 눌림 반등: 상승 추세 속 RSI(2) 과매도
     if (px > ma100 && ma20 > ma60 && r2 <= 10) {
       const stop = Math.max(px - 1.5 * a, px * 0.94), tgt = Math.max(ma5, px + 1.0 * a);
-      res.push({ setup: 'A', score: 10 - r2 + (ma20 / ma60 - 1) * 50, name: s.name, code: s.code, px, chg, r2, stop, tgt, tgt2: px + 1.5 * a, volR });
+      const rr = (tgt - px) / (px - stop);
+      const above100 = (px / ma100 - 1) * 100; // 100일선 위 여유(너무 멀면 추세 끝물)
+      const score = clamp((10 - r2) * 3, 0, 30) + trend + clamp(rr * 15, 0, 20) + liq + (above100 > 2 && above100 < 25 ? 15 : above100 <= 2 ? 5 : 8) + (chg > -6 ? 5 : 0);
+      res.push({ setup: 'A', score, name: s.name, code: s.code, px, chg, r2, stop, tgt, rr, volR, why: `RSI(2) ${r2.toFixed(0)} 과매도 · 상승 추세 속 눌림` });
     }
     // B 돌파: 20일 고가 돌파 + 거래량
     if (px > hi20 && px > ma60 && volR >= 1.8 && pos >= 0.6 && chg <= (kr ? 8 : 10) && chg > 0) {
       const stop = Math.max(hi20 * 0.985, px - 1.5 * a, px * 0.95);
-      if (stop < px) res.push({ setup: 'B', score: volR + chg / 4, name: s.name, code: s.code, px, chg, r2, stop, tgt: px + 2 * (px - stop), volR, hi20 });
+      if (stop < px) {
+        const ext = (px / hi20 - 1) * 100; // 돌파 후 얼마나 달렸나(작을수록 좋음)
+        const score = clamp((volR - 1.8) * 12, 0, 30) + clamp((pos - 0.6) * 37, 0, 15) + clamp(15 - ext * 3, 0, 15) + trend + liq + (chg >= 2 && chg <= 6 ? 10 : 4);
+        res.push({ setup: 'B', score, name: s.name, code: s.code, px, chg, r2, stop, tgt: px + 2 * (px - stop), rr: 2, volR, why: `20일 고가 돌파 · 거래량 ${volR.toFixed(1)}배` });
+      }
     }
     return res;
   };
@@ -84,74 +94,42 @@ window.__berryScan = async function (opt) {
   };
   const [KR, US] = await Promise.all([run('kr', 'kr-s', opt.krN || 200), run('us', 'us-s', opt.usN || 150)]);
 
-  // ── 보유 종목
-  let pos = opt.positions;
-  if (!pos) { try { pos = JSON.parse(await window.__berryLoad('bb/a/5543763cc4-pos.json')).positions; } catch (e) { pos = []; } }
-  const holdLines = [], warnHold = [];
-  for (const p of pos) {
-    try {
-      const us = p.code.startsWith('US'), mk = us ? 'us-s' : 'kr-s', f = us ? fu : fk;
-      const day = (await get(`${INFO}/api/v1/c-chart/${mk}/${p.code}/day:1?count=30&useAdjustedRate=true`)).result.candles.slice().reverse();
-      const mins = (await get(`${INFO}/api/v1/c-chart/${mk}/${p.code}/min:1?count=400&useAdjustedRate=true`)).result.candles || [];
-      const px = mins.length ? mins[0].close : day[day.length - 1].close;
-      // 매수 시각(since) 이후 저가만 본다 — 매수 전에 찍은 저가는 손절 터치가 아님
-      const since = p.since || '1970-01-01T00:00:00+09:00', sinceT = Date.parse(since);
-      const minFirst = mins.length ? Date.parse(mins[mins.length - 1].dt) : Infinity;
-      let low = Infinity, lowAt = '';
-      mins.forEach(m => { if (Date.parse(m.dt) >= sinceT && m.low < low) { low = m.low; lowAt = m.dt.slice(5, 16).replace('T', ' '); } });
-      day.forEach(d => { const t = Date.parse(d.dt); if (t > sinceT && t + 86400e3 <= minFirst && d.low < low) { low = d.low; lowAt = d.dt.slice(5, 10); } });
-      const flags = [];
-      if (px <= p.stop) flags.push('손절선 이탈'); else if (low <= p.stop) flags.push('매수 후 손절선 터치(' + lowAt + ')');
-      else if (p.support && px < p.support) flags.push('지지선 아래');
-      if (p.target && px >= p.target) flags.push('목표 도달');
-      if (flags.length) warnHold.push(p.name);
-      holdLines.push(`${p.name} ${f(px)} (${pct(100 * (px / p.avg - 1))} 평단비) ${flags.length ? '⚠' + flags.join('·') : '유지'} · 매수 후 저가 ${low < Infinity ? f(low) : '-'} · 손절 ${f(p.stop)} / 목표 ${f(p.target)}`);
-    } catch (e) { holdLines.push(p.name + ' 시세 확인 실패'); }
-  }
-
-  // ── 알럿 본문
-  const L = [];
-  L.push(`■ 시장  코스피 ${pct(ks.ch)} 코스닥 ${pct(kq.ch)} 원달러 ${fx.p ? fk(fx.p) : '-'}(${pct(fx.ch)})`);
-  L.push(`  나스닥 ${pct(nq.ch)} S&P ${pct(sp.ch)} 나스닥선물 ${pct(nqf.ch)} 반도체 ${pct(sox.ch)} VIX ${vix.p ? vix.p.toFixed(1) : '-'}`);
-  L.push(`  국내 ${krReg} / 미국 ${usReg}${halt.kospiCircuitBreaker ? ' · 코스피 서킷브레이커 발동' : ''}${halt.kospiSidecar ? ' · 코스피 사이드카' : ''}`);
-  if (holdLines.length) { L.push('■ 보유'); holdLines.forEach(x => L.push('  ' + x)); }
-  const krLine = (x) => {
-    const e = rk(x.px * 1.003, 'down'), st = rk(x.stop, 'down'), tg = rk(x.tgt, 'up');
-    return x.setup === 'A'
-      ? `  [눌림] ${x.name} ${fk(x.px)}(${pct(x.chg)}) RSI2 ${x.r2.toFixed(0)} · 매수≤${fk(e)} 손절 ${fk(st)} 1차 ${fk(tg)} · 5일선 위 종가면 매도`
-      : `  [돌파] ${x.name} ${fk(x.px)}(${pct(x.chg)}) 거래량 ${x.volR.toFixed(1)}배 · 매수≤${fk(e)} 손절 ${fk(st)} 목표 ${fk(tg)}`;
+  // ── 등급 (조건에 잘 맞을수록 높게): SSS SS S A+ A A- B+ B
+  const GR = [[85, 'SSS'], [78, 'SS'], [71, 'S'], [64, 'A+'], [57, 'A'], [50, 'A-'], [43, 'B+'], [0, 'B']];
+  const grade = (x) => GR.find(g => x >= g[0])[1];
+  const penalty = (reg) => reg === '위험회피' ? 10 : reg === '주의' ? 5 : 0;
+  const krAllowed = !(krReg === '위험회피' && kstMin < 840);       // 국내 위험회피 14시 전은 추천 안 함
+  const take = (R, reg, allowed) => {
+    if (!allowed) return [];
+    const list = reg === '위험회피' ? R.A.slice(0, 2) : R.A.slice(0, 3).concat(R.B.slice(0, 3));
+    return list.map(x => Object.assign({}, x, { score: x.score - penalty(reg) }));
   };
-  const usLine = (x) => x.setup === 'A'
-    ? `  [눌림] ${x.name} ${fu(x.px)}(${pct(x.chg)}) RSI2 ${x.r2.toFixed(0)} · 매수≤${fu(x.px * 1.003)} 손절 ${fu(x.stop)} 1차 ${fu(x.tgt)}`
-    : `  [돌파] ${x.name} ${fu(x.px)}(${pct(x.chg)}) 거래량 ${x.volR.toFixed(1)}배 · 매수≤${fu(x.px * 1.01)} 손절 ${fu(x.stop)} 목표 ${fu(x.tgt)}`;
-  const pick = (R, reg) => { const nA = reg === '위험회피' ? 1 : 2, nB = reg === '위험회피' ? 0 : 2; return R.B.slice(0, nB).concat(R.A.slice(0, nA)); };
-  const krPick = pick(KR, krReg), usPick = pick(US, usReg);
-  const krNote = krReg === '위험회피' ? (kstMin < 840 ? ' — 관찰만, 14시 이후 지지 확인 시 소액(10%)' : ' — 지지 확인 시에만 소액(10%)') : krReg === '주의' ? ' — 비중 15% 이하' : '';
-  L.push(`■ 국내 단기 후보${krNote}`);
-  if (krPick.length) krPick.forEach(x => L.push(krLine(x))); else L.push('  조건 맞는 종목 없음');
-  L.push(`■ 미국 (오늘 밤 22:30 정규장 기준${usReg !== '정상' ? ', ' + usReg : ''})`);
-  if (usPick.length) usPick.forEach(x => L.push(usLine(x))); else L.push('  조건 맞는 종목 없음');
-  L.push(`  스캔: 국내 ${KR.scanned} · 미국 ${US.scanned} (신호 국내 ${KR.A.length + KR.B.length} · 미국 ${US.A.length + US.B.length})`);
-  L.push('※ 참고용 신호입니다. 주문은 직접 판단하세요.');
-
+  const card = (x, kr) => {
+    const f = kr ? fk : fu, buy = kr ? rk(x.px * 1.003, 'down') : x.px * (x.setup === 'B' ? 1.01 : 1.003);
+    const stop = kr ? rk(x.stop, 'down') : x.stop, tgt = kr ? rk(x.tgt, 'up') : x.tgt;
+    return {
+      g: grade(x.score), sc: Math.round(x.score), m: kr ? 'KR' : 'US', n: x.name, code: x.code,
+      s: x.setup === 'A' ? '눌림 반등' : '거래량 돌파',
+      px: f(x.px), ch: pct(x.chg),
+      buy: f(buy), tgt: f(tgt), stop: f(stop),
+      tp: pct(100 * (tgt / buy - 1)), sp: pct(100 * (stop / buy - 1)), rr: x.rr.toFixed(1),
+      why: x.why,
+      hold: x.setup === 'A' ? '1~5일 · 종가가 5일선 위면 매도' : '1~5일 · 목표/손절 도달 시',
+      when: kr ? '지금(장중)' : '오늘 밤 22:30 정규장',
+    };
+  };
+  const cards = take(KR, krReg, krAllowed).map(x => card(x, true)).concat(take(US, usReg, true).map(x => card(x, false)))
+    .sort((a, b) => b.sc - a.sc).slice(0, 6);
   const hhmm = String(kst.getUTCHours()).padStart(2, '0') + ':' + String(kst.getUTCMinutes()).padStart(2, '0');
-  const md = (kst.getUTCMonth() + 1) + '/' + kst.getUTCDate();
-  const head = [];
-  if (warnHold.length) head.push('보유 경고 ' + warnHold.join('·'));
-  if (krReg !== '정상') head.push('국내 ' + krReg + ' ' + pct(ks.ch));
-  head.push('국내 ' + krPick.length + ' · 미국 ' + usPick.length);
-  // 지금 실제로 들어갈 수 있는 후보 수 (국내 위험회피 14시 전 '관찰만'은 제외)
-  const krActionable = krReg === '위험회피' && kstMin < 840 ? 0 : krPick.length;
-  const actionable = krActionable + usPick.length;
+  const top = cards[0];
   const alert = {
-    actionable, krActionable, usActionable: usPick.length,
-    id: kst.toISOString().slice(0, 16).replace('T', ' '),
-    time: md + ' ' + hhmm,
-    slot: opt.slot || hhmm,
-    level: warnHold.length || krReg === '위험회피' || usReg === '위험회피' ? 'warn' : 'info',
-    title: `[${opt.slot || hhmm}] ` + head.join(' / '),
-    body: L.join('\n'),
+    v: 2, slot: opt.slot || hhmm, time: (kst.getUTCMonth() + 1) + '/' + kst.getUTCDate() + ' ' + hhmm,
+    actionable: cards.length, krActionable: cards.filter(c => c.m === 'KR').length, usActionable: cards.filter(c => c.m === 'US').length,
+    level: 'info',
+    title: top ? `${top.g} ${top.n}${cards.length > 1 ? ' 외 ' + (cards.length - 1) + '종목' : ''} · ${opt.slot || hhmm}` : `지금은 들어갈 종목 없음 · ${opt.slot || hhmm}`,
+    cards,
   };
+  alert.body = JSON.stringify({ v: 2, slot: alert.slot, time: alert.time, cards });
   window.__ALERT = alert;
   window.__ALERT_JSON = JSON.stringify(alert);
   return 'ok ' + window.__ALERT_JSON.length;
@@ -160,9 +138,10 @@ window.__berryScan = async function (opt) {
 // ── ntfy 발행 / 요청 대기 ─────────────────────────────
 window.__BERRY = { alerts: 'berry-3059012bcc6b7db9-a', requests: 'berry-3059012bcc6b7db9-r' };
 window.__berryPublish = async function (alert, extraTags) {
-  let body = alert.body || '';
   const enc = new TextEncoder();
-  while (enc.encode(body).length > 3800) body = body.slice(0, body.lastIndexOf('\n', body.length - 2)) + '\n…(생략)';
+  let body = alert.body || '';
+  if (alert.cards) { const cs = alert.cards.slice(); body = JSON.stringify({ v: 2, slot: alert.slot, time: alert.time, cards: cs }); while (enc.encode(body).length > 3800 && cs.length > 1) { cs.pop(); body = JSON.stringify({ v: 2, slot: alert.slot, time: alert.time, cards: cs }); } }
+  else while (enc.encode(body).length > 3800) body = body.slice(0, body.lastIndexOf('\n', body.length - 2)) + '\n…(생략)';
   const tags = [alert.level || 'info'].concat(extraTags || []);
   const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: alert.title, message: body, tags, priority: alert.level === 'warn' ? 4 : 3 }) });
   return r.status;
