@@ -1,0 +1,21 @@
+:root{--bg:#f7f7f5;--fg:#1d1d1b;--mut:#6b6b66;--line:#e2e1dc;--card:#fff;--acc:#c4302b;--pos:#2f7d4f;--neg:#b23a32}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151514;--fg:#ecebe6;--mut:#a3a29c;--line:#2e2e2b;--card:#1e1e1c;--acc:#e0564f;--pos:#5fb07f;--neg:#e0716a}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.65 "Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+header{border-bottom:1px solid var(--line);background:var(--card)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px;flex-wrap:wrap}
+.logo{font-weight:800;letter-spacing:-.02em;color:var(--fg);text-decoration:none}.logo b{color:var(--acc)}
+nav a{color:var(--mut);text-decoration:none;margin-left:18px;font-size:14px}nav a.on,nav a:hover{color:var(--fg)}
+main{padding:40px 0 60px}h1{font-size:30px;letter-spacing:-.02em;margin:0 0 8px}h2{font-size:19px;margin:32px 0 8px}
+p,li{color:var(--fg)}.mut{color:var(--mut)}a{color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.kpi .n{font-size:28px;font-weight:800}.kpi .l{color:var(--mut);font-size:13px}
+.yt{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--card)}
+.yt i{width:22px;height:15px;background:#ff0000;border-radius:4px;position:relative;display:inline-block}.yt i:after{content:"";position:absolute;left:8px;top:4px;border-left:7px solid #fff;border-top:3.5px solid transparent;border-bottom:3.5px solid transparent}
+footer{border-top:1px solid var(--line);padding:24px 0;color:var(--mut);font-size:13px}footer a{color:var(--mut)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}td:first-child{white-space:normal;min-width:240px}
+th{color:var(--mut);font-weight:600}.scroll{overflow-x:auto}
+.bar{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.bar span{width:110px;color:var(--mut)}.bar div{height:10px;background:var(--acc);border-radius:3px}.bar em{font-style:normal}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
