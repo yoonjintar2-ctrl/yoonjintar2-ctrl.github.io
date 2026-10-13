@@ -145,8 +145,9 @@
     const sc = spy.map(k => k.close), sL = sc.length - 1;
     let hi = -1, hiI = 0; for (let k = Math.max(0, sL - 60); k <= sL; k++) if (sc[k] > hi) { hi = sc[k]; hiI = k; }
     const dd = 1 - sc[sL] / hi, hiDate = spy[hiI].dt.slice(0, 10), ri = sc[sL] / hi - 1;
-    let crash = dd >= 0.07, crashStart = '';
-    if (crash) { for (let k = sL; k > hiI; k--) { let h2 = -1; for (let j = Math.max(0, k - 60); j <= k; j++) h2 = Math.max(h2, sc[j]); if (1 - sc[k] / h2 >= 0.07) crashStart = spy[k].dt.slice(0, 10); else break; } }
+    const THR = opt.crashThr != null ? opt.crashThr : 0.07; // 테스트용으로만 바꿈
+    let crash = dd >= THR, crashStart = '';
+    if (crash) { for (let k = sL; k > hiI; k--) { let h2 = -1; for (let j = Math.max(0, k - 60); j <= k; j++) h2 = Math.max(h2, sc[j]); if (1 - sc[k] / h2 >= THR) crashStart = spy[k].dt.slice(0, 10); else break; } }
     let list = [], scanned = 0;
     if (crash) {
       const out = []; for (let p = 1; out.length < (opt.usN || 150) && p <= 2; p++) { const j = await post(CERT + '/api/v2/screener/screen', { pagingParam: { key: null, number: p, size: 100 }, filters: [], sort: { column: 'C_시가총액', label: '시가총액', order: 'DESC' }, nation: 'us' }); (j.result.stocks || []).forEach(s => { const cat = (s.columns || []).find(c => c.id === 'C_CUSTOM_TICS'); out.push({ code: s.stockCode, name: s.name, cat: cat ? cat.value : '' }); }); }
