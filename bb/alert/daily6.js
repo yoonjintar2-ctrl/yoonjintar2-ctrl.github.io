@@ -137,7 +137,7 @@
 
     const ord = { S: 0, A: 1, B: 2 }; cards.sort((a, b) => ord[a.g] - ord[b.g]);
     const kst = new Date(Date.now() + 9 * 3600e3), hhmm = String(kst.getUTCHours()).padStart(2, '0') + ':' + String(kst.getUTCMinutes()).padStart(2, '0');
-    const title = (cards.length ? '매수 의견: ' + cards.map(c => c.g + ' ' + c.n).join(' · ') : '매수 의견 없음') + (near.length ? ' · 참고(B): ' + near.map(c => c.n).join(', ') : '') + (cards.length ? '' : ' · ' + state.slice(0, 3).join(' · '));
+    const title = (cards.length ? '매수 의견: ' + cards.map(c => c.g + '등급 ' + c.n).join(' · ') : '매수 의견 없음') + (near.length ? ' · 참고(B등급): ' + near.map(c => c.n).join(', ') : '') + (cards.length ? '' : ' · ' + state.slice(0, 3).join(' · '));
     const line = (c) => `${c.g} · ${c.n} (${c.s}) — 매수 상한 ${c.buy} · ${c.stop !== '-' ? '손절/자동매도 ' + c.stop + ' · ' : ''}${c.hold}\n   ${c.why}`;
     const text = `[${(kst.getUTCMonth() + 1)}/${kst.getUTCDate()} ${hhmm} · 미국 ${lastDay} 마감 기준]\n` + (cards.length ? cards.map(line).join('\n') : '매수 의견 없음') + (near.length ? '\n참고(B, 매수 안 함): ' + near.map(c => c.n + ' ' + c.s).join(', ') : '') + '\n상태: ' + state.join(' · ');
     const alert = { v: 3, slot: opt.slot || '18시', time: (kst.getUTCMonth() + 1) + '/' + kst.getUTCDate() + ' ' + hhmm, cards, near, sPlus: cards.map(c => c.g + ' ' + c.n), title, level: 'info', text, lastDay };
