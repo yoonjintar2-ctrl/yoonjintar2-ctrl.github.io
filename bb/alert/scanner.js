@@ -1,6 +1,11 @@
 // 베리 알럿 스캐너 v1.0 — tossinvest.com 탭에서 실행 (credentials 포함 fetch)
 // 사용: await window.__berryScan({slot:'11시', positions:[...]}) → window.__ALERT (알럿 1건 객체)
 // 규칙: 「국내 우량주 박스권 순환매 v1.3」 3장(단기 스윙) 기준. 주문 기능 없음.
+// 저장소 파일을 캐시 없이 읽기(GitHub API, 실패하면 raw)
+window.__berryLoad = async function (path) {
+  try { const r = await fetch('https://api.github.com/repos/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/contents/' + path + '?ref=main', { headers: { Accept: 'application/vnd.github.raw' }, cache: 'no-store' }); if (r.ok) return await r.text(); } catch (e) {}
+  return await (await fetch('https://raw.githubusercontent.com/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/main/' + path, { cache: 'no-store' })).text();
+};
 window.__berryScan = async function (opt) {
   opt = opt || {};
   const INFO = 'https://wts-info-api.tossinvest.com', CERT = 'https://wts-cert-api.tossinvest.com';
@@ -81,7 +86,7 @@ window.__berryScan = async function (opt) {
 
   // ── 보유 종목
   let pos = opt.positions;
-  if (!pos) { try { pos = (await (await fetch('https://raw.githubusercontent.com/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/main/bb/a/5543763cc4-pos.json?' + Date.now())).json()).positions; } catch (e) { pos = []; } }
+  if (!pos) { try { pos = JSON.parse(await window.__berryLoad('bb/a/5543763cc4-pos.json')).positions; } catch (e) { pos = []; } }
   const holdLines = [], warnHold = [];
   for (const p of pos) {
     try {
