@@ -166,18 +166,50 @@
       list = rows.filter(x => x.above && x.r - ri >= 0.03 && x.rs >= 0.05).sort((p, q) => q.rs - p.rs).slice(0, 5);
       const q = await pool(list, 5, (x) => quality(x.code)); list.forEach((x, k) => { if (q[k] && q[k].sym) x.sym = q[k].sym; });
     }
-    const cards = list.map((x, k) => ({
+    let cards = list.map((x, k) => ({
       g: 'S', sc: Math.round(x.rs * 1000) / 10, m: 'US', n: x.sym || x.name, kn: x.name, code: x.code, s: '급락장 상대강도',
       px: fu(x.px), ch: pct(x.chg), buy: fu(x.px * 1.01), tgt: '20~40일', stop: fu(x.px * 0.88),
       tp: '보유', sp: pct(-12), rr: '-',
       why: `S&P 고점(${hiDate}) 대비 이 종목 ${pct(100 * x.r)} · 업종 중간 ${pct(100 * x.rp)} · S&P ${pct(100 * ri)}`,
       hold: '20~40일 보유 · −12% 손절 (검증 규칙 ①)', when: '오늘 밤 정규장',
     }));
+    // ② 나스닥 상승 후 박스권 — TQQQ 박스 하단 (엄격 기준 + 장중 자동매도)
+    //   큰 상승: QQQ 60일 저점→고점 +12%↑ / 박스: 고점 후 8일 이상 신고가 없음, 폭 4~12%, 저점에서 2% 반등
+    //   엄격 하단: 박스 15일 이상, 바닥 2번 이상(5일 간격) 확인, 하단 20% 안, QQQ 200일선 위
+    //   매도: QQQ가 박스 75% 지점 / 최대 15일 / QQQ가 박스 바닥 −4% 닿는 순간 자동매도(장중)
+    //   검증(2011~2026): 13회 평균 +7.6% 승률 77% 최악 −12%, 2011~18 +5.3% · 2019~22 +6.1% · 2023~26 +10.8%
+    const r2 = await (async () => {
+      const q = await candles('us-s', 'US19990310001', 320), tq = await candles('us-s', 'US20100211003', 5);
+      const C = q.map(k => k.close), H = q.map(k => k.high), Lw = q.map(k => k.low), n = C.length;
+      const ma200 = (i) => { let s = 0; for (let k = i - 199; k <= i; k++) s += C[k]; return s / 200; };
+      let box = null, sig = null;
+      for (let t = 210; t < n; t++) {
+        if (!box) { const lo60 = Math.min(...Lw.slice(t - 60, t + 1)); let hi = -1, hiI = 0; for (let k = t - 40; k <= t; k++) if (H[k] > hi) { hi = H[k]; hiI = k; }
+          if (hi / lo60 - 1 < 0.12 || t - hiI < 8) continue; const loS = Math.min(...Lw.slice(hiI, t + 1)), w = hi / loS - 1; if (w < 0.04 || w > 0.12 || C[t] < loS * 1.02) continue; box = { hi, lo: loS, start: t, hiI }; continue; }
+        if (C[t] > box.hi * 1.01 || C[t] < box.lo * 0.96 || t - box.start > 60) { box = null; continue; }
+        box.lo = Math.min(box.lo, Math.min(...Lw.slice(box.hiI, t + 1)));
+        const bp = (C[t] - box.lo) / (box.hi - box.lo);
+        let touch = 0, last = -99; for (let k = box.hiI; k <= t; k++) if (Lw[k] <= box.lo * 1.015) { if (k - last >= 5) touch++; last = k; }
+        const ok = bp >= 0 && bp <= 0.2 && touch >= 2 && t - box.hiI >= 15 && C[t] > ma200(t);
+        if (t === n - 1 && ok) sig = { box: Object.assign({}, box), t, bp };
+      }
+      if (!sig) return { card: null, state: box ? `QQQ 박스 진행 중 (${fu(box.lo)}~${fu(box.hi)}, 현재 ${Math.round(100 * (C[n - 1] - box.lo) / (box.hi - box.lo))}% 위치)` : 'QQQ 박스 없음' };
+      const qc = C[n - 1], tc = tq[tq.length - 1].close, lvl = sig.box.lo + 0.75 * (sig.box.hi - sig.box.lo), qStop = sig.box.lo * 0.96;
+      const toT = (qLevel) => tc * (1 + 3 * (qLevel / qc - 1));
+      return { card: {
+        g: 'S', sc: 100, m: 'US', n: 'TQQQ', kn: '나스닥100 3배', code: 'US20100211003', s: 'QQQ 박스 하단',
+        px: fu(tc), ch: pct(100 * (tc / tq[tq.length - 1].base - 1)), buy: fu(tc * 1.01), tgt: fu(toT(lvl)), stop: fu(toT(qStop)),
+        tp: pct(100 * (toT(lvl) / tc - 1)), sp: pct(100 * (toT(qStop) / tc - 1)), rr: '-',
+        why: `QQQ 박스 ${fu(sig.box.lo)}~${fu(sig.box.hi)} 하단 ${Math.round(sig.bp * 100)}% · 목표 QQQ ${fu(lvl)} · 자동매도 QQQ ${fu(qStop)}`,
+        hold: '최대 15일 · QQQ가 자동매도선 닿으면 바로 매도(스탑로스 걸기) (검증 규칙 ②)', when: '오늘 밤 정규장',
+      }, state: 'signal' };
+    })();
+    if (r2.card) cards.unshift(r2.card);
     const KR = { scanned: 0 }, US = { scanned };
     const sPlus = cards.filter(c => ['SSS', 'SS', 'S'].includes(c.g));
     const hhmm = String(kst.getUTCHours()).padStart(2, '0') + ':' + String(kst.getUTCMinutes()).padStart(2, '0');
     const slot = opt.slot || hhmm;
-    const title = sPlus.length ? '급락장 상대강도: ' + sPlus.map(c => c.n).join(' · ') : crash ? '급락 발동 · 조건 맞는 종목 없음' : '지금은 추천 없음 (S&P 고점 대비 ' + pct(-100 * dd) + ', 발동 −7%)';
+    const title = sPlus.length ? '추천: ' + sPlus.map(c => c.n).join(' · ') : '지금은 추천 없음 · ① S&P 고점 대비 ' + pct(-100 * dd) + '(발동 −7%) · ② ' + r2.state;
     const alert = { v: 3, slot, time: (kst.getUTCMonth() + 1) + '/' + kst.getUTCDate() + ' ' + hhmm, cards, sPlus: sPlus.map(c => c.g + ' ' + c.n), actionable: cards.length, title, level: 'info', scanned: KR.scanned + US.scanned, krReg, usReg, crash, dd: Math.round(dd * 1000) / 10, crashStart };
     alert.body = JSON.stringify({ v: 3, slot, time: alert.time, cards });
     window.__ALERT = alert;
