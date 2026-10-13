@@ -1,4 +1,4 @@
-// 매일 오후 6시(KST) 매수 의견 — 검증된 6개 규칙(①②CDEF)만 사용. tossinvest.com 탭에서 eval. 주문 기능 없음.
+// 매일 오후 6시(KST) 매수 의견 — 검증된 6개 규칙(①~⑥)만 사용. tossinvest.com 탭에서 eval. 주문 기능 없음.
 // await window.__daily6() → window.__D6 {title, cards[], near[], text}
 // 무기: QQQ · TQQQ · UGL (D만 개별 종목)
 // 등급(2026-10-13 검증, 2011~2026 규칙 신호 216건):
@@ -78,29 +78,29 @@
           why: `QQQ 박스 ${fu(sig.box.lo)}~${fu(sig.box.hi)} 하단 ${Math.round(sig.bp * 100)}% · QQQ/50일선 ${(sig.m50 * 100).toFixed(1)}% · 목표 QQQ ${fu(lvl)}` });
         (g === 'B' ? near : cards).push(c); } }
 
-    // C. 유가 급등 + S&P 하락 → TQQQ 20~30일 (실시간은 USO로 대신: FRED 유가는 하루 늦음)
+    // ③ 유가 급등 + S&P 하락 → TQQQ 20~30일 (실시간은 USO로 대신: FRED 유가는 하루 늦음)
     { const U = uso.map(x => x.close), nU = U.length; const ud = byDate(spy);
       let hit = null; for (let t = nU - 3; t < nU; t++) { const d = uso[t].dt.slice(0, 10), ur = U[t] / U[t - 1] - 1; const si = spy.findIndex(x => x.dt.slice(0, 10) === d); if (si < 1) continue; const sr = S[si] / S[si - 1] - 1; const qi = qqq.findIndex(x => x.dt.slice(0, 10) === d); const up = qi >= 200 && Q[qi] > ma(Q, 200, qi);
         if (sr < 0 && up && ur >= 0.05) hit = { d, ur, sr, g: 'A' }; else if (sr < 0 && up && ur >= 0.04 && t === nU - 1) hit = hit || { d, ur, sr, g: 'B' }; }
-      state.push('C 유가(USO) 전일 ' + pct(U[nU - 1] / U[nU - 2] - 1));
-      if (hit) { const c = card(hit.g, 'C 유가 급등', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: '20~30일 보유', stop: '없음(검증 기준)', hold: '20~30일 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `유가 ${pct(hit.ur)} · S&P ${pct(hit.sr)} · QQQ 200일선 위. 2004~2026 TQQQ 20일 +13.5% 승 78%` }); (hit.g === 'B' ? near : cards).push(c); } }
+      state.push('③ 유가(USO) 전일 ' + pct(U[nU - 1] / U[nU - 2] - 1));
+      if (hit) { const c = card(hit.g, '③ 유가 급등', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: '20~30일 보유', stop: '없음(검증 기준)', hold: '20~30일 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `유가 ${pct(hit.ur)} · S&P ${pct(hit.sr)} · QQQ 200일선 위. 2004~2026 TQQQ 20일 +13.5% 승 78%` }); (hit.g === 'B' ? near : cards).push(c); } }
 
-    // E. 금리·금·은 동반 하락 → UGL 20일 (금리는 IEF로 대신: 금리 하락 = IEF 상승)
+    // ⑤ 금리·금·은 동반 하락 → UGL 20일 (금리는 IEF로 대신: 금리 하락 = IEF 상승)
     { const dg = byDate(gld), ds = byDate(slv), di = byDate(ief), dsp = byDate(spy);
       const days = gld.map(x => x.dt.slice(0, 10)).filter(d => ds[d] && di[d] && dsp[d]); const n = days.length;
       const r = (m, i) => m[days[i]].close / m[days[i - 1]].close - 1;
       const z = (m, i) => { const xs = []; for (let k = i - 250; k < i; k++) xs.push(r(m, k)); return (r(m, i) - avg(xs)) / sd(xs); };
       let hit = null; for (let i = n - 3; i < n; i++) { const zg = z(dg, i), zs = z(ds, i), zi = z(di, i); if (zg <= -1 && zs <= -1 && zi >= 1) { const sp = r(dsp, i) < 0; const G = gld.map(x => x.close); const gi = gld.findIndex(x => x.dt.slice(0, 10) === days[i]); const g50 = G[gi] > ma(G, 50, gi); hit = { d: days[i], g: sp && g50 ? 'S' : sp ? 'A' : 'B', zg, zs }; } }
-      state.push('E 금 전일 ' + pct(r(dg, n - 1)));
-      if (hit) { const c = card(hit.g, 'E 금·금리 동반 하락', 'UGL', '금 2배', px.UGL, { tgt: '20일 보유', stop: '없음(검증 기준)', hold: '20일 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `금리·금·은 함께 급락(금 z ${hit.zg.toFixed(1)}) · ${hit.g === 'B' ? 'S&P 상승일이라 약함' : 'S&P도 하락'}. UGL 20일 +7.0% 승 77%` }); (hit.g === 'B' ? near : cards).push(c); } }
+      state.push('⑤ 금 전일 ' + pct(r(dg, n - 1)));
+      if (hit) { const c = card(hit.g, '⑤ 금·금리 동반 하락', 'UGL', '금 2배', px.UGL, { tgt: '20일 보유', stop: '없음(검증 기준)', hold: '20일 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `금리·금·은 함께 급락(금 z ${hit.zg.toFixed(1)}) · ${hit.g === 'B' ? 'S&P 상승일이라 약함' : 'S&P도 하락'}. UGL 20일 +7.0% 승 77%` }); (hit.g === 'B' ? near : cards).push(c); } }
 
-    // F. QQQ 200일선 위 + 반도체 5일 −7% → TQQQ 20일(−15% 손절)
+    // ⑥ QQQ 200일선 위 + 반도체 5일 −7% → TQQQ 20일(−15% 손절)
     { const X = soxx.map(x => x.close), nX = X.length; const s5 = (t) => X[t] / X[t - 5] - 1; const recent = [...Array(10).keys()].some(k => s5(nX - 2 - k) <= -0.07);
-      state.push('F 반도체 5일 ' + pct(s5(nX - 1)));
-      if (qUp200 && s5(nX - 1) <= -0.07 && !recent) cards.push(card('A', 'F 반도체만 급락', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: '20일 보유', stop: px.TQQQ ? fu(px.TQQQ * 0.85) : '−15%', hold: '20일 · TQQQ −15% 손절 필수 · 내일 시가까지 사야 함(늦으면 수익 급감)', why: `반도체(SOXX) 5일 ${pct(s5(nX - 1))} · QQQ 200일선 위. TQQQ 20일 +8.7% 승 74%` }));
-      else if (qUp200 && s5(nX - 1) <= -0.05 && !recent) near.push(card('B', 'F 반도체 급락 근접', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: '-', stop: '-', hold: '매수 안 함', why: `반도체 5일 ${pct(s5(nX - 1))} (발동 −7%)` })); }
+      state.push('⑥ 반도체 5일 ' + pct(s5(nX - 1)));
+      if (qUp200 && s5(nX - 1) <= -0.07 && !recent) cards.push(card('A', '⑥ 반도체만 급락', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: '20일 보유', stop: px.TQQQ ? fu(px.TQQQ * 0.85) : '−15%', hold: '20일 · TQQQ −15% 손절 필수 · 내일 시가까지 사야 함(늦으면 수익 급감)', why: `반도체(SOXX) 5일 ${pct(s5(nX - 1))} · QQQ 200일선 위. TQQQ 20일 +8.7% 승 74%` }));
+      else if (qUp200 && s5(nX - 1) <= -0.05 && !recent) near.push(card('B', '⑥ 반도체 급락 근접', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: '-', stop: '-', hold: '매수 안 함', why: `반도체 5일 ${pct(s5(nX - 1))} (발동 −7%)` })); }
 
-    // D. 실적 좋은 종목 급락 + 커뮤니티 공포 여론
+    // ④ 실적 좋은 종목 급락 + 커뮤니티 공포 여론
     if (!opt.skipD) { try {
       const U = []; for (let p = 1; p <= 5; p++) { const j = await post(CERT + '/api/v2/screener/screen', { pagingParam: { key: null, number: p, size: 100 }, filters: [], sort: { column: 'C_시가총액', label: '시가총액', order: 'DESC' }, nation: 'us' }); (j.result.stocks || []).forEach(s => U.push({ code: s.stockCode, name: s.name })); }
       const uni = U.filter(x => !/우선주|ADR|만기|%/.test(x.name)).slice(0, 400);
@@ -129,11 +129,11 @@
         const sh = (re) => all.filter(m => re.test(m)).length / all.length; const emo = sh(EMO), buy = sh(BUY), wry = sh(WRY), fear = sh(FEAR);
         let g = null; if (emo >= 0.05 && buy < emo && wry < emo) g = 'S'; else if (emo >= 0.03 && buy < emo) g = 'A'; else if (fear >= 0.07) g = 'B';
         if (!g) continue;
-        LN[s.name] = s.ln; const c = card(g, 'D 실적주 공포 여론', s.name, s.name, s.px, { code: s.code, tgt: '20~60일 보유', stop: '없음(검증 기준)', hold: '20~60일', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%` });
+        LN[s.name] = s.ln; const c = card(g, '④ 실적주 공포 여론', s.name, s.name, s.px, { code: s.code, tgt: '20~60일 보유', stop: '없음(검증 기준)', hold: '20~60일', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%` });
         (g === 'B' ? near : cards).push(c);
       }
-      state.push(`D 급락 후보 ${drops.length}개`);
-    } catch (e) { state.push('D 오류: ' + String(e).slice(0, 60)); } }
+      state.push(`④ 급락 후보 ${drops.length}개`);
+    } catch (e) { state.push('④ 오류: ' + String(e).slice(0, 60)); } }
 
     const ord = { S: 0, A: 1, B: 2 }; cards.sort((a, b) => ord[a.g] - ord[b.g]);
     const kst = new Date(Date.now() + 9 * 3600e3), hhmm = String(kst.getUTCHours()).padStart(2, '0') + ':' + String(kst.getUTCMinutes()).padStart(2, '0');
