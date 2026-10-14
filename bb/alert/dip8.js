@@ -20,11 +20,12 @@
   const byDate = (cs) => { const m = {}; cs.forEach(x => m[x.dt.slice(0, 10)] = x); return m; };
 
   const EARN_RE = /(실적|어닝|분기).{0,12}(발표|쇼크|서프라이즈|부진|미스|하회|상회|밑돌|웃돌|예상치|기대 ?이하|기대 ?이상)|가이던스|주당순이익|EPS|매출 ?전망/;
-  const PRE_RE = /앞두고|앞둔|예정|프리뷰|미리 ?보기/;
+  const PRE_RE = /앞두고|앞둔|예정|프리뷰|미리 ?보기|했을 ?듯|할 ?듯|실적 전망$/;
   const earnNews = async (code) => {
-    const cc = (await get(`${INFO}/api/v2/stock-infos/${code}`)).result.companyCode; if (!cc) return false;
+    const si = (await get(`${INFO}/api/v2/stock-infos/${code}`)).result; const cc = si.companyCode; if (!cc) return false;
+    const names = [String(si.companyName || si.name || '').split(/[ (]/)[0], si.symbol].filter(x => x && x.length >= 2); // 다른 회사 실적 기사(시장 정리) 빼려고 제목에 회사 이름이 있어야 함
     const j = await get(`${INFO}/api/v2/news/companies/${cc}?size=40&orderBy=latest`); const lo = Date.now() - 48 * 3600e3;
-    return (j.result.body || []).some(x => { const t = Date.parse(String(x.createdAt).slice(0, 19) + '+09:00'); return t >= lo && EARN_RE.test(x.title || '') && !PRE_RE.test(x.title || ''); });
+    return (j.result.body || []).some(x => { const t = Date.parse(String(x.createdAt).slice(0, 19) + '+09:00'); const ti = x.title || ''; return t >= lo && EARN_RE.test(ti) && !PRE_RE.test(ti) && names.some(nm => ti.includes(nm)); });
   };
   window.__dip8earn = earnNews;
   window.__dip8 = async function () {
