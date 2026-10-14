@@ -331,6 +331,7 @@
       if (m.event !== 'message' || seen.has(m.id) || !/^scan/.test(m.message || '')) return;
       seen.add(m.id);
       if (Date.now() / 1000 - (m.time || 0) > 600 || busy || Date.now() - lastRun < 45000) return;
+      if (!/^scan sched/.test(m.message || '')) { st.reqHist = (st.reqHist || []).filter(x => Date.now() - x < 600000); if (st.reqHist.length >= 5) return; st.reqHist.push(Date.now()); } // 새로고침 남용 막기: 10분에 5번
       busy = true; lastRun = Date.now();
       try {
         if (!/^scan sched/.test(m.message || '')) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: '맥에서 지금 시세로 검색 중이에요 (1~2분)', tags: ['ack'] }) });
