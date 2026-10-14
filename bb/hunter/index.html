@@ -129,6 +129,19 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 .tc.gC .tg .v{color:#495057!important}
 .tc.gC .tg{border-color:#dee2e6;box-shadow:none}
 .tc.gC .spark{opacity:.5}
+/* ⑩ 인버스: 어두운 카드 */
+.tc.dark .in{background:radial-gradient(120% 60% at 15% 0%,rgba(255,255,255,.10),transparent 60%),linear-gradient(170deg,#3b4046,#212529 55%,#2b3035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.tc.dark .nm,.tc.dark .mvn,.tc.dark .dmg{color:#f1f3f5}
+.tc.dark .nm .ep,.tc.dark .nm small{color:#ced4da}
+.tc.dark .mvd,.tc.dark .fl,.tc.dark .ft{color:#ced4da}
+.tc.dark .tg .l{color:#adb5bd}
+.tc.dark .tg>div,.tc.dark .tg .v{color:#f1f3f5}
+.tc.dark .tg{border-color:rgba(255,255,255,.25);box-shadow:none}
+.tc.dark .tg>div+div{border-left-color:rgba(255,255,255,.2)}
+.tc.dark .stage{background:linear-gradient(180deg,#868e96,#495057);color:#f1f3f5}
+.mc.dark .mci{background:linear-gradient(170deg,#3b4046,#212529)}
+.mc.dark .mn{color:#f1f3f5}
+.mc.dark .mw,.mc.dark .mh b{color:#ced4da}
 /* 상시 카드 머리 */
 .baseh{max-width:420px;margin:30px auto 8px;font-size:13px;font-weight:800;color:#868e96;border-top:1px solid var(--line);padding-top:14px}
 .baseh small{display:block;font-size:11px;font-weight:600;color:var(--muted);padding-top:2px}
@@ -284,7 +297,7 @@ function cell(l, v, s, col){ return '<div class="cell"><div class="l">' + esc(l)
 var RTYPE = {1:['#1c7ed6','#d0ebff','💧','지수'],2:['#339af0','#d0ebff','💧','지수'],3:['#1971c2','#d0ebff','💧','지수'],
   4:['#2b8a3e','#d3f9d8','🍃','개별주'],7:['#37b24d','#ebfbee','🍃','개별주'],8:['#40c057','#d3f9d8','🍃','개별주'],
   5:['#d9822b','#ffe8cc','✨','금'],6:['#f59f00','#fff3bf','⚡','반도체'],9:['#fab005','#fff9db','⚡','반도체'],
-  10:['#495057','#e9ecef','🌑','인버스'],11:['#e03131','#ffe3e3','🔥','위기'],12:['#868e96','#f1f3f5','·','상시']};
+  10:['#343a40','#495057','🌑','인버스'],11:['#e03131','#ffe3e3','🔥','위기'],12:['#868e96','#f1f3f5','·','상시']};
 // 등급별 테두리(GPT가 그린 그림, 가운데는 비움): S 홀로 · A 금 · B+ 은 · B 동
 function tier(g){ g = String(g || 'B'); return g[0] === 'S' ? 'S' : g[0] === 'A' ? 'A' : g === 'B+' ? 'Bp' : g === 'C' ? 'C' : 'B'; }
 function frameCss(g, w){ return ''; }
@@ -307,7 +320,7 @@ function card(c){
   var cost = ({S:4,'A+':3,A:3,'B+':2,B:2,C:1})[g] || 2, ci = ''; for (var i = 0; i < cost; i++) ci += '<i></i>';
   var desc = (c.when ? '언제 · ' + c.when : '') + (c.hold ? '\n어떻게 · ' + c.hold : '');
   var sub = !kr && c.kn && c.kn !== c.n ? c.kn : (kr && c.code ? c.code : '');
-  return '<div class="tc g' + tier(g) + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="in">' +
+  return '<div class="tc g' + tier(g) + (no === 10 ? ' dark' : '') + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="in">' +
     '<div class="hd"><span class="stage">' + esc(ty[3]) + '</span><div class="nm">' + (ep ? '<span class="ep">' + esc(ep) + '</span> ' : '') + esc(c.n) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' +
       badge(g, 1) + '<div class="orb">' + ty[2] + '</div></div>' +
     '<div class="art"><div class="no">' + (CIRC.charAt(no - 1) || '★') + '</div>' + (no ? '<img src="a/art/' + (c.art || 'r' + nn) + '.webp" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
@@ -345,7 +358,7 @@ function ruleCardObj(r){ var lg = liveGrade(r[0]);
     grid: [['익절', r[7], '#2b8a3e'], ['손절', r[8], '#e03131'], ['보유기간', r[9]], ['처음 등급', r[3]]] }; }
 function binderHTML(){ var h = '<div class="bdh">카드를 누르면 크게 볼 수 있어요</div><div class="bind">';
   RCARDS.forEach(function(r, i){ var ty = RTYPE[r[0]], nn = r[0] < 10 ? '0' + r[0] : '' + r[0], lg = liveGrade(r[0]) || r[3];
-    h += '<button class="mc g' + tier(lg.split('·')[0]) + '" data-i="' + i + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="mci"><div class="mh"><b>' + CIRC.charAt(r[0] - 1) + '</b>' + badge(lg.split('·')[0]) + '</div>' +
+    h += '<button class="mc g' + tier(lg.split('·')[0]) + (r[0] === 10 ? ' dark' : '') + '" data-i="' + i + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="mci"><div class="mh"><b>' + CIRC.charAt(r[0] - 1) + '</b>' + badge(lg.split('·')[0]) + '</div>' +
       '<div class="ma"><div class="no">' + CIRC.charAt(r[0] - 1) + '</div><img src="a/art/r' + nn + '.webp" alt="" loading="lazy" onerror="this.remove()"></div>' +
       '<div class="mn">' + esc(ruleCardObj(r).s.slice(2)) + '</div><div class="mw">' + ty[2] + ' ' + esc(EPI[r[0]][0] + ' ' + r[1]) + '</div></div></button>'; });
   return h + '</div>'; }
