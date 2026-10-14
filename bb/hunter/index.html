@@ -142,6 +142,9 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 .mc.dark .mci{background:linear-gradient(170deg,#3b4046,#212529)}
 .mc.dark .mn{color:#f1f3f5}
 .mc.dark .mw,.mc.dark .mh b{color:#ced4da}
+/* 사이트 설명(C+ 이상 카드 아래, 상시 카드 위) */
+.about{max-width:420px;margin:22px auto 4px;padding:0 6px;text-align:center;font-size:11px;line-height:1.6;color:#868e96;word-break:keep-all}
+.about b{font-weight:700;color:#6c757d}
 /* 상시 카드 머리 */
 .baseh{max-width:420px;margin:30px auto 8px;font-size:13px;font-weight:800;color:#868e96;border-top:1px solid var(--line);padding-top:14px}
 .baseh small{display:block;font-size:11px;font-weight:600;color:var(--muted);padding-top:2px}
@@ -377,6 +380,7 @@ function render(){
     var cs = (r.cards || []).slice().sort(function(a, b){ return RANK.indexOf(a.g) - RANK.indexOf(b.g); });
     if (!cs.length) html += '<div class="note">' + esc(state.title || '지금은 매수 의견이 없어요.') + '</div>';
     cs.forEach(function(c){ html += card(c); });
+    html += '<div class="about">투자하며 떠올린 아이디어를 법칙으로 만들고, 클로드와 실제 데이터로 검증해 성공률에 따라 등급을 매겼다.<br>지금 상황에 가장 맞는 카드를 추천하며, 방법은 주기적으로 다시 검증해 등급을 새로 매긴다.<br><b>투자 선택은 각자의 몫, 참고만 하시길</b> (돈 잃어도 책임 못 짐)</div>';
     var bs = r.base || [];
     if (bs.length) { html += '<div class="baseh">상시 카드 · C등급 <small>C등급은 아직 효과가 검증되지 않았거나 보유 기간이 긴 방법이에요. 규칙 신호와 상관없이 언제 사도 되는 교과서적 장기 전략(수익은 낮거나 느림)</small></div>'; bs.forEach(function(c){ html += card(c); }); }
   }
