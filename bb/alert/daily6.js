@@ -80,7 +80,9 @@
       let hit = null; for (let t = nU - 3; t < nU; t++) { const d = uso[t].dt.slice(0, 10), ur = U[t] / U[t - 1] - 1; const si = spy.findIndex(x => x.dt.slice(0, 10) === d); if (si < 1) continue; const sr = S[si] / S[si - 1] - 1; const qi = qqq.findIndex(x => x.dt.slice(0, 10) === d); const up = qi >= 200 && Q[qi] > ma(Q, 200, qi);
         if (sr < 0 && up && ur >= 0.05) hit = { d, ur, sr, g: 'A' }; else if (sr < 0 && up && ur >= 0.04 && t === nU - 1) hit = hit || { d, ur, sr, g: 'B' }; }
       state.push('③ 유가(USO) 전일 ' + pct(U[nU - 1] / U[nU - 2] - 1));
-      if (hit) { const c = card(hit.g, '③ 유가 급등', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: px.TQQQ ? fu(px.TQQQ * 1.30) : '+30%', stop: px.TQQQ ? fu(px.TQQQ * 0.85) : '−15%', hold: '최대 20거래일 · 실제 산 값 기준 +30% 익절 / −15% 손절 · 20일째 종가 매도 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `유가 ${pct(hit.ur)} · S&P ${pct(hit.sr)} · QQQ 200일선 위. 2004~2026 TQQQ 20일 +13.5% 승 78%` }); (hit.g === 'B' ? near : cards).push(c); } }
+      if (hit) { const c = card(hit.g, '③ 유가 급등', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: px.TQQQ ? fu(px.TQQQ * 1.30) : '+30%', stop: px.TQQQ ? fu(px.TQQQ * 0.85) : '−15%', hold: '최대 20거래일 · 실제 산 값 기준 +30% 익절 / −15% 손절 · 20일째 종가 매도 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `유가 ${pct(hit.ur)} · S&P ${pct(hit.sr)} · QQQ 200일선 위. 2004~2026 TQQQ 20일 +13.5% 승 78%` }); (hit.g === 'B' ? near : cards).push(c); }
+      { const t = nU - 1, d = uso[t].dt.slice(0, 10), ur = U[t] / U[t - 1] - 1; const si = spy.findIndex(x => x.dt.slice(0, 10) === d); const qi = qqq.findIndex(x => x.dt.slice(0, 10) === d);
+        if (si > 0 && qi >= 200 && S[si] < S[si - 1] && Q[qi] > ma(Q, 200, qi) && ur >= 0.03 && px.TQQQ) cards.push(card('A', '③ 유가 급등 · 단타', 'TQQQ', '나스닥100 3배', px.TQQQ, { v: 1, hd: 3, tgt: fu(px.TQQQ * 1.05), stop: fu(px.TQQQ * 0.92), when: '오늘 밤 정규장 시가', hold: '최대 3거래일 · 실제 산 값 기준 +5% 익절 / −8% 손절 · 3일째 종가 매도', why: `유가 ${pct(ur)} · S&P 하락 · QQQ 200일선 위. 짧게: 2011~2026 55건 3일 안에 71% 성공, 평균 +1.7%(세 기간 모두 아무 날보다 나음)` })); } }
 
     // ⑤ 금리·금·은 동반 하락 → UGL 20일 (금리는 IEF로 대신: 금리 하락 = IEF 상승)
     { const dg = byDate(gld), ds = byDate(slv), di = byDate(ief), dsp = byDate(spy);
@@ -89,13 +91,15 @@
       const z = (m, i) => { const xs = []; for (let k = i - 250; k < i; k++) xs.push(r(m, k)); return (r(m, i) - avg(xs)) / sd(xs); };
       let hit = null; for (let i = n - 3; i < n; i++) { const zg = z(dg, i), zs = z(ds, i), zi = z(di, i); if (zg <= -1 && zs <= -1 && zi >= 1) { const sp = r(dsp, i) < 0; const G = gld.map(x => x.close); const gi = gld.findIndex(x => x.dt.slice(0, 10) === days[i]); const g50 = G[gi] > ma(G, 50, gi); hit = { d: days[i], g: sp && g50 ? 'S' : sp ? 'A' : 'B', zg, zs }; } }
       state.push('⑤ 금 전일 ' + pct(r(dg, n - 1)));
-      if (hit) { const c = card(hit.g, '⑤ 금·금리 동반 하락', 'UGL', '금 2배', px.UGL, { tgt: px.UGL ? fu(px.UGL * 1.15) : '+15%', stop: px.UGL ? fu(px.UGL * 0.90) : '−10%', hold: '최대 20거래일 · 실제 산 값 기준 +15% 익절 / −10% 손절 · 20일째 종가 매도 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `금리·금·은 함께 급락(금 z ${hit.zg.toFixed(1)}) · ${hit.g === 'B' ? 'S&P 상승일이라 약함' : 'S&P도 하락'}. UGL 20일 +7.0% 승 77%` }); (hit.g === 'B' ? near : cards).push(c); } }
+      if (hit) { const c = card(hit.g, '⑤ 금·금리 동반 하락', 'UGL', '금 2배', px.UGL, { tgt: px.UGL ? fu(px.UGL * 1.15) : '+15%', stop: px.UGL ? fu(px.UGL * 0.90) : '−10%', hold: '최대 20거래일 · 실제 산 값 기준 +15% 익절 / −10% 손절 · 20일째 종가 매도 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `금리·금·은 함께 급락(금 z ${hit.zg.toFixed(1)}) · ${hit.g === 'B' ? 'S&P 상승일이라 약함' : 'S&P도 하락'}. UGL 20일 +7.0% 승 77%` }); (hit.g === 'B' ? near : cards).push(c);
+        if (hit.g !== 'B' && px.UGL) cards.push(card('B+', '⑤ 금·금리 동반 하락 · 단타', 'UGL', '금 2배', px.UGL, { v: 1, hd: 10, tgt: fu(px.UGL * 1.08), stop: fu(px.UGL * 0.92), hold: '최대 10거래일 · 실제 산 값 기준 +8% 익절 / −8% 손절 · 10일째 종가 매도', why: '같은 신호를 짧게: 2009~2026 30건 10일 안에 67% 성공, 평균 +2.4%(세 기간 모두 아무 날보다 나음)' })); } }
 
     // ⑥ QQQ 200일선 위 + 반도체 5일 −7% → TQQQ 20일(−15% 손절)
     { const X = soxx.map(x => x.close), nX = X.length; const s5 = (t) => X[t] / X[t - 5] - 1; const recent = [...Array(10).keys()].some(k => s5(nX - 2 - k) <= -0.07);
       state.push('⑥ 반도체 5일 ' + pct(s5(nX - 1)));
       if (qUp200 && s5(nX - 1) <= -0.07 && !recent) cards.push(card('A', '⑥ 반도체만 급락', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: px.TQQQ ? fu(px.TQQQ * 1.25) : '+25%', stop: px.TQQQ ? fu(px.TQQQ * 0.85) : '−15%', hold: '최대 20거래일 · 실제 산 값 기준 +25% 익절 / −15% 손절 필수 · 20일째 종가 매도 · 오늘 밤 정규장 시가까지 사야 함(늦으면 수익 급감)', why: `반도체(SOXX) 5일 ${pct(s5(nX - 1))} · QQQ 200일선 위. TQQQ 20일 +8.7% 승 74%` }));
-      else if (qUp200 && s5(nX - 1) <= -0.05 && !recent) near.push(card('B', '⑥ 반도체 급락 근접', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: '-', stop: '-', hold: '매수 안 함', why: `반도체 5일 ${pct(s5(nX - 1))} (발동 −7%)` })); }
+      else if (qUp200 && s5(nX - 1) <= -0.05 && !recent) near.push(card('B', '⑥ 반도체 급락 근접', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: '-', stop: '-', hold: '매수 안 함', why: `반도체 5일 ${pct(s5(nX - 1))} (발동 −7%)` }));
+      if (qUp200 && s5(nX - 1) <= -0.07 && !recent && px.TQQQ) cards.push(card('A', '⑥ 반도체만 급락 · 단타', 'TQQQ', '나스닥100 3배', px.TQQQ, { v: 1, hd: 3, tgt: fu(px.TQQQ * 1.06), stop: fu(px.TQQQ * 0.90), hold: '최대 3거래일 · 실제 산 값 기준 +6% 익절 / −10% 손절 · 3일째 종가 매도 · 오늘 밤 정규장 시가', why: '같은 신호를 짧게: 2010~2026 36건 3일 안에 78% 성공, 평균 +2.6%(세 기간 모두 아무 날보다 나음)' })); }
 
     // ④ 실적 좋은 종목 급락 + 커뮤니티 공포 여론
     if (!opt.skipD) { try {

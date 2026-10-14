@@ -45,7 +45,8 @@
       when: '10년 금리 4.5% 이상인 동안 · 몇 주~몇 달에 나눠서',
       hold: '5년 이상 · 주식이 크게 빠질 때 버팀목(그때 팔아 주식 사기)',
       why: `10년 금리 ${y.toFixed(2)}%(${y10[0].slice(5)}), 물가 예상 ${bei ? bei[1].toFixed(2) : '-'}% → 실질 약 ${bei ? (y - bei[1]).toFixed(1) : '-'}%. 금리가 더 오르면 시세는 더 빠지지만(1%p 오르면 약 −7%) 이자로 메워지고, 경기가 꺾여 금리가 내리면 시세 이익. 10년 금리가 4.5% 아래로 내려가면 이 카드는 사라져요.` })); if (c) cards.push(c); }
-    const ART = { SGOV: 'c1', QQQ: 'c2', QLD: 'c3', IEF: 'c4' }; cards.forEach(c => { c.art = ART[c.n]; }); // 상시 카드마다 다른 그림
+    const ART = { SGOV: 'c1', QQQ: 'c2', QLD: 'c3', IEF: 'c4' }; cards.forEach(c => { c.art = ART[c.n]; });
+    // 쉬운 말 설명은 웹 화면(index.html CSAY)에 있음 — 알림 글자 수 제한 때문 // 상시 카드마다 다른 그림
     return cards;
   };
 })();

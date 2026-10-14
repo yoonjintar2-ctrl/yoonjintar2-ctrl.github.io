@@ -93,7 +93,7 @@
   window.__applyRuleCaps = function (A) {
     let st = null; try { st = JSON.parse(localStorage.getItem('ruleStats') || 'null'); } catch (e) {} if (!st) return A;
     const keep = [], toNear = [];
-    for (const c of A.cards) { const r = (c.s || '').trim().charAt(0); const cap = st.rules[r] && st.rules[r].g; if (!cap) { keep.push(c); continue; }
+    for (const c of A.cards) { const r = (c.s || '').trim().charAt(0); const cap = !c.v && st.rules[r] && st.rules[r].g; if (!cap) { keep.push(c); continue; } // 단타 버전은 자기 기록으로 따로
       if (cap === 'B') { c.g = 'B'; c.why = (c.why || '') + ' · 주간 점검에서 B(알림 멈춤)'; toNear.push(c); continue; }
       if (GR.indexOf(c.g) > GR.indexOf(cap)) { c.why = (c.why || '') + ` · 주간 점검 상한 ${cap}(원래 ${c.g})`; c.g = cap; }
       keep.push(c); }
@@ -104,9 +104,9 @@
   window.__logCards = function (A) {
     const HOLD = { '①': 40, '②': 15, '③': 20, '④': 20, '⑤': 20, '⑥': 20, '⑧': 20, '⑨': 15, '⑩': 10 }; // ⑦은 당일 매매라 vlog로 따로
     let log = []; try { log = JSON.parse(localStorage.getItem('cardlog') || '[]'); } catch (e) {}
-    for (const c of A.cards || []) { const r = (c.s || '').trim().charAt(0); const px = +(String(c.px || '').replace(/[^0-9.]/g, '')); if (!HOLD[r] || !(px > 0)) continue;
+    for (const c of A.cards || []) { const r0 = (c.s || '').trim().charAt(0), r = c.v ? r0 + 's' : r0; const px = +(String(c.px || '').replace(/[^0-9.]/g, '')); const hh = c.v ? c.hd : HOLD[r0]; if (!hh || !(px > 0)) continue; // 단타 버전(v)은 'rs'로 따로 기록
       const d = A.lastDay || new Date().toISOString().slice(0, 10); if (log.some(x => x.r === r && x.n === c.n && Math.abs(new Date(x.d) - new Date(d)) < 5 * 864e5)) continue;
-      log.push({ r, n: c.n, code: c.code || null, d, px, h: HOLD[r], g: c.g }); }
+      log.push({ r, n: c.n, code: c.code || null, d, px, h: hh, g: c.g }); }
     try { localStorage.setItem('cardlog', JSON.stringify(log.slice(-500))); } catch (e) {}
   };
 })();
