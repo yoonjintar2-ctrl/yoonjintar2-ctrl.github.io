@@ -241,6 +241,14 @@
     alert.fresh = fresh.map(c => c.g + '등급 ' + c.n);
     if (!fresh.length && tags.indexOf('quiet') < 0) tags.push('quiet');
     const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: alert.title, message: body, tags, priority: (alert.sPlus || []).length ? 4 : 2 }) });
+    // C등급 카드(상시·조건)는 글자 수 제한(3800바이트) 때문에 본문에서 빠질 수 있어 따로 한 번 더 보냄(v 없이 k:'cset' → 웹이 아래쪽에 붙임)
+    if ((alert.base || []).length || (alert.cond || []).length) try {
+      const sl = c => Object.assign({}, c, { ln: undefined, why: (c.why || '').slice(0, 150) });
+      let cb = (alert.base || []).map(sl), cc2 = (alert.cond || []).map(sl), mk2 = () => JSON.stringify({ k: 'cset', time: alert.time, base: cb, cond: cc2 }), b2 = mk2();
+      while (enc.encode(b2).length > 3800 && (cb.concat(cc2)).some(c => c.why)) { cb.concat(cc2).forEach(c => { c.why = (c.why || '').slice(0, Math.max(0, (c.why || '').length - 40)); }); b2 = mk2(); }
+      while (enc.encode(b2).length > 3800 && cc2.length) { cc2.pop(); b2 = mk2(); }
+      await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: 'C등급 카드', message: b2, tags: ['quiet', 'cset'], priority: 1 }) });
+    } catch (e) {}
     if (r.status === 200 && all.length) { all.forEach(c => { seen[key(c)] = now; }); for (const k in seen) if (now - seen[k] > 30 * 86400e3) delete seen[k]; try { localStorage.setItem('d6seen', JSON.stringify(seen)); } catch (e) {} }
     return r.status;
   };

@@ -125,17 +125,27 @@
           if (good) { try { stb = (await post(`${INFO}/api/v2/stock-infos/stability/${s.code}`, {})).result; } catch (e) {}
             if (!stb || stb.liabilityRatio == null || stb.liabilityRatio >= 200 || (stb.interestCoverageRatio != null && stb.interestCoverageRatio <= 3)) good = false; }
         } catch (e) {}
-        // 급락일(미국 날짜 D) 기준 한국시각 D−1 12:00 ~ D+1 12:00 사이 댓글을 세 구간에서 최대 33개씩 + 구간 안 전체 댓글 수(nIn)
+        // 급락일(미국 날짜 D) 기준 한국시각 D−1 12:00 ~ D+1 12:00 사이 댓글을 세 구간에서 최대 333개씩(전체 약 1000개) + 구간 안 전체 댓글 수(nIn)
+        //   2026-10-15 석진: 99개(33개씩)는 표본이 작다 → 1000개로. 비율은 구간별로 낸 뒤 평균(검증 때와 같은 구간 가중). 구간이 끝난 종목은 결과를 저장해 다시 안 읽음
         const D0 = new Date(s.d + 'T00:00:00+09:00').getTime(), wins = [6, 30, 36].map(h => [D0 + (h - 18) * 3600e3, D0 + h * 3600e3]);
-        const got = wins.map(() => []); let id = null, nIn = 0;
-        for (let p = 0; p < 40; p++) { const j = await get(`${CERT}/api/v4/comments?subjectType=STOCK&subjectId=${s.code}&commentSortType=RECENT` + (id ? '&lastCommentId=' + id : '')); const r = (j.result && j.result.results) || []; if (!r.length) break;
-          for (const x of r) { const t = new Date(x.createdAt).getTime(); const m = ((x.message && x.message.title) || '') + ' ' + ((x.message && x.message.message) || ''); if (t >= wins[0][0] && t <= wins[2][1]) nIn++; wins.forEach((w, k) => { if (t >= w[0] && t <= w[1] && got[k].length < 33) got[k].push(m); }); }
-          id = r[r.length - 1].commentId; if (new Date(r[r.length - 1].createdAt).getTime() < wins[0][0]) break; }
-        const all = [].concat(...got); if (all.length < 15) continue;
-        const sh = (re) => all.filter(m => re.test(m)).length / all.length; const emo = sh(EMO), buy = sh(BUY), wry = sh(WRY), fear = sh(FEAR);
+        const CK = 'd6c4:' + s.code + ':' + s.d, RES = { EMO, BUY, WRY, FEAR, UJ };
+        let cc = null; try { cc = JSON.parse(localStorage.getItem(CK) || 'null'); } catch (e) {}
+        if (!cc) {
+          const got = wins.map(() => []); let id = null, nIn = 0;
+          for (let p = 0; p < 160; p++) { const j = await get(`${CERT}/api/v4/comments?subjectType=STOCK&subjectId=${s.code}&commentSortType=RECENT` + (id ? '&lastCommentId=' + id : '')); const r = (j.result && j.result.results) || []; if (!r.length) break;
+            for (const x of r) { const t = new Date(x.createdAt).getTime(); const m = ((x.message && x.message.title) || '') + ' ' + ((x.message && x.message.message) || ''); if (t >= wins[0][0] && t <= wins[2][1]) nIn++; wins.forEach((w, k) => { if (t >= w[0] && t <= w[1] && got[k].length < 333) got[k].push(m); }); }
+            id = r[r.length - 1].commentId; if (new Date(r[r.length - 1].createdAt).getTime() < wins[0][0] || got.every(g => g.length >= 333)) break; }
+          const n = new Set([].concat(...got)).size, ws = got.filter(g => g.length >= 5), shr = {};
+          for (const k in RES) shr[k] = ws.length ? ws.reduce((a, g) => a + g.filter(m => RES[k].test(m)).length / g.length, 0) / ws.length : 0;
+          cc = { n, nIn, sh: shr };
+          if (Date.now() > wins[2][1] + 3600e3) try { localStorage.setItem(CK, JSON.stringify(cc)); for (let q = localStorage.length - 1; q >= 0; q--) { const k = localStorage.key(q); if (k && k.startsWith('d6c4:') && Date.now() - new Date(k.split(':')[2]).getTime() > 40 * 864e5) localStorage.removeItem(k); } } catch (e) {}
+        }
+        const nIn = cc.nIn, all = { length: cc.n }; if (cc.n < 15) continue;
+        const sh = (re) => cc.sh[Object.keys(RES).find(k => RES[k] === re)] || 0; const emo = sh(EMO), buy = sh(BUY), wry = sh(WRY), fear = sh(FEAR);
         let g = null; if (good) { if (emo >= 0.05 && buy < emo && wry < emo) g = 'S'; else if (emo >= 0.03 && buy < emo) g = 'A'; else if (fear >= 0.07) g = 'B'; }
+        if (g && cc.n < 100) g = g === 'S' ? 'A' : g === 'A' ? 'B+' : g; // 댓글 100개 미만은 표본이 작아 한 단계 낮춤
         if (g) {
-          LN[s.name] = s.ln; const c = card(g, '④ 실적주 공포 여론', s.name, s.name, s.px, { code: s.code, tgt: s.px ? fu(s.px * 1.20) : '+20%', stop: s.px ? fu(s.px * 0.85) : '−15%', hold: '20~60일 · 실제 산 값 기준 +20% 익절 / −15% 손절(일반 가이드, 개별주 검증 전) · 60일째 종가 매도', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%` });
+          LN[s.name] = s.ln; const c = card(g, '④ 실적주 공포 여론', s.name, s.name, s.px, { code: s.code, tgt: s.px ? fu(s.px * 1.20) : '+20%', stop: s.px ? fu(s.px * 0.85) : '−15%', hold: '20~60일 · 실제 산 값 기준 +20% 익절 / −15% 손절(일반 가이드, 개별주 검증 전) · 60일째 종가 매도', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%${cc.n < 100 ? ' · 댓글이 적어 등급 한 단계 낮춤' : ''}` });
           (g === 'B' ? near : cards).push(c); continue;
         }
         // ④ 억까 여론(C+ 관찰, 2026-10-14): 댓글 많은 급락주에서 '억까·세력·작전·털기'(억울하다·누가 일부러 누른다) 말이 3% 이상

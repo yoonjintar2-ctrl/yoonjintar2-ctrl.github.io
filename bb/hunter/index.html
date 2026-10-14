@@ -73,12 +73,12 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .status{text-align:center;font-size:11px;color:var(--muted);padding:14px 0 4px}
 .status.bad{color:var(--warn)}
 /* 트레이딩 카드 — 은색 테두리 + 규칙 색 카드 몸통(카드 게임 기본 구성), 등급은 등급 그림 + 반짝임 */
-.tc{--ty:#5c7cfa;--ty2:#dbe4ff;position:relative;overflow:hidden;margin:6px auto 18px;max-width:420px;padding:8px;border-radius:16px;background:linear-gradient(135deg,#f8f9fa,#ced4da 22%,#f1f3f5 40%,#adb5bd 62%,#e9ecef 80%,#ced4da);box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.tc{--ty:#5c7cfa;--ty2:#dbe4ff;position:relative;overflow:hidden;margin:6px auto 34px;max-width:420px;padding:8px;border-radius:16px;background:linear-gradient(135deg,#f8f9fa,#ced4da 22%,#f1f3f5 40%,#adb5bd 62%,#e9ecef 80%,#ced4da);box-shadow:0 4px 14px rgba(0,0,0,.22)}
 .tc .in{position:relative;z-index:1;border-radius:10px;padding:7px 10px 8px;background:radial-gradient(120% 60% at 15% 0%,rgba(255,255,255,.55),transparent 60%),radial-gradient(90% 50% at 100% 100%,rgba(255,255,255,.35),transparent 60%),linear-gradient(170deg,color-mix(in srgb,var(--ty) 30%,#fff),color-mix(in srgb,var(--ty) 50%,#fff) 55%,color-mix(in srgb,var(--ty) 38%,#fff));box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
 .tc .hd{display:flex;align-items:center;gap:6px;min-height:34px}
 .tc .stage{flex:none;font-size:10px;font-weight:800;color:#495057;background:linear-gradient(180deg,#fff,#ced4da);padding:2px 12px 2px 7px;clip-path:polygon(0 0,100% 0,85% 100%,0 100%);border-radius:3px 0 0 3px;font-style:italic;align-self:flex-start;margin-top:2px}
 .tc .nm{flex:1;min-width:0;font-size:21px;font-weight:900;letter-spacing:-.4px;line-height:1.15;word-break:keep-all;color:#1d232a}
-.tc .nm .ep{font-size:14px;font-weight:800;color:#343a40}
+.tc .nm .ep{display:block;font-size:13px;font-weight:800;color:#343a40;line-height:1.3}
 .tc .nm small{font-size:11px;font-weight:700;color:#495057;margin-left:4px}
 .tc .gimg{height:28px;width:auto;flex:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
 .tc .orb{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:radial-gradient(circle at 35% 30%,#fff,var(--ty) 75%);box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.35)}
@@ -101,17 +101,17 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .tc .tg .s{font-size:10.5px;font-weight:700;opacity:.85}
 .tc .spark{padding:4px 0 0}
 .tc .spark svg{height:26px}
-.tc .fl{margin:6px 0 0 18%;font-size:11px;line-height:1.45;color:#343a40;white-space:pre-line;text-align:left}
+.tc .fl{margin:6px 0 0;font-size:11px;line-height:1.45;color:#343a40;white-space:pre-line;text-align:left}
 .tc .ft{display:flex;justify-content:space-between;align-items:baseline;font-size:9px;color:#495057;padding-top:6px;font-style:italic}
 .tc .ft b{font-style:normal;font-weight:900;letter-spacing:.5px}
 /* 등급 표시: 문구 + 반짝임(S 무지개 · A 금빛 · B+ 은빛 · B 회색) */
 .bdg{display:inline-flex;align-items:baseline;gap:2px;flex:none;font-weight:900;font-size:12px;line-height:1;padding:4px 8px;border-radius:999px;color:#fff;background:#868e96;letter-spacing:-.3px;white-space:nowrap;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.3)}
 .bdg small{font-size:10px;font-weight:800;opacity:.9}
 .bdg.big{font-size:17px;padding:5px 10px}
-.bdg.tA{background:linear-gradient(110deg,#b8860b 0%,#f5c518 30%,#fff3b0 45%,#f5c518 60%,#b8860b 100%);background-size:250% 100%;color:#4a3300;}
-.bdg.tS{background:linear-gradient(110deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7,#b197fc,#ff6b6b);background-size:300% 100%;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45);box-shadow:0 0 0 1.5px #fff,0 0 8px rgba(255,255,255,.9)}
-.bdg.tC{background:#ced4da;color:#495057;box-shadow:none}
-.bdg.tBp{background:linear-gradient(110deg,#868e96,#dee2e6 45%,#868e96);background-size:250% 100%;color:#212529}
+.bdg.tA{background:linear-gradient(110deg,#aeb8c6 0%,#eef1f4 30%,#ffffff 45%,#d0d6de 60%,#9aa5b4 100%);background-size:250% 100%;color:#212529;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.35)}
+.bdg.tS{background:linear-gradient(110deg,#b8860b 0%,#f5c518 30%,#fff3b0 45%,#f5c518 60%,#b8860b 100%);background-size:250% 100%;color:#4a3300;box-shadow:0 0 0 1.5px #fff,0 0 8px rgba(255,212,59,.8)}
+.bdg.tC{background:#9aa1a9;color:#fff;box-shadow:0 0 0 1.5px #fff}
+.bdg.tBp,.bdg.tB{background:linear-gradient(110deg,#6b3a1f,#c98a63 45%,#6b3a1f);background-size:250% 100%;color:#fff}
 @keyframes shine{from{background-position:100% 0}to{background-position:-100% 0}}
 /* 도감 미니 카드: 칸 높이가 달라도 위아래 여백 같게 */
 .mc{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
@@ -177,8 +177,7 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .tc .simln{margin-top:7px;font-size:12px;font-weight:700;color:#343a40;background:rgba(255,255,255,.6);border-radius:6px;padding:5px 8px;cursor:pointer;line-height:1.45}
 .tc .simln u{font-weight:600;color:#1c7ed6;text-decoration:none;white-space:nowrap}
 .tc.dark .simln{background:rgba(255,255,255,.08);color:#e9ecef}
-.tc .freq{margin-top:6px;font-size:11px;font-weight:700;color:#495057;text-align:right}
-.tc.dark .freq{color:#ced4da}
+.freqo{max-width:420px;margin:-26px auto 34px;padding:0 6px;font-size:11px;font-weight:400;color:#adb5bd;text-align:right}
 .simpop[hidden]{display:none}
 .simpop{position:fixed;inset:0;z-index:90;background:rgba(10,14,20,.6);display:grid;place-items:center;padding:20px}
 .simbox{max-width:380px;width:100%;background:#fff;border-radius:14px;padding:16px 16px 10px;font-size:13px;line-height:1.6;color:#343a40;white-space:pre-line;box-shadow:0 6px 24px rgba(0,0,0,.3)}
@@ -203,7 +202,7 @@ html{background:#1d232a}
 .mast .head h1 .bi{background:rgba(255,255,255,.08);border-radius:10px;padding:3px}
 /* C+ 관찰 카드: 무광 회색 테두리(동색 B와 구분), 등급 표시도 회색 */
 .tc.gCp,.mc.gCp{background:linear-gradient(135deg,#6c757d,#3d434a 30%,#59616a 55%,#2f343a 80%,#4f565e)}
-.bdg.tCp{background:#e9ecef;color:#495057;box-shadow:0 0 0 1.5px #adb5bd}
+.bdg.tCp{background:linear-gradient(110deg,#3d434a,#6c757d 45%,#3d434a);color:#fff;box-shadow:0 0 0 1.5px #fff}
 /* 매수 금지 카드(등급은 따로, 예: C-): 검은 테두리 + 붉은 기운 */
 .tc.gZ,.mc.gZ{background:linear-gradient(135deg,#495057,#0b0d10 25%,#343a40 45%,#000 65%,#5c1f1f 85%,#212529)}
 .bdg.tZ{background:#000;color:#ff8787;box-shadow:0 0 0 1.5px #ff8787}
@@ -330,7 +329,7 @@ var LS = { get: function(k, d){ try { var v = localStorage.getItem(k); return v 
            set: function(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} } };
 var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
 
-var state = { result: LS.get('bh_result', null), resultTime: LS.get('bh_resultTime', 0), title: LS.get('bh_title', ''),
+var state = { result: LS.get('bh_result', null), resultTime: LS.get('bh_resultTime', 0), cset: LS.get('bh_cset', null), csetTime: LS.get('bh_csetTime', 0), title: LS.get('bh_title', ''),
   chat: LS.get('bh_chat', []), seen: {}, reqAt: 0, ackAt: 0, doneAt: 0, fail: '', chatWaitAt: LS.get('bh_chatWait', 0) };
 
 // ── 시계 · n분 전 업데이트
@@ -423,9 +422,8 @@ function card(c, sh){
       '<div><div class="l">보유기간</div><div class="v" style="font-size:12px">' + brk(hold) + '</div></div></div>') +
     spark(c.ln, g) +
     '<div class="fl">' + esc(c.why || '') + '</div>' +
-    (RSIM[key] ? '<div class="freq">' + esc(freqLine(key)) + '</div>' : '') +
     '<div class="ft"><span>수리수리진타리 · 규칙 ' + (CIRC.charAt(no - 1) || '') + (c.rr && c.rr !== '-' ? ' · 손익비 ' + esc(c.rr) : '') + '</span><b>' + esc(ty[3]) + ' ' + esc(g) + '</b></div>' +
-  '</div></div>';
+  '</div></div>' + (RSIM[key] ? '<div class="freqo">' + esc(freqLine(key)) + '</div>' : '');
 }
 // ── 규칙 카드 도감(매수 규칙 화면)
 var RCARDS = [
@@ -532,9 +530,9 @@ function render(){
     if (!cs.length) { var tt = String(state.title || '매수 의견 없음'), k = tt.indexOf(' · '); html += '<div class="none"><b>' + esc(k > 0 ? tt.slice(0, k) : tt) + '</b>' + (k > 0 ? '<small>' + esc(tt.slice(k + 3)) + '</small>' : '') + '</div>'; }
     (r.z || []).forEach(function(c){ html += card(c, 1); }); // 매수 금지 카드는 맨 위
     cs.forEach(function(c){ html += card(c, 1); });
-    (r.cond || []).forEach(function(c){ html += card(c, 1); }); // 조건이 맞을 때만 뜨는 C카드(SGOV·QLD·IEF)
+    var CS = state.cset || {}; (r.cond || CS.cond || []).forEach(function(c){ html += card(c, 1); }); // 조건이 맞을 때만 뜨는 C카드(SGOV·QLD·IEF)
     html += '<div class="about">투자하며 떠올린 아이디어를 법칙으로 만들고, 클로드와 실제 데이터로 검증해 성공률에 따라 등급을 매겼다.<br>지금 상황에 가장 맞는 카드를 추천하며, 방법은 주기적으로 다시 검증해 등급을 새로 매긴다.<br><b>투자 선택은 각자의 몫, 참고만 하시길</b> (돈 잃어도 책임 못 짐)</div>';
-    var bs = r.base || [];
+    var bs = r.base || CS.base || [];
     if (bs.length) { html += '<div class="baseh">상시 카드 · C등급 <small>C등급은 아직 효과가 검증되지 않았거나 보유 기간이 긴 방법이에요. 규칙 신호와 상관없이 언제 사도 되는 교과서적 장기 전략(수익은 낮거나 느림)</small></div>'; bs.forEach(function(c){ html += card(c, 1); }); }
   }
   L.innerHTML = html;
@@ -640,6 +638,7 @@ function handle(m, live){
   if (tags.indexOf('ack') >= 0) { if (m.time * 1000 >= state.reqAt - 5000) state.ackAt = m.time * 1000; return; }
   if (body.charAt(0) === '{') {
     try { var j = JSON.parse(body); } catch(e) { return; }
+    if (j.k === 'cset') { if (m.time >= (state.csetTime || 0)) { state.cset = j; state.csetTime = m.time; LS.set('bh_cset', j); LS.set('bh_csetTime', m.time); render(); } return; }
     if ((j.v || 0) >= 2 && m.time >= (state.resultTime || 0)) {
       state.result = j; state.resultTime = m.time; state.title = m.title || '';
       LS.set('bh_result', j); LS.set('bh_resultTime', m.time); LS.set('bh_title', state.title);
