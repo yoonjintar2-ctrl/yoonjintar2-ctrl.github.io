@@ -489,7 +489,7 @@ function ruleCardObj(r){ if (r[0] === 13 && typeof r[12] === 'string') return { 
     v: r[12] ? 1 : 0, art: r[13] || undefined, ep: EPI[r[0]][0], tp: r[6], rule: 1, dex: typeof r[12] === 'string' ? '규칙 카드 · 같은 번호의 다른 신호(관찰 중)' : r[12] ? '규칙 카드 · 같은 신호를 짧게 치고 빠지는 단타 버전' : '규칙 카드' + (lg ? ' · 이번 주 성적표 ' + lg + '등급' : ''), why: r[11],
     grid: [['익절', r[7], '#2b8a3e'], ['손절', r[8], '#e03131'], ['보유기간', r[9]]] }; }
 function binderHTML(){ var h = '<div class="glegend"><b>등급</b> S 강력 매수(과거 승률 높고 수익 큼) · A 매수 · B+ 소액 매수 · B 참고만(알림 없음)<br>C+ 관찰: 아직 효과를 검증 중인 방법, 조건이 되면 카드로 보여 주고 실전 기록이 좋으면 등급을 올려요(알림 없음)<br>C 상시: 언제 사도 되는 장기 보유 전략(수익이 느림, 화면 맨 아래)<br>매수 금지 카드(어두운 카드): ‘지금은 사지 마세요’ 경고도 근거가 얼마나 단단한지로 등급을 매겨요. C-는 근거가 약하거나 표본이 적은 경고예요(화면 맨 위, 알림 없음)<br><small>‘· 단타’ 카드는 같은 신호를 더 짧게 치고 빠지는 버전이에요. 알림은 B+ 이상만 울려요.</small></div><div class="bdh">카드를 누르면 크게 볼 수 있어요</div><div class="bind">';
-  var ord = RCARDS.map(function(r, i){ return i; }).sort(function(a, b){ var ga = ((RCARDS[a][12] ? '' : liveGrade(RCARDS[a][0])) || RCARDS[a][3]).split('·')[0], gb = ((RCARDS[b][12] ? '' : liveGrade(RCARDS[b][0])) || RCARDS[b][3]).split('·')[0]; return (RANK.indexOf(ga) - RANK.indexOf(gb)) || (RCARDS[a][0] - RCARDS[b][0]); });
+  var ord = RCARDS.map(function(r, i){ return i; }).filter(function(i){ return RISK_SHOW || RCARDS[i][0] !== 10; }).sort(function(a, b){ var ga = ((RCARDS[a][12] ? '' : liveGrade(RCARDS[a][0])) || RCARDS[a][3]).split('·')[0], gb = ((RCARDS[b][12] ? '' : liveGrade(RCARDS[b][0])) || RCARDS[b][3]).split('·')[0]; return (RANK.indexOf(ga) - RANK.indexOf(gb)) || (RCARDS[a][0] - RCARDS[b][0]); });
   ord.forEach(function(i){ var r = RCARDS[i], ty = RTYPE[r[0]], nn = r[0] < 10 ? '0' + r[0] : '' + r[0], lg = (r[12] ? '' : liveGrade(r[0])) || r[3];
     var T = r[0] === 13 ? 'Z' : tier(lg.split('·')[0]); h += '<button class="mc g' + T + (r[0] === 10 || r[0] === 13 ? ' dark' : '') + '" data-i="' + i + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="mci"><div class="mh"><b>' + (CIRC.charAt(r[0] - 1) || 'ⓒ') + '</b>' + badge(lg.split('·')[0], 0, T) + '</div>' +
       '<div class="ma"><div class="no">' + CIRC.charAt(r[0] - 1) + '</div><img src="a/art/' + (r[13] || 'r' + nn) + '.webp" alt="" loading="lazy" onerror="this.remove()"></div>' +
@@ -524,8 +524,9 @@ function opinionOf(rk){ if (rk.op) return rk.op; var sh = rk.sh, v = rk.v;
   if (v >= 90) return '위험 모드 → 반도체·레버리지 비중 줄이고, 새로 살 땐 평소의 절반만';
   if (v >= 80) return '경계 → 레버리지 새 매수는 자제, 1배 보유는 유지';
   if (v >= 60) return '주의 → 평소대로, 레버리지는 가볍게'; return '보통 → 평소대로 운용'; }
+var RISK_SHOW = false; // 2026-10-14 석진: 반반도체지수는 숨기고 보관(⑫ 조용한 눌림·반도체 과열 카드가 대신). true로 바꾸면 다시 보임
 function riskBar(rk){
-  var b = $('rbar'); if (!rk || rk.v == null) { b.hidden = true; return; }
+  var b = $('rbar'); if (!RISK_SHOW || !rk || rk.v == null) { b.hidden = true; return; }
   b.hidden = false; var c = riskColor(rk.v); b.style.background = c[0]; b.style.color = c[1];
   $('rnum').textContent = rk.v;
   $('rl').textContent = '반반도체지수 · ' + (rk.lv || '') + (rk.d ? ' · ' + rk.d.slice(5) + ' 마감' : '');
@@ -724,7 +725,7 @@ function statsText(){ var st = state.result && state.result.st; if (!st || !st.r
     if (x[1] !== '실전') t += ' · 실전 ' + (x[6] ? x[6] + '건 승률 ' + x[7] + '%' : '기록 쌓는 중');
     t += '\n'; });
   return t + '\n등급: S 점수 4↑ · A 2↑ · B+ 1↑ · 그 밖 또는 기대 이익 0 이하는 B · C+ 아직 검증 중(실전 기록으로 채점) · C 장기 상시 카드\n\n'; }
-$('bInfo').onclick = function(){ var rest = RULES.replace(/■ [①-⑪][\s\S]*?(?=■ 화면 아래)/, '');
+$('bInfo').onclick = function(){ var rest = RULES.replace(/■ [①-⑪][\s\S]*?(?=■ 화면 아래)/, ''); if (!RISK_SHOW) rest = rest.replace(/■ 화면 아래 반반도체지수[\s\S]*?(?=■|$)/, '');
   $('rules').innerHTML = binderHTML() + '<div class="rtext">' + esc(statsText() + rest) + '</div>'; $('info').classList.add('on'); };
 $('rules').addEventListener('click', function(e){ var b = e.target.closest('.mc'); if (b) openRuleCard(+b.dataset.i); });
 document.addEventListener('click', function(e){ var s = e.target.closest && e.target.closest('.simln'); if (!s) return; e.stopPropagation(); var r = RSIM[s.dataset.no]; if (!r) return; $('simTx').textContent = '규칙 ' + CIRC.charAt(parseInt(s.dataset.no, 10) - 1) + (/s$/.test(s.dataset.no) ? ' 단타' : '') + ' 시뮬레이션 세팅\n\n' + r.d.split(' · ').join('\n· ').replace(/^/, '') ; $('simPop').hidden = false; }, true);

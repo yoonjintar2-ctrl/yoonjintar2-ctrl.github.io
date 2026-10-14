@@ -272,7 +272,9 @@
       }
     } catch (e) { window.__D6.vscanErr = String(e); }
     // 클석진 반반도체 지수(화면 하단 상시 표시) · 90 이상 위험 모드면 TQQQ 매수 의견은 절반만 · 위험 모드 진입/반도체 충격 때 알림
-    try {
+    // 2026-10-14 석진: 반반도체지수는 화면에서 숨기고 보관만(⑫ 조용한 눌림·반도체 과열 카드가 대신). 다시 쓰려면 RISK_ON = true → ⑩ 인버스·위험 모드 절반·위험 알림도 함께 돌아옴
+    const RISK_ON = false;
+    if (RISK_ON) try {
       (0, eval)(await window.__berryLoad('bb/alert/risk.js'));
       const rk = await window.__risk();
       if (rk) {
@@ -308,7 +310,7 @@
   };
   // 반반도체지수 일봉 기록을 1시간마다 ntfy에 올림(웹 팝업 그래프용). 검색 감시 탭에서만 한 번 설치
   if (window.__berryWatchState && !window.__rkHistTimer) {
-    const tickRk = async () => { try { (0, eval)(await window.__berryLoad('bb/alert/risk.js')); window.__rkHistLast = await window.__riskHistPush(); } catch (e) { window.__rkHistLast = 'ERR ' + e; } };
+    const tickRk = async () => { if (!window.__RISK_ON) return; try { (0, eval)(await window.__berryLoad('bb/alert/risk.js')); window.__rkHistLast = await window.__riskHistPush(); } catch (e) { window.__rkHistLast = 'ERR ' + e; } };
     window.__rkHistTimer = setInterval(tickRk, 3600e3); setTimeout(tickRk, 5000);
   }
   window.__berryLoad = async function (path) {
