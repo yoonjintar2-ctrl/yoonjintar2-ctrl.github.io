@@ -242,8 +242,22 @@
     opt = opt || {};
     try { (0, eval)(await window.__berryLoad('bb/alert/daily6.js')); } catch (e) { if (!window.__daily6) throw e; }
     await window.__daily6({ slot: opt.slot });
+    // ⑦ 미국 정규장 초반 2시간(개장 50~135분 뒤)에는 1분봉 V자 반등 후 횡보도 확인
+    try {
+      const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false, weekday: 'short' }).formatToParts(new Date()).map(x => [x.type, x.value]));
+      const t = (+p.hour % 24) * 60 + +p.minute - 570;
+      if (p.weekday !== 'Sat' && p.weekday !== 'Sun' && t >= 30 && t <= 135) {
+        (0, eval)(await window.__berryLoad('bb/alert/vscan.js'));
+        const v = await window.__vscan();
+        if (v.length) {
+          const A = window.__D6; A.cards = A.cards.concat(v); A.sPlus = (A.sPlus || []).concat(v.map(c => c.g + ' ' + c.n));
+          A.title = '매수 의견: ' + A.cards.map(c => c.g + '등급 ' + c.n).join(' · ');
+        }
+        window.__D6.vscan = { at: new Date().toISOString(), hits: v.length };
+      }
+    } catch (e) { window.__D6.vscanErr = String(e); }
     window.__ALERT = window.__D6;
-    return 'ok ' + window.__D6.cards.length + ' cards (S·A)';
+    return 'ok ' + window.__D6.cards.length + ' cards';
   };
   window.__berryLoad = async function (path) {
     try { const r = await fetch('https://api.github.com/repos/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/contents/' + path + '?ref=main', { headers: { Accept: 'application/vnd.github.raw' }, cache: 'no-store' }); if (r.ok) return await r.text(); } catch (e) {}
