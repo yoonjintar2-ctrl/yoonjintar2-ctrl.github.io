@@ -223,8 +223,10 @@
     const enc = new TextEncoder(), cs = (alert.cards || []).slice();
     // ⓒ 상시 카드(C등급)는 꺾은선 빼고 짧게 실어 화면 맨 아래에만. 글자 수가 넘치면 상시 카드부터 뺀다
     const bs = (alert.base || []).map(c => Object.assign({}, c, { ln: undefined, why: (c.why || '').slice(0, 150) }));
-    const mk = () => JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs, base: bs.length ? bs : undefined, st: alert.st || undefined, rk: alert.rk || undefined });
+    const cd = (alert.cond || []).map(c => Object.assign({}, c, { ln: undefined, why: (c.why || '').slice(0, 150) }));
+    const mk = () => JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs, cond: cd.length ? cd : undefined, base: bs.length ? bs : undefined, st: alert.st || undefined, rk: alert.rk || undefined });
     let body = mk();
+    while (enc.encode(body).length > 3800 && cd.length) { cd.pop(); body = mk(); }
     while (enc.encode(body).length > 3800 && bs.length) { bs.pop(); body = mk(); }
     while (enc.encode(body).length > 3800 && cs.length > 1) { cs.pop(); body = mk(); }
     const tags = [alert.level || 'info'].concat(extraTags || []);
@@ -300,7 +302,7 @@
       window.__D6.title = window.__D6.cards.length ? '매수 의견: ' + window.__D6.cards.map(c => c.g + '등급 ' + c.n).join(' · ') : window.__D6.title;
     } catch (e) { window.__D6.weeklyErr = String(e); }
     // ⓒ 상시 카드(C 등급, 교과서적 장기 전략): 알림·성적표와 별도로 화면 맨 아래에만
-    try { (0, eval)(await window.__berryLoad('bb/alert/evergreen.js')); window.__D6.base = await window.__evergreen(); } catch (eC) { window.__D6.baseErr = String(eC); }
+    try { (0, eval)(await window.__berryLoad('bb/alert/evergreen.js')); const ev = await window.__evergreen(); window.__D6.base = ev.filter(c => c.always); window.__D6.cond = ev.filter(c => !c.always); /* 상시(QQQM 적립)와 조건 C카드(SGOV·QLD·IEF) 분리 */ } catch (eC) { window.__D6.baseErr = String(eC); }
     window.__ALERT = window.__D6;
     return 'ok ' + window.__D6.cards.length + ' cards';
   };
