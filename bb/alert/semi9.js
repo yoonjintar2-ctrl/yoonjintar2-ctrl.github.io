@@ -15,7 +15,7 @@
   const daily = async (sym, n) => { const j0 = await get(`${INFO}/api/v2/stock-infos/code-or-symbol/${sym}`); const c = j0.result.code || j0.result.stockCode; const j = await get(`${INFO}/api/v1/c-chart/us-s/${c}/day:1?count=${n}&useAdjustedRate=true`); const et = etNow(); return (j.result.candles || []).slice().reverse().filter(x => x.dt.slice(0, 10) < et.d || (x.dt.slice(0, 10) === et.d && et.h >= 16)); };
 
   window.__semi9 = async function (rk) {
-    const [sx, sl, ss] = await Promise.all([daily('SOXX', 60), daily('SOXL', 41), daily('SOXS', 41)]);
+    const [sx, sl, ss, spy] = await Promise.all([daily('SOXX', 60), daily('SOXL', 41), daily('SOXS', 41), daily('SPY', 60)]);
     const n = sx.length; if (n < 25) return [];
     const c = sx.map(x => x.close), day = sx[n - 1].dt.slice(0, 10);
     const hi20 = Math.max(...c.slice(n - 21, n - 1)), dd = c[n - 1] / hi20 - 1;
@@ -24,12 +24,20 @@
     const lnL = sl.slice(-40).map(x => x.close), pL = lnL[lnL.length - 1], chL = pL / sl[sl.length - 2].close - 1;
     const lnS = ss.slice(-40).map(x => x.close), pS = lnS[lnS.length - 1], chS = pS / ss[ss.length - 2].close - 1;
     // ⑨ −12% 이하인 날(검증과 같게: 앞선 매매가 끝났으면 다시 매수 신호). 같은 카드는 3일 안엔 다시 안 울림
-    if (dd <= -0.12) {
+    // 2026-10-14: 반도체만 단체 급락한 날(SOXX −3% 이하인데 S&P는 −1.5%보다 덜 빠짐)엔 바로 사지 않고 2거래일 기다림
+    //   그 날 바로 산 9건 평균 +8.5% → 2일 미룬 6건 +12.7%, 전체 성적 11.1 / 3.6 / 11.0% → 11.5 / 3.9 / 13.7%(익절 40·손절 20·15일). 모두 미루면 오히려 나빠짐
+    const spm = {}; spy.forEach(x => spm[x.dt.slice(0, 10)] = x.close);
+    const ddAt = (k) => k >= 21 ? c[k] / Math.max(...c.slice(k - 20, k)) - 1 : null;
+    const dragAt = (k) => { if (k < 1) return false; const d0 = sx[k - 1].dt.slice(0, 10), d1 = sx[k].dt.slice(0, 10); const a = c[k] / c[k - 1] - 1, b = spm[d1] && spm[d0] ? spm[d1] / spm[d0] - 1 : 0; return a <= -0.03 && b >= -0.015; };
+    const nowSig = dd <= -0.12 && !dragAt(n - 1), lateSig = ddAt(n - 3) != null && ddAt(n - 3) <= -0.12 && dragAt(n - 3);
+    window.__semi9wait = dd <= -0.12 && dragAt(n - 1) ? `${day.slice(5)} 반도체만 단체 급락 → ⑨ SOXL은 2거래일 뒤 판단` : '';
+    if (nowSig || lateSig) {
+      const late = !nowSig && lateSig ? `반도체만 단체 급락한 ${sx[n - 3].dt.slice(5, 10)}에서 2거래일 기다린 뒤 매수. ` : '';
       const risk = rk && rk.v >= 90;
       cards.push({ g: 'A', m: 'US', n: 'SOXL', kn: '반도체 3배', s: '⑨ 반도체 급락 반등', semi: 1, px: fu(pL), ch: pct(chL), ln: lnL,
         buy: fu(pL * 1.03), tgt: fu(pL * 1.40), tp: '+40%', stop: fu(pL * 0.80), sp: '−20%(필수)', rr: '2.0',
         when: '오늘 밤 정규장 시가(또는 지금 데이마켓)', hold: '최대 15거래일 · 실제 산 값 기준 +40% 익절 / −20% 손절(자동 주문 걸기) · 15일째 종가 매도',
-        why: `${day.slice(5)} SOXX ${pct(dd)}(20일 최고 종가 대비) — 빠르게 빠진 반도체는 다시 오르는 일이 많았음. 2012~26 아무 날보다 건당 +9.2 / +1.5 / +7.7%p(기간별), 승률 57~67%. SOXL −20% ≈ SOXX −7%${rk && rk.sh ? ` · 추가 하락 가능성 ${['낮음', '보통', '높음'][rk.sh.t]}` : ''}${risk ? '\n⚠ 위험 모드(반반도체지수 ' + rk.v + '): 평소의 절반만' : ''}` });
+        why: `${late}${day.slice(5)} SOXX ${pct(dd)}(20일 최고 종가 대비) — 빠르게 빠진 반도체는 다시 오르는 일이 많았음. 2012~26 아무 날보다 건당 +9.2 / +1.5 / +7.7%p(기간별), 승률 57~67%. SOXL −20% ≈ SOXX −7%${rk && rk.sh ? ` · 추가 하락 가능성 ${['낮음', '보통', '높음'][rk.sh.t]}` : ''}${risk ? '\n⚠ 위험 모드(반반도체지수 ' + rk.v + '): 평소의 절반만' : ''}` });
     }
     // ⑩ 위험 모드 + 20일선 처음 이탈
     const vr = rk ? (rk.vr != null ? rk.vr : rk.v) : null; // 검증은 급락 위험 축(v4) 기준
