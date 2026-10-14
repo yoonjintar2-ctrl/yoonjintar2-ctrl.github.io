@@ -87,6 +87,17 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 .tc .fl{margin:6px 0 0 18%;font-size:11px;line-height:1.45;color:#343a40;white-space:pre-line;text-align:left}
 .tc .ft{display:flex;justify-content:space-between;align-items:baseline;font-size:9px;color:#495057;padding-top:6px;font-style:italic}
 .tc .ft b{font-style:normal;font-weight:900;letter-spacing:.5px}
+/* 등급 표시: 문구 + 반짝임(S 무지개 · A 금빛 · B+ 은빛 · B 회색) */
+.bdg{display:inline-flex;align-items:baseline;gap:2px;flex:none;font-weight:900;font-size:12px;line-height:1;padding:4px 8px;border-radius:999px;color:#fff;background:#868e96;letter-spacing:-.3px;white-space:nowrap;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.3)}
+.bdg small{font-size:10px;font-weight:800;opacity:.9}
+.bdg.big{font-size:17px;padding:5px 10px}
+.bdg.tA{background:linear-gradient(110deg,#b8860b 0%,#f5c518 30%,#fff3b0 45%,#f5c518 60%,#b8860b 100%);background-size:250% 100%;color:#4a3300;animation:shine 2.6s linear infinite}
+.bdg.tS{background:linear-gradient(110deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7,#b197fc,#ff6b6b);background-size:300% 100%;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45);animation:shine 2s linear infinite;box-shadow:0 0 0 1.5px #fff,0 0 8px rgba(255,255,255,.9)}
+.bdg.tBp{background:linear-gradient(110deg,#868e96,#dee2e6 45%,#868e96);background-size:250% 100%;color:#212529;animation:shine 3.5s linear infinite}
+@keyframes shine{from{background-position:100% 0}to{background-position:-100% 0}}
+/* 도감 미니 카드: 칸 높이가 달라도 위아래 여백 같게 */
+.mc{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
+.mc .mci{flex:1}
 /* 테두리 색 = 등급: S~SSS 금(반짝임) · A-~A+ 은 · B+ 이하 동 */
 .tc.gS,.mc.gS{background:linear-gradient(135deg,#fff3bf,#e8a400 22%,#ffe066 40%,#b8860b 62%,#ffd43b 80%,#c99700);background-size:200% 200%;animation:goldflow 4s ease-in-out infinite alternate}
 .tc.gA,.mc.gA{background:linear-gradient(135deg,#f8f9fa,#ced4da 22%,#f1f3f5 40%,#adb5bd 62%,#e9ecef 80%,#ced4da)}
@@ -102,7 +113,7 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 @keyframes holo{from{background-position:0% 50%}to{background-position:300% 50%}}
 @keyframes sweep{0%{transform:translateX(-60%)}60%,100%{transform:translateX(60%)}}
 @keyframes twinkle{from{opacity:.2}to{opacity:.9}}
-@media (prefers-reduced-motion:reduce){.tc,.mc,.tc::after,.tc .in::before,.tc .in::after,.mc::after{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.bdg,.tc,.mc,.tc::after,.tc .in::before,.tc .in::after,.mc::after{animation:none!important}}
 /* 규칙 카드 도감 */
 .rules .rtext{white-space:pre-line;padding-top:18px;border-top:1px solid var(--line);margin-top:16px}
 .rules{white-space:normal}
@@ -260,7 +271,7 @@ var RTYPE = {1:['#1c7ed6','#d0ebff','💧','지수'],2:['#3b5bdb','#dbe4ff','�
 function tier(g){ g = String(g || 'B'); return g[0] === 'S' ? 'S' : g[0] === 'A' ? 'A' : g === 'B+' ? 'Bp' : 'B'; }
 function frameCss(g, w){ return ''; }
 var GIMG = { SSS:'SSS', SS:'SS', S:'S', 'A+':'Ap', A:'A', 'A-':'Am', 'B+':'Bp', B:'B' };
-function badge(g, big){ g = String(g || 'B').trim(); return '<img class="gimg" src="a/grades/' + (GIMG[g] || 'B') + '.png" alt="' + esc(g) + '등급">'; }
+function badge(g, big){ return '<span class="bdg t' + tier(g) + (big ? ' big' : '') + '">' + esc(g) + (big ? '<small>등급</small>' : '') + '</span>'; }
 
 var CIRC = '①②③④⑤⑥⑦⑧⑨⑩⑪';
 // 종목 이름 앞 수식어(규칙별, 종목마다 하나 골라 고정)
