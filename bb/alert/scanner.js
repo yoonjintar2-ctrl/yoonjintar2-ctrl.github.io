@@ -294,6 +294,8 @@
       window.__logCards(window.__D6);
       window.__D6.title = window.__D6.cards.length ? '매수 의견: ' + window.__D6.cards.map(c => c.g + '등급 ' + c.n).join(' · ') : window.__D6.title;
     } catch (e) { window.__D6.weeklyErr = String(e); }
+    // ⓒ 상시 카드(C 등급, 교과서적 장기 전략): 알림·성적표와 별도로 화면 맨 아래에만
+    try { (0, eval)(await window.__berryLoad('bb/alert/evergreen.js')); window.__D6.base = await window.__evergreen(); } catch (eC) { window.__D6.baseErr = String(eC); }
     window.__ALERT = window.__D6;
     return 'ok ' + window.__D6.cards.length + ' cards';
   };
