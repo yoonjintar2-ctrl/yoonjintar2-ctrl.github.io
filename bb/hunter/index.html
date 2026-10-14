@@ -55,64 +55,61 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 .why{font-size:12px;color:var(--body);padding-top:8px;line-height:1.45;white-space:pre-line}
 .status{text-align:center;font-size:11px;color:var(--muted);padding:14px 0 4px}
 .status.bad{color:var(--warn)}
-/* 트레이딩 카드(규칙 그림 + 기술 설명) */
-.tc{--ty:#5c7cfa;--ty2:#dbe4ff;position:relative;overflow:hidden;margin:6px auto 18px;max-width:420px;padding:11px;border-radius:20px;background:linear-gradient(150deg,var(--ty2) 0%,var(--ty) 35%,color-mix(in srgb,var(--ty) 70%,#000) 70%,var(--ty) 100%);box-shadow:0 4px 14px rgba(0,0,0,.2)}
-.tc .in{position:relative;z-index:1;border-radius:12px;background:linear-gradient(180deg,var(--ty2),#fff 55%,var(--ty2));padding:8px 10px 10px;border:1px solid rgba(0,0,0,.08)}
-.tc .hd{display:flex;align-items:center;gap:8px}
-.tc .stage{font-size:10px;font-weight:700;color:#fff;background:var(--ty);border-radius:4px;padding:1px 6px;align-self:center}
-.tc .nm{flex:1;min-width:0;font-size:21px;font-weight:900;letter-spacing:-.4px;line-height:1.2;word-break:keep-all}
-.tc .nm .ep{font-size:15px;font-weight:800;color:#343a40}
-.tc .nm small{font-size:12px;font-weight:600;color:var(--muted);margin-left:5px}
-.tc .hp{display:flex;align-items:baseline;gap:3px;font-weight:900;color:#c92a2a;white-space:nowrap}
-.tc .hp small{font-size:10px;font-weight:700}
-.tc .hp b{font-size:22px}
-.tc .orb{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:radial-gradient(circle at 35% 30%,#fff,var(--ty) 70%);box-shadow:0 1px 2px rgba(0,0,0,.3);align-self:center}
-.tc .art{position:relative;margin-top:6px;aspect-ratio:4/3;border:4px solid;border-color:#e9ecef #adb5bd #adb5bd #e9ecef;background:linear-gradient(135deg,var(--ty2),var(--ty));overflow:hidden;max-width:100%}
+/* 트레이딩 카드 — 은색 테두리 + 규칙 색 카드 몸통(카드 게임 기본 구성), 등급은 등급 그림 + 반짝임 */
+.tc{--ty:#5c7cfa;--ty2:#dbe4ff;position:relative;overflow:hidden;margin:6px auto 18px;max-width:420px;padding:8px;border-radius:16px;background:linear-gradient(135deg,#f8f9fa,#ced4da 22%,#f1f3f5 40%,#adb5bd 62%,#e9ecef 80%,#ced4da);box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.tc .in{position:relative;z-index:1;border-radius:10px;padding:7px 10px 8px;background:radial-gradient(120% 60% at 15% 0%,rgba(255,255,255,.55),transparent 60%),radial-gradient(90% 50% at 100% 100%,rgba(255,255,255,.35),transparent 60%),linear-gradient(170deg,color-mix(in srgb,var(--ty) 30%,#fff),color-mix(in srgb,var(--ty) 50%,#fff) 55%,color-mix(in srgb,var(--ty) 38%,#fff));box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.tc .hd{display:flex;align-items:center;gap:6px;min-height:34px}
+.tc .stage{flex:none;font-size:10px;font-weight:800;color:#495057;background:linear-gradient(180deg,#fff,#ced4da);padding:2px 12px 2px 7px;clip-path:polygon(0 0,100% 0,85% 100%,0 100%);border-radius:3px 0 0 3px;font-style:italic;align-self:flex-start;margin-top:2px}
+.tc .nm{flex:1;min-width:0;font-size:21px;font-weight:900;letter-spacing:-.4px;line-height:1.15;word-break:keep-all;color:#1d232a}
+.tc .nm .ep{font-size:14px;font-weight:800;color:#343a40}
+.tc .nm small{font-size:11px;font-weight:700;color:#495057;margin-left:4px}
+.tc .gimg{height:28px;width:auto;flex:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
+.tc .orb{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:radial-gradient(circle at 35% 30%,#fff,var(--ty) 75%);box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.35)}
+.tc .art{position:relative;margin:4px 2px 0;aspect-ratio:4/3;border:3px solid transparent;background:linear-gradient(135deg,var(--ty2),var(--ty)) padding-box,linear-gradient(135deg,#fff,#adb5bd 40%,#f1f3f5 60%,#868e96) border-box;box-shadow:0 2px 4px rgba(0,0,0,.25);overflow:hidden;max-width:100%}
 .tc .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .tc .art .no{position:absolute;inset:0;display:grid;place-items:center;font-size:64px;color:rgba(255,255,255,.85);font-weight:900}
-.tc .dex{margin:4px 6px 0;font-size:11px;font-style:italic;color:#495057;text-align:center;background:linear-gradient(90deg,transparent,rgba(255,224,102,.7),transparent);padding:2px 0;font-variant-numeric:tabular-nums}
-.tc .mv{padding:10px 2px 4px}
-.tc .mvh{display:flex;align-items:center;gap:6px}
-.tc .cost{display:flex;gap:2px}
-.tc .cost i{width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,var(--ty) 70%);box-shadow:0 1px 1px rgba(0,0,0,.3)}
-.tc .mvn{flex:1;min-width:0;font-size:17px;font-weight:900;letter-spacing:-.3px}
-.tc .dmg{font-size:22px;font-weight:900;color:#2b8a3e;white-space:nowrap;font-variant-numeric:tabular-nums}
-.tc .mvd{font-size:13px;line-height:1.5;color:#343a40;padding:4px 0 0;white-space:pre-line}
-.tc .tg{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:8px;border-top:2px solid var(--ty);border-bottom:2px solid var(--ty)}
-.tc .tg>div{text-align:center;padding:5px 2px;min-width:0}
-.tc .tg>div+div{border-left:1px dashed rgba(0,0,0,.15)}
-.tc .tg .l{font-size:10px;color:#868e96;font-weight:700}
-.tc .tg .v{font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;word-break:keep-all}
+.tc .dex{margin:5px 6px 0;font-size:10.5px;color:#343a40;text-align:center;background:linear-gradient(180deg,#fff,#dee2e6 60%,#ced4da);clip-path:polygon(2% 0,98% 0,100% 50%,98% 100%,2% 100%,0 50%);padding:2px 14px;font-variant-numeric:tabular-nums}
+.tc .mv{padding:10px 2px 2px}
+.tc .mvh{display:flex;align-items:center;gap:8px}
+.tc .cost{display:flex;gap:2px;flex:none;min-width:52px}
+.tc .cost i{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,var(--ty) 72%);box-shadow:0 0 0 1.5px #fff,0 1px 2px rgba(0,0,0,.35)}
+.tc .mvn{flex:1;min-width:0;font-size:18px;font-weight:900;letter-spacing:-.3px;color:#1d232a}
+.tc .dmg{font-size:22px;font-weight:900;color:#1d232a;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tc .mvd{font-size:12.5px;line-height:1.5;color:#212529;padding:4px 0 0;white-space:pre-line}
+.tc .tg{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:9px;border-top:2px solid rgba(255,255,255,.85);border-bottom:2px solid rgba(255,255,255,.85);box-shadow:0 -1px 0 rgba(0,0,0,.08),0 1px 0 rgba(0,0,0,.08)}
+.tc .tg>div{text-align:center;padding:4px 2px;min-width:0}
+.tc .tg>div+div{border-left:1px solid rgba(255,255,255,.8)}
+.tc .tg .l{font-size:9.5px;color:#495057;font-weight:700}
+.tc .tg .v{font-size:13.5px;font-weight:900;font-variant-numeric:tabular-nums;word-break:keep-all}
 .tc .tg .s{font-size:10px;font-weight:700}
-.tc .fl{margin-top:8px;font-size:11.5px;line-height:1.45;color:#495057;font-style:italic;border:1px solid rgba(0,0,0,.12);border-radius:6px;padding:6px 8px;background:rgba(255,255,255,.7);white-space:pre-line}
-.tc .ft{display:flex;justify-content:space-between;font-size:9px;color:#868e96;padding-top:5px}
 .tc .spark{padding:4px 0 0}
-.tc .spark svg{height:28px}
-/* 등급: 문구 + 반짝임(S 무지개 홀로 · A 금빛 · B+ 은빛 · B 없음) */
-.bdg{display:inline-flex;align-items:baseline;gap:2px;flex:none;font-weight:900;font-size:13px;line-height:1;padding:4px 8px;border-radius:999px;color:#fff;background:#868e96;letter-spacing:-.3px;white-space:nowrap}
-.bdg small{font-size:10px;font-weight:800;opacity:.9}
-.bdg.big{font-size:18px;padding:5px 10px}
-.bdg.tA{background:linear-gradient(110deg,#b8860b 0%,#f5c518 30%,#fff3b0 45%,#f5c518 60%,#b8860b 100%);background-size:250% 100%;color:#4a3300;animation:shine 2.6s linear infinite}
-.bdg.tS{background:linear-gradient(110deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7,#b197fc,#ff6b6b);background-size:300% 100%;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45);animation:shine 2s linear infinite;box-shadow:0 0 8px rgba(255,255,255,.9)}
-.bdg.tBp{background:linear-gradient(110deg,#868e96,#dee2e6 45%,#868e96);background-size:250% 100%;color:#212529;animation:shine 3.5s linear infinite}
-@keyframes shine{from{background-position:100% 0}to{background-position:-100% 0}}
-/* 카드 전체 반짝임: S는 무지개 빛줄기 + 별, A는 금빛 빛줄기 */
-.tc.gS::after,.tc.gA::after,.mc.gS::after,.mc.gA::after{content:"";position:absolute;inset:-40%;z-index:0;pointer-events:none;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.75) 50%,transparent 58%);animation:sweep 3.2s ease-in-out infinite}
-.tc.gS .in::after,.tc.gA .in::after,.mc.gS .mci::after,.mc.gA .mci::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.22) 50%,transparent 60%);background-size:300% 100%;animation:shine 3.2s ease-in-out infinite}
-.tc.gS::after,.mc.gS::after{background:linear-gradient(115deg,transparent 34%,rgba(255,120,120,.7) 42%,rgba(255,240,150,.8) 47%,rgba(150,255,200,.75) 52%,rgba(140,190,255,.7) 57%,transparent 65%);animation-duration:2.6s}
-.tc.gS::before,.mc.gS::before{content:"✦  ✧   ✦    ✧  ✦";position:absolute;left:0;right:0;top:0;z-index:2;pointer-events:none;color:#fff;font-size:12px;letter-spacing:6px;text-align:center;opacity:.85;animation:twinkle 1.6s ease-in-out infinite alternate}
+.tc .spark svg{height:26px}
+.tc .fl{margin:6px 0 0 18%;font-size:11px;line-height:1.45;color:#343a40;white-space:pre-line;text-align:left}
+.tc .ft{display:flex;justify-content:space-between;align-items:baseline;font-size:9px;color:#495057;padding-top:6px;font-style:italic}
+.tc .ft b{font-style:normal;font-weight:900;letter-spacing:.5px}
+/* 반짝임 — S: 무지개 홀로가 카드 몸통에 흐르고 별이 반짝 · A: 은은한 빛줄기와 별 · B+: 빛줄기만 · B: 없음 */
+.tc .in::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0}
+.tc .in>*{position:relative;z-index:1}
+.tc.gS .in::before{background:linear-gradient(115deg,rgba(255,110,110,.0) 0%,rgba(255,110,110,.28) 15%,rgba(255,230,120,.28) 30%,rgba(120,240,170,.28) 45%,rgba(120,180,255,.28) 60%,rgba(200,140,255,.28) 75%,rgba(255,110,110,.0) 90%);background-size:300% 300%;mix-blend-mode:screen;animation:holo 6s linear infinite}
+.tc.gS .in::after,.tc.gA .in::after{content:"✦      ✧          ✦     ✧        ✦          ✧     ✦";position:absolute;inset:6% 0 auto;z-index:2;pointer-events:none;color:#fff;font-size:11px;white-space:pre;overflow:hidden;text-shadow:0 0 4px #fff;opacity:.8;animation:twinkle 1.8s ease-in-out infinite alternate}
+.tc.gA .in::after{opacity:.55;font-size:9px}
+.tc.gS::after,.tc.gA::after,.tc.gBp::after{content:"";position:absolute;inset:-40%;z-index:3;pointer-events:none;background:linear-gradient(115deg,transparent 44%,rgba(255,255,255,.45) 50%,transparent 56%);animation:sweep 3.6s ease-in-out infinite}
+.tc.gBp::after{background:linear-gradient(115deg,transparent 46%,rgba(255,255,255,.25) 50%,transparent 54%);animation-duration:5s}
+@keyframes holo{from{background-position:0% 50%}to{background-position:300% 50%}}
 @keyframes sweep{0%{transform:translateX(-60%)}60%,100%{transform:translateX(60%)}}
-@keyframes twinkle{from{opacity:.25}to{opacity:.95}}
-@media (prefers-reduced-motion:reduce){.bdg,.tc::after,.mc::after,.tc::before,.mc::before{animation:none!important}}
+@keyframes twinkle{from{opacity:.2}to{opacity:.9}}
+@media (prefers-reduced-motion:reduce){.tc::after,.tc .in::before,.tc .in::after,.mc::after{animation:none!important}}
 /* 규칙 카드 도감 */
 .rules .rtext{white-space:pre-line;padding-top:18px;border-top:1px solid var(--line);margin-top:16px}
 .rules{white-space:normal}
 .bdh{font-size:12px;color:var(--muted);padding-bottom:8px}
 .bind{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.mc{position:relative;overflow:hidden;border:0;padding:6px;border-radius:12px;background:linear-gradient(150deg,var(--ty2) 0%,var(--ty) 35%,color-mix(in srgb,var(--ty) 70%,#000) 70%,var(--ty) 100%);cursor:pointer;text-align:left;font:inherit;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.15);-webkit-tap-highlight-color:transparent}
+.mc{position:relative;overflow:hidden;border:0;padding:5px;border-radius:12px;background:linear-gradient(135deg,#f8f9fa,#ced4da 22%,#f1f3f5 40%,#adb5bd 62%,#e9ecef 80%,#ced4da);cursor:pointer;text-align:left;font:inherit;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.18);-webkit-tap-highlight-color:transparent}
 .mc:active{transform:scale(.97)}
-.mci{position:relative;z-index:1;border-radius:8px;background:linear-gradient(180deg,var(--ty2),#fff 60%);padding:5px 6px 7px}
-.mh{display:flex;justify-content:space-between;align-items:center;font-size:15px}
+.mci{position:relative;z-index:1;border-radius:8px;background:linear-gradient(170deg,color-mix(in srgb,var(--ty) 30%,#fff),color-mix(in srgb,var(--ty) 50%,#fff));padding:4px 6px 7px}
+.mh{display:flex;justify-content:space-between;align-items:center;font-size:15px;min-height:22px}
+.mh .gimg{height:18px;width:auto}
+.mc.gS::after,.mc.gA::after{content:"";position:absolute;inset:-40%;z-index:3;pointer-events:none;background:linear-gradient(115deg,transparent 44%,rgba(255,255,255,.45) 50%,transparent 56%);animation:sweep 3.6s ease-in-out infinite}
 .mh span{font-size:12px;font-weight:900;color:#c92a2a}
 .ma{position:relative;aspect-ratio:1/1;margin-top:3px;border:3px solid;border-color:#e9ecef #adb5bd #adb5bd #e9ecef;background:linear-gradient(135deg,var(--ty2),var(--ty));overflow:hidden}
 .ma img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -258,7 +255,8 @@ var RTYPE = {1:['#1c7ed6','#d0ebff','💧','지수'],2:['#3b5bdb','#dbe4ff','�
 // 등급별 테두리(GPT가 그린 그림, 가운데는 비움): S 홀로 · A 금 · B+ 은 · B 동
 function tier(g){ g = String(g || 'B'); return g[0] === 'S' ? 'S' : g[0] === 'A' ? 'A' : g === 'B+' ? 'Bp' : 'B'; }
 function frameCss(g, w){ return ''; }
-function badge(g, big){ return '<span class="bdg t' + tier(g) + (big ? ' big' : '') + '">' + esc(g) + (big ? '<small>등급</small>' : '') + '</span>'; }
+var GIMG = { SSS:'SSS', SS:'SS', S:'S', 'A+':'Ap', A:'A', 'A-':'Am', 'B+':'Bp', B:'B' };
+function badge(g, big){ g = String(g || 'B').trim(); return '<img class="gimg" src="a/grades/' + (GIMG[g] || 'B') + '.png" alt="' + esc(g) + '등급">'; }
 
 var CIRC = '①②③④⑤⑥⑦⑧⑨⑩⑪';
 // 종목 이름 앞 수식어(규칙별, 종목마다 하나 골라 고정)
@@ -290,7 +288,7 @@ function card(c){
       '<div><div class="l">보유기간</div><div class="v" style="font-size:12px">' + esc(hold) + '</div></div></div>') +
     spark(c.ln, g) +
     '<div class="fl">' + esc(c.why || '') + '</div>' +
-    '<div class="ft"><span>박스권 헌터 · 규칙 ' + (CIRC.charAt(no - 1) || '') + '</span><span>' + (c.rr && c.rr !== '-' ? '손익비 ' + esc(c.rr) : '') + '</span></div>' +
+    '<div class="ft"><span>박스권 헌터 · 규칙 ' + (CIRC.charAt(no - 1) || '') + (c.rr && c.rr !== '-' ? ' · 손익비 ' + esc(c.rr) : '') + '</span><b>' + esc(ty[3]) + ' ' + esc(g) + '</b></div>' +
   '</div></div>';
 }
 // ── 규칙 카드 도감(매수 규칙 화면)
