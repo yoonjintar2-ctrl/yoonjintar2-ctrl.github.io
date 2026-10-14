@@ -273,10 +273,12 @@
         // 위험 모드: TQQQ(②③⑥)와 ⑧ 반도체주 매수 의견은 절반만. ⑧ 반도체를 위험 모드에서 산 경우 6건 20일 −7.1% 승 33% vs 평소 +12.9% 승 69%(2012~26, 표본 작음)
         if (rk.v >= 90) window.__D6.cards.forEach(c => { if (c.n === 'TQQQ' || c.semi) { c.risk = 1; c.why = '⚠ 위험 모드(반반도체지수 ' + rk.v + '): 평소의 절반만 매수\n' + (c.why || ''); } });
         window.__D6.rkSent = await window.__riskAlert(rk, window.__BERRY.alerts);
-        // ⑨ 반도체 급락 반등(SOXL) · ⑩ 위험 모드 추세 이탈(SOXS)
-        try { (0, eval)(await window.__berryLoad('bb/alert/semi9.js')); const c9 = await window.__semi9(window.__D6.rk); if (c9.length) { const A = window.__D6; A.cards = A.cards.concat(c9); A.sPlus = (A.sPlus || []).concat(c9.map(c => c.g + ' ' + c.n)); } } catch (e9) { window.__D6.semi9Err = String(e9); }
       }
     } catch (e) { window.__D6.rkErr = String(e); }
+    // ⑪ 위기 매수(QQQ·SOXX 고점 −30/−40/−50%, 계획의 30/30/40%)
+    try { (0, eval)(await window.__berryLoad('bb/alert/crisis.js')); const c11 = await window.__crisis(); const A = window.__D6; if (c11.cards.length) { A.cards = A.cards.concat(c11.cards); A.sPlus = (A.sPlus || []).concat(c11.cards.map(c => c.g + ' ' + c.n)); } if (c11.near.length) A.near = (A.near || []).concat(c11.near); } catch (e11) { window.__D6.crisisErr = String(e11); }
+    // ⑨ 반도체 급락 반등(SOXL) · ⑩ 위험 모드 추세 이탈(SOXS)
+    try { (0, eval)(await window.__berryLoad('bb/alert/semi9.js')); const c9 = await window.__semi9(window.__D6.rk); if (c9.length) { const A = window.__D6; A.cards = A.cards.concat(c9); A.sPlus = (A.sPlus || []).concat(c9.map(c => c.g + ' ' + c.n)); } } catch (e9) { window.__D6.semi9Err = String(e9); }
     // 주간 규칙 점검(토요일 아침 6:30~9:00, 주 1회) → 등급 상한 적용 → 띄운 카드 기록 → 성적표 첨부
     try {
       (0, eval)(await window.__berryLoad('bb/alert/weekly.js'));
