@@ -1,13 +1,13 @@
-// 클석진 반도체 위험지수(v4) + 충격 뒤 '추가 하락' 점수 — 실시간 계산. tossinvest.com 탭에서 eval. 주문 기능 없음.
+// 클석진 반반도체 지수(통칭 '반반도체지수', v4) — 반도체 급락 위험 0~100 + 충격 뒤 '추가 하락' 점수 — 실시간 계산. tossinvest.com 탭에서 eval. 주문 기능 없음.
 // FRED 자료는 맥 크롬의 FRED 탭(fredwatch.js)이 1시간마다 받아 ntfy(-f 토픽)에 첨부로 올려 둠 → 여기서 받아 계산.
-// 위험지수 v4 (2026-10-14): 9요인 z점수를 똑같은 비중으로 평균 → 직전 3년 안 백분위(0~100)
+// 반반도체지수 v4 (2026-10-14): 9요인 z점수를 똑같은 비중으로 평균 → 직전 3년 안 백분위(0~100)
 //   10년 금리 수준 · NFCI 13주 변화 · 순유동성 13주 감소 · 원달러 '수준'(직전 3년 대비) · 기대인플레 20일 하락 · 유가 20일 하락 · 가이던스 감속
 //   · 장단기 금리차(10년−2년) 축소 · 2년 금리 120일 상승
 //   v3 대비: 원달러 20일 변화는 2023~26에 예측력 사라짐(AUC .47) → 3년 수준으로(.71/.63/.71). 장단기차·2년 120일은 세 기간 모두 일관. PCE·30년·기준금리는 기간마다 뒤집혀 탈락
 //   AUC 2012~18 .743 · 2019~22 .685 · 2023~26 .716 / 90 이상이면 20일 안 SOXX −10% 급락 2019~26 31% vs 14%
 //   위험 모드(90↑ 현금): SOXL 2013~18 연 49.8→73.8%, 2019~26 48.3→88.1% · SOXX 19.5→24.7%, 34.8→41.0%
 // 추가 하락 점수 (반도체가 20일 고점 대비 −8% 이상 빠진 '충격' 상태에서만): 그 뒤 20일 안 −7% 더 빠질 확률
-//   위험지수·NFCI 13주·원달러 20일·기대인플레 20일(−)·달러 20일·시장 전체 하락 여부·VIX/VIX3M·5일 수익률을 직전 3년 백분위로 평균
+//   반반도체지수·NFCI 13주·원달러 20일·기대인플레 20일(−)·달러 20일·시장 전체 하락 여부·VIX/VIX3M·5일 수익률을 직전 3년 백분위로 평균
 //   2010~2018에서 고른 요인 → 2018~2026 AUC 0.65. 상위 1/3이면 52%, 하위 1/3이면 15%(기준 30%)
 // await window.__risk() → { d, v, lv, h:[최근 10일], sh:{dd, cs, t, p} | null }
 (function () {
@@ -76,11 +76,21 @@
     return null;
   };
 
-  window.__risk = async function () {
+  // 지금 반도체 주식을 어떻게 하면 좋을지 한 줄(참고 의견)
+  const opinion = (v, sh) => {
+    if (sh) return ['반도체 급락 중 · 과거엔 대부분 여기서 멈춤 → 나눠서 조금씩 매수 고려', '반도체 급락 중 · 추가 하락 반반 → 서두르지 말고 나눠서', '반도체 급락 중 · 더 빠질 가능성 높음 → 바닥 잡기 서두르지 말기'][sh.t];
+    if (v == null) return '';
+    if (v >= 90) return '위험 모드 → 반도체·레버리지 비중 줄이고, 새로 살 땐 평소의 절반만';
+    if (v >= 80) return '경계 → 레버리지 새 매수는 자제, 1배 보유는 유지';
+    if (v >= 60) return '주의 → 평소대로, 레버리지는 가볍게';
+    return '보통 → 평소대로 운용';
+  };
+  window.__risk = async function (opt) {
     const F = await fredPack(); if (!F) return null;
     const [spy, sox] = await Promise.all([hist('SPY'), hist('SOXX')]);
     const r = window.__riskCalc(F.P, spy, sox);
-    const out = { d: r.d, v: r.v, lv: r.lv, h: r.h, sh: r.sh, dd: r.dd, ft: F.t };
+    const out = { d: r.d, v: r.v, lv: r.lv, h: r.h, sh: r.sh, dd: r.dd, op: opinion(r.v, r.sh), ft: F.t };
+    if (opt && opt.hist) { const i0 = r._D.findIndex((d, i) => r._idx[i] != null); out.H = { D: r._D.slice(i0), v: r._idx.slice(i0), sox: r._D.slice(i0).map(d => sox[d] == null ? null : +sox[d].toFixed(2)) }; }
     try { localStorage.setItem('riskLast', JSON.stringify(out)); } catch (e) {}
     return out;
   };
@@ -92,7 +102,7 @@
     const sent = [];
     const post = async (title, message, pr) => { const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic, title, message, tags: ['warn', 'risk'], priority: pr }) }); if (r.status === 200) sent.push(title); };
     if (rk.v >= 90 && !s.hi) {
-      await post(`클석진 반도체 위험지수 ${rk.v} · 위험 모드`, `반도체 위험지수가 ${rk.v}(0~100)로 위험 모드에 들어갔어요.\n과거엔 이 구간에서 20일 안 반도체 −10% 급락 확률이 평소의 약 2.5배였어요.\nTQQQ(②③⑥)와 ⑧ 반도체주 매수 의견은 평소의 절반만 사는 걸 권해요. 레버리지 비중도 줄여 두세요.`, 4);
+      await post(`반반도체지수 ${rk.v} · 위험 모드`, `클석진 반반도체 지수가 ${rk.v}(0~100)로 위험 모드에 들어갔어요.\n과거엔 이 구간에서 20일 안 반도체 −10% 급락 확률이 평소의 약 2.5배였어요.\nTQQQ(②③⑥)와 ⑧ 반도체주 매수 의견은 평소의 절반만 사는 걸 권해요. 레버리지 비중도 줄여 두세요.`, 4);
       s.hi = rk.d;
     } else if (rk.v < 80 && s.hi) { s.hi = null; }
     if (rk.sh && (!s.sh || (Date.parse(rk.d) - Date.parse(s.sh)) / 86400e3 > 21)) {
@@ -103,5 +113,13 @@
     try { localStorage.setItem('riskAlert', JSON.stringify(s)); } catch (e) {}
     return sent;
   };
+
+  // 일봉 그래프용 전체 기록(2013~): ntfy(-k)에 첨부로 올림 → 웹 팝업이 받아 그림. 첨부는 3시간 뒤 사라져서 1시간마다 다시 올림
+  window.__riskHistPush = async function () {
+    const r = await window.__risk({ hist: true }); if (!r || !r.H) return 'no data';
+    const body = JSON.stringify({ v: 1, d: r.d, now: { v: r.v, lv: r.lv, op: r.op, dd: r.dd, sh: r.sh }, D: r.H.D, x: r.H.v, s: r.H.sox });
+    const res = await fetch('https://ntfy.sh/berry-3059012bcc6b7db9-k', { method: 'PUT', headers: { Filename: 'banban.json', Title: 'banban ' + r.d }, body });
+    return res.status + ' ' + r.H.D.length + '일';
+  };
 })();
-'risk v1 loaded';
+'risk v4 loaded';

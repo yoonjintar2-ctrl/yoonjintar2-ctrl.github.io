@@ -279,20 +279,25 @@
       window.__logCards(window.__D6);
       window.__D6.title = window.__D6.cards.length ? '매수 의견: ' + window.__D6.cards.map(c => c.g + '등급 ' + c.n).join(' · ') : window.__D6.title;
     } catch (e) { window.__D6.weeklyErr = String(e); }
-    // 클석진 반도체 위험지수(화면 하단 상시 표시) · 90 이상 위험 모드면 TQQQ 매수 의견은 절반만 · 위험 모드 진입/반도체 충격 때 알림
+    // 클석진 반반도체 지수(화면 하단 상시 표시) · 90 이상 위험 모드면 TQQQ 매수 의견은 절반만 · 위험 모드 진입/반도체 충격 때 알림
     try {
       (0, eval)(await window.__berryLoad('bb/alert/risk.js'));
       const rk = await window.__risk();
       if (rk) {
-        window.__D6.rk = { d: rk.d, v: rk.v, lv: rk.lv, h: rk.h, dd: rk.dd, sh: rk.sh };
+        window.__D6.rk = { d: rk.d, v: rk.v, lv: rk.lv, h: rk.h, dd: rk.dd, sh: rk.sh, op: rk.op };
         // 위험 모드: TQQQ(②③⑥)와 ⑧ 반도체주 매수 의견은 절반만. ⑧ 반도체를 위험 모드에서 산 경우 6건 20일 −7.1% 승 33% vs 평소 +12.9% 승 69%(2012~26, 표본 작음)
-        if (rk.v >= 90) window.__D6.cards.forEach(c => { if (c.n === 'TQQQ' || c.semi) { c.risk = 1; c.why = '⚠ 위험 모드(위험지수 ' + rk.v + '): 평소의 절반만 매수\n' + (c.why || ''); } });
+        if (rk.v >= 90) window.__D6.cards.forEach(c => { if (c.n === 'TQQQ' || c.semi) { c.risk = 1; c.why = '⚠ 위험 모드(반반도체지수 ' + rk.v + '): 평소의 절반만 매수\n' + (c.why || ''); } });
         window.__D6.rkSent = await window.__riskAlert(rk, window.__BERRY.alerts);
       }
     } catch (e) { window.__D6.rkErr = String(e); }
     window.__ALERT = window.__D6;
     return 'ok ' + window.__D6.cards.length + ' cards';
   };
+  // 반반도체지수 일봉 기록을 1시간마다 ntfy에 올림(웹 팝업 그래프용). 검색 감시 탭에서만 한 번 설치
+  if (window.__berryWatchState && !window.__rkHistTimer) {
+    const tickRk = async () => { try { (0, eval)(await window.__berryLoad('bb/alert/risk.js')); window.__rkHistLast = await window.__riskHistPush(); } catch (e) { window.__rkHistLast = 'ERR ' + e; } };
+    window.__rkHistTimer = setInterval(tickRk, 3600e3); setTimeout(tickRk, 5000);
+  }
   window.__berryLoad = async function (path) {
     try { const r = await fetch('https://api.github.com/repos/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/contents/' + path + '?ref=main', { headers: { Accept: 'application/vnd.github.raw' }, cache: 'no-store' }); if (r.ok) return await r.text(); } catch (e) {}
     return await (await fetch('https://raw.githubusercontent.com/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/main/' + path + '?v=' + Date.now(), { cache: 'no-store' })).text();
