@@ -390,7 +390,10 @@ var SHR_ICON = '<svg class="lk" viewBox="0 0 24 24" fill="none" stroke="currentC
 function shareSlug(c){ var no = ruleNo(c.s); if (no === 12) return /^c\d$/.test(c.art || '') ? c.art : 'c2'; return no ? no + (c.v ? 's' : '') : ''; }
 function tickPart(c){ var t = String((c.m === 'KR' && c.code) || (/[A-Za-z]/.test(c.n || '') ? c.n : c.code) || c.n || '').replace(/[^A-Za-z0-9]/g, ''); if (t) return t.slice(0, 24); var h = 0; String(c.n || '').split('').forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) >>> 0; }); return 'k' + h.toString(36); }
 function cardAnchor(c){ return 'c' + shareSlug(c) + '-' + tickPart(c); }
-function shareUrl(c){ var sl = shareSlug(c), gv = sl + '-' + String(c.g || '').toLowerCase().replace('+', 'p').replace('-', 'm'), pg = SHARE_OK.indexOf(gv) >= 0 ? gv : SHARE_OK.indexOf(sl) >= 0 ? sl : ''; return pg ? SHARE_HOST + 'c/' + pg + '/#' + tickPart(c) : SHARE_HOST + '#' + cardAnchor(c); }
+var LIVE = {}; // stock 저장소 c/live.json: 개별주 카드별 공유 페이지(c/<slug>/<티커>/, 썸네일에 티커가 크게) — GitHub Actions가 10분마다 만듦
+function liveLoad(){ fetch(SHARE_HOST + 'c/live.json?t=' + Math.floor(Date.now() / 60000), { cache: 'no-store' }).then(function(r){ return r.ok ? r.json() : {}; }).then(function(j){ var ch = JSON.stringify(j) !== JSON.stringify(LIVE); LIVE = j || {}; if (ch) render(); }).catch(function(){}); }
+function shareUrl(c){ var lk = shareSlug(c) + '/' + tickPart(c); if (LIVE[lk]) return SHARE_HOST + 'c/' + lk + '/';
+  var sl = shareSlug(c), gv = sl + '-' + String(c.g || '').toLowerCase().replace('+', 'p').replace('-', 'm'), pg = SHARE_OK.indexOf(gv) >= 0 ? gv : SHARE_OK.indexOf(sl) >= 0 ? sl : ''; return pg ? SHARE_HOST + 'c/' + pg + '/#' + tickPart(c) : SHARE_HOST + '#' + cardAnchor(c); }
 function copyText(t){
   var fb = function(){ var a = document.createElement('textarea'); a.value = t; a.setAttribute('readonly', ''); a.style.cssText = 'position:fixed;top:0;left:0;opacity:0'; document.body.appendChild(a); a.select(); a.setSelectionRange(0, t.length); var ok = false; try { ok = document.execCommand('copy'); } catch(e){} a.remove(); return ok; };
   if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(function(){ return true; }, function(){ return fb(); });
@@ -809,7 +812,7 @@ $('list').addEventListener('click', function(e){
   if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) requestAnimationFrame(loop);
 })();
 window.__hx = { RCARDS: RCARDS, rc: ruleCardObj, sl: shareSlug, card: card, EPI: EPI, RTYPE: RTYPE, tier: tier, badge: badge };
-render(); refresh().then(function(){ ancPolled = true; render(); }, function(){ ancPolled = true; goAnchor(); }).then(connect);
+render(); liveLoad(); setInterval(liveLoad, 120000); refresh().then(function(){ ancPolled = true; render(); liveLoad(); }, function(){ ancPolled = true; goAnchor(); }).then(connect);
 })();
 </script>
 </body>

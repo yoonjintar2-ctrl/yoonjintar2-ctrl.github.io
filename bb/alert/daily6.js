@@ -6,6 +6,8 @@
 (function () {
   const INFO = 'https://wts-info-api.tossinvest.com', CERT = 'https://wts-cert-api.tossinvest.com';
   const get = async (u) => { const r = await fetch(u, { credentials: 'include' }); if (!r.ok) throw new Error(r.status + ' ' + u); return r.json(); };
+  // 토스 종목 코드 → 미국 티커(공유 썸네일에 MRVL처럼 티커가 크게 나오게). 실패하면 한글 이름
+  const SYM = {}; const symOf = async (code, nm) => { if (SYM[code]) return SYM[code]; try { const j = await get(`${INFO}/api/v2/stock-infos/code-or-symbol/${code}`); SYM[code] = (j.result && j.result.symbol) || nm || code; } catch (e) { SYM[code] = nm || code; } return SYM[code]; };
   const post = async (u, b) => { const r = await fetch(u, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) }); if (!r.ok) throw new Error(r.status + ' ' + u); return r.json(); };
   const pool = async (items, n, fn) => { const out = new Array(items.length); let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < items.length) { const k = i++; try { out[k] = await fn(items[k]); } catch (e) { out[k] = null; } } })); return out; };
   const fu = (p) => '$' + p.toFixed(2);
@@ -145,15 +147,15 @@
         const sh = (re) => cc.sh[Object.keys(RES).find(k => RES[k] === re)] || 0; const emo = sh(EMO), buy = sh(BUY), wry = sh(WRY), fear = sh(FEAR);
         let g = null; if (good) { if (emo >= 0.05 && buy < emo && wry < emo) g = 'S'; else if (emo >= 0.03 && buy < emo) g = 'A'; else if (fear >= 0.07) g = 'B'; }
         if (g) {
-          LN[s.name] = s.ln; const c = card(g, '④ 실적주 공포 여론', s.name, s.name, s.px, { code: s.code, tgt: s.px ? fu(s.px * 1.20) : '+20%', stop: s.px ? fu(s.px * 0.85) : '−15%', hold: '20~60일 · 실제 산 값 기준 +20% 익절 / −15% 손절(일반 가이드, 개별주 검증 전) · 60일째 종가 매도', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%` });
+          const tk = await symOf(s.code, s.name); LN[tk] = s.ln; const c = card(g, '④ 실적주 공포 여론', tk, s.name, s.px, { code: s.code, tgt: s.px ? fu(s.px * 1.20) : '+20%', stop: s.px ? fu(s.px * 0.85) : '−15%', hold: '20~60일 · 실제 산 값 기준 +20% 익절 / −15% 손절(일반 가이드, 개별주 검증 전) · 60일째 종가 매도', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%` });
           (g === 'B' ? near : cards).push(c); continue;
         }
         // ④ 억까 여론(C+ 관찰, 2026-10-14): 댓글 많은 급락주에서 '억까·세력·작전·털기'(억울하다·누가 일부러 누른다) 말이 3% 이상
         //   검증(토스 댓글, 2023~2026 3일 −8% 급락 중 급락 전후 댓글 80개 이상 327건): 16건 20일 +11.0%(승 75%) 60일 +24.6% vs 전체 +3.4%(53%) — 우연 확률 7%, 2025~26 12건 +5.7%
         //   반대로 '이유를 모르겠다·왜 빠지냐'는 오히려 나빴음(20일 +1.4% vs 없을 때 +5.0%), '너무 빠졌다·과하다'는 차이 없음
         const uj = sh(UJ);
-        if (nIn >= 80 && uj >= 0.03 && s.px) { LN[s.name] = s.ln;
-          cards.push(card('C+', '④ 억까 여론', s.name, s.name, s.px, { v: 1, hd: 20, art: 'r04u', code: s.code, tgt: fu(s.px * 1.20), stop: fu(s.px * 0.85), hold: '최대 20거래일 · 실제 산 값 기준 +20% 익절 / −15% 손절(검증 전 일반 가이드) · 20일째 종가 매도', why: `아직 효과 검증 중인 관찰 후보(C+) · 소액만. 3일 ${pct(s.r3)} · 급락 전후 댓글 ${nIn}개 · '억까·세력·작전·털기' ${(uj * 100).toFixed(0)}%` })); }
+        if (nIn >= 80 && uj >= 0.03 && s.px) { const tk = await symOf(s.code, s.name); LN[tk] = s.ln;
+          cards.push(card('C+', '④ 억까 여론', tk, s.name, s.px, { v: 1, hd: 20, art: 'r04u', code: s.code, tgt: fu(s.px * 1.20), stop: fu(s.px * 0.85), hold: '최대 20거래일 · 실제 산 값 기준 +20% 익절 / −15% 손절(검증 전 일반 가이드) · 20일째 종가 매도', why: `아직 효과 검증 중인 관찰 후보(C+) · 소액만. 3일 ${pct(s.r3)} · 급락 전후 댓글 ${nIn}개 · '억까·세력·작전·털기' ${(uj * 100).toFixed(0)}%` })); }
       }
       state.push(`④ 급락 후보 ${drops.length}개`);
     } catch (e) { state.push('④ 오류: ' + String(e).slice(0, 60)); } }
