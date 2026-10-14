@@ -7,8 +7,9 @@
 // 이벤트 목록: 날짜가 확정되면 고칠 것(예상일은 est:1). 앤트로픽·오픈AI 상장일이 정해지면 추가
 // await window.__zcard() → [card]
 (function () {
+  // 2026-10-14 확대 검증에서 근거가 약해 꺼 둠(장부 'Ⓩ 확대 검증'). 다시 켜려면 아래 줄 주석을 풀 것
   const ZEV = [
-    { d: '2026-11-18', n: '엔비디아 3분기 실적 발표', est: 1 },
+    // { d: '2026-11-18', n: '엔비디아 3분기 실적 발표', est: 1 },
     // { d: 'YYYY-MM-DD', n: '앤트로픽 상장' }, { d: 'YYYY-MM-DD', n: '오픈AI 상장' }
   ];
   const etDay = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).map(x => [x.type, x.value])); return p.year + '-' + p.month + '-' + p.day; };
