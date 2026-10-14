@@ -242,6 +242,13 @@
     opt = opt || {};
     try { (0, eval)(await window.__berryLoad('bb/alert/daily6.js')); } catch (e) { if (!window.__daily6) throw e; }
     await window.__daily6({ slot: opt.slot });
+    // ⑧ 전날 미국장이 급락했으면, 평소 움직임보다 훨씬 더 빠진 종목(급락 직후 데이마켓 매수)
+    try {
+      (0, eval)(await window.__berryLoad('bb/alert/dip8.js'));
+      const r8 = await window.__dip8();
+      if (r8.cards.length) { const A = window.__D6; A.cards = A.cards.concat(r8.cards); A.sPlus = (A.sPlus || []).concat(r8.cards.map(c => c.g + ' ' + c.n)); A.title = '매수 의견: ' + A.cards.map(c => c.g + '등급 ' + c.n).join(' · '); }
+      window.__D6.dip8 = r8.note;
+    } catch (e) { window.__D6.dip8Err = String(e); }
     // ⑦ 미국 정규장 초반 2시간(개장 50~135분 뒤)에는 1분봉 V자 반등 후 횡보도 확인
     try {
       const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false, weekday: 'short' }).formatToParts(new Date()).map(x => [x.type, x.value]));
