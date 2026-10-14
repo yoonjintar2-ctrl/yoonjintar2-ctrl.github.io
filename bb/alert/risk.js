@@ -89,7 +89,7 @@
     const sent = [];
     const post = async (title, message, pr) => { const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic, title, message, tags: ['warn', 'risk'], priority: pr }) }); if (r.status === 200) sent.push(title); };
     if (rk.v >= 90 && !s.hi) {
-      await post(`클석진 반도체 위험지수 ${rk.v} · 위험 모드`, `반도체 위험지수가 ${rk.v}(0~100)로 위험 모드에 들어갔어요.\n과거엔 이 구간에서 20일 안 반도체 −10% 급락 확률이 평소의 약 2.5배였어요.\nTQQQ 매수 의견(②③⑥)은 평소의 절반만 사는 걸 권해요. 레버리지 비중도 줄여 두세요.`, 4);
+      await post(`클석진 반도체 위험지수 ${rk.v} · 위험 모드`, `반도체 위험지수가 ${rk.v}(0~100)로 위험 모드에 들어갔어요.\n과거엔 이 구간에서 20일 안 반도체 −10% 급락 확률이 평소의 약 2.5배였어요.\nTQQQ(②③⑥)와 ⑧ 반도체주 매수 의견은 평소의 절반만 사는 걸 권해요. 레버리지 비중도 줄여 두세요.`, 4);
       s.hi = rk.d;
     } else if (rk.v < 80 && s.hi) { s.hi = null; }
     if (rk.sh && (!s.sh || (Date.parse(rk.d) - Date.parse(s.sh)) / 86400e3 > 21)) {

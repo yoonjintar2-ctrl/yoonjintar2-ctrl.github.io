@@ -45,7 +45,7 @@
       const L = cs[n - 1], P = cs[n - 2]; const gap = L.open / P.close - 1, ixGap = (() => { const a = M[day], b = M[P.dt.slice(0, 10)]; return a && b ? a.open / b.close - 1 : 0; })();
       if (gap - beta * ixGap <= -0.04) continue;
       cards.push({ resid, card: {
-        g: semi ? 'A' : 'B+', m: 'US', n: sym, kn: h.u.name, s: '⑧ 시장 급락일 과하게 빠진 종목', px: fu(L.close), ch: pct(h.r), ln: cs.slice(-40).map(x => x.close),
+        g: semi ? 'A' : 'B+', semi: semi ? 1 : 0, m: 'US', n: sym, kn: h.u.name, s: '⑧ 시장 급락일 과하게 빠진 종목', px: fu(L.close), ch: pct(h.r), ln: cs.slice(-40).map(x => x.close),
         buy: fu(L.close * 1.03), tgt: semi ? '+6%p(20일)' : '+3%p(20일)', tp: '시장 대비', stop: fu(L.close * 0.85), sp: '−15%(참고)', rr: '',
         when: '지금 데이마켓(또는 오늘 밤 정규장 시가까지)', hold: '5~20일 · 반등이 빨라 늦게 살수록 손해',
         why: `${day.slice(5)} 나스닥 ${pct(qr)}${spr != null ? ' · S&P ' + pct(spr) : ''}${sxr != null ? ' · 반도체 ' + pct(sxr) : ''}${all3 ? '(셋 다 하락)' : ''}. 이 종목 ${pct(h.r)}, 평소대로면 ${pct(beta * ix)}(베타 ${beta.toFixed(2)}) → ${pct(resid)}p 더 빠짐. ${semi ? '반도체 112건 20일 +5.9%p 승 63%' : '대형주 1,755건 20일 +2.8%p 승 55%'}. 실적 발표 때문인지 확인` } });
