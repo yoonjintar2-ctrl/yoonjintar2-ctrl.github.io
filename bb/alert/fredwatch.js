@@ -2,7 +2,7 @@
 // (FRED는 맥 파이썬·curl 요청을 막아서 크롬 탭이 대신 받는다. risk.js가 이걸 받아 '클석진 반도체 위험지수'를 계산)
 (function () {
   const TOPIC = 'berry-3059012bcc6b7db9-f';
-  const IDS = ['DGS10', 'NFCI', 'WALCL', 'WTREGEN', 'RRPONTSYD', 'DEXKOUS', 'T10YIE', 'DCOILWTICO', 'DTWEXBGS', 'VIXCLS', 'VXVCLS', 'DGS2', 'T10Y2Y'];
+  const IDS = ['DGS10', 'NFCI', 'WALCL', 'WTREGEN', 'RRPONTSYD', 'DEXKOUS', 'T10YIE', 'DCOILWTICO', 'DTWEXBGS', 'VIXCLS', 'VXVCLS', 'DGS2', 'T10Y2Y', 'IPG3344S', 'CAPG3344S'];
   window.__fredPush = async function () {
     const out = {};
     for (const id of IDS) {

@@ -269,7 +269,7 @@
       (0, eval)(await window.__berryLoad('bb/alert/risk.js'));
       const rk = await window.__risk();
       if (rk) {
-        window.__D6.rk = { d: rk.d, v: rk.v, lv: rk.lv, h: rk.h, dd: rk.dd, sh: rk.sh, op: rk.op };
+        window.__D6.rk = { d: rk.d, v: rk.v, vr: rk.vr, vc: rk.vc, lv: rk.lv, h: rk.h, dd: rk.dd, sh: rk.sh, op: rk.op };
         // 위험 모드: TQQQ(②③⑥)와 ⑧ 반도체주 매수 의견은 절반만. ⑧ 반도체를 위험 모드에서 산 경우 6건 20일 −7.1% 승 33% vs 평소 +12.9% 승 69%(2012~26, 표본 작음)
         if (rk.v >= 90) window.__D6.cards.forEach(c => { if (c.n === 'TQQQ' || c.semi) { c.risk = 1; c.why = '⚠ 위험 모드(반반도체지수 ' + rk.v + '): 평소의 절반만 매수\n' + (c.why || ''); } });
         window.__D6.rkSent = await window.__riskAlert(rk, window.__BERRY.alerts);
