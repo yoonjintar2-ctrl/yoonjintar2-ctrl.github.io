@@ -381,7 +381,7 @@ var SHARE_HOST = 'https://stock.jintar.co.kr/';
 var SHARE_OK = ['1','2','3','3s','4','4s','5','5s','6','6s','7','8','9','11','13','13s','14','c1','c2','c3','c4']; // stock 저장소 c/<slug>/ 공유 페이지가 있는 카드
 var SHR_ICON = '<svg class="lk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 function shareSlug(c){ var no = ruleNo(c.s); if (no === 12) return /^c\d$/.test(c.art || '') ? c.art : 'c2'; return no ? no + (c.v ? 's' : '') : ''; }
-function tickPart(c){ var t = String((c.m === 'KR' && c.code) || c.n || '').replace(/[^A-Za-z0-9]/g, ''); if (t) return t.slice(0, 24); var h = 0; String(c.n || '').split('').forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) >>> 0; }); return 'k' + h.toString(36); }
+function tickPart(c){ var t = String((c.m === 'KR' && c.code) || (/[A-Za-z]/.test(c.n || '') ? c.n : c.code) || c.n || '').replace(/[^A-Za-z0-9]/g, ''); if (t) return t.slice(0, 24); var h = 0; String(c.n || '').split('').forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) >>> 0; }); return 'k' + h.toString(36); }
 function cardAnchor(c){ return 'c' + shareSlug(c) + '-' + tickPart(c); }
 function shareUrl(c){ var sl = shareSlug(c); return SHARE_OK.indexOf(sl) >= 0 ? SHARE_HOST + 'c/' + sl + '/#' + tickPart(c) : SHARE_HOST + '#' + cardAnchor(c); }
 function copyText(t){
