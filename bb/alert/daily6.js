@@ -143,7 +143,7 @@
         //   반대로 '이유를 모르겠다·왜 빠지냐'는 오히려 나빴음(20일 +1.4% vs 없을 때 +5.0%), '너무 빠졌다·과하다'는 차이 없음
         const uj = sh(UJ);
         if (nIn >= 80 && uj >= 0.03 && s.px) { LN[s.name] = s.ln;
-          cards.push(card('C+', '④ 억까 여론', s.name, s.name, s.px, { v: 1, hd: 20, code: s.code, tgt: fu(s.px * 1.20), stop: fu(s.px * 0.85), hold: '최대 20거래일 · 실제 산 값 기준 +20% 익절 / −15% 손절(검증 전 일반 가이드) · 20일째 종가 매도', why: `아직 효과 검증 중인 관찰 후보(C+) · 소액만. 3일 ${pct(s.r3)} · 급락 전후 댓글 ${nIn}개 · '억까·세력·작전·털기' ${(uj * 100).toFixed(0)}%` })); }
+          cards.push(card('C+', '④ 억까 여론', s.name, s.name, s.px, { v: 1, hd: 20, art: 'r04u', code: s.code, tgt: fu(s.px * 1.20), stop: fu(s.px * 0.85), hold: '최대 20거래일 · 실제 산 값 기준 +20% 익절 / −15% 손절(검증 전 일반 가이드) · 20일째 종가 매도', why: `아직 효과 검증 중인 관찰 후보(C+) · 소액만. 3일 ${pct(s.r3)} · 급락 전후 댓글 ${nIn}개 · '억까·세력·작전·털기' ${(uj * 100).toFixed(0)}%` })); }
       }
       state.push(`④ 급락 후보 ${drops.length}개`);
     } catch (e) { state.push('④ 오류: ' + String(e).slice(0, 60)); } }
