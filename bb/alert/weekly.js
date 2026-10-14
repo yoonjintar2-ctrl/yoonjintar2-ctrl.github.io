@@ -1,6 +1,7 @@
 // 주간 규칙 점검(매주 토요일 아침, 금요일 미국장 마감 뒤) — 규칙별 성공률 재검증 → 등급 상한 조정 → 앱·웹 규칙 화면에 공시. 주문 기능 없음.
 // await window.__weekly() → { at, rules: { '①': {g, n, win, avg, edge, n3, win3, avg3, edge3, n1, win1, live:{n, win, avg}} ... }, changed: [...] }
-// 등급 상한(최근 3년 기준, 3년 표본 5건 미만이면 전체 기간): S 승률 80%↑ & 기준 대비 +4%p↑ · A 65%↑ & 기준 대비 플러스 · B+ 55%↑ & 플러스 · 그 밖 B(알림 멈춤, 참고만)
+// 등급 상한(최근 3년 기준, 3년 표본 5건 미만이면 전체 기간): 점수 = 승률 × 기대 이익(아무 날 대비 평균 초과수익, 20거래일 환산)
+//   S 점수 4↑ · A 2↑ · B+ 1↑ · 그 밖 또는 기대 이익 0 이하 B(알림 멈춤, 참고만)
 (function () {
   const INFO = 'https://wts-info-api.tossinvest.com';
   const get = async (u) => { for (let t = 0; t < 3; t++) { try { const r = await fetch(u, { credentials: 'include' }); if (r.ok) return r.json(); } catch (e) {} await new Promise(z => setTimeout(z, 700)); } throw new Error('fail ' + u); };
@@ -11,6 +12,7 @@
   const hist = async (sym) => { const c = await code(sym); let cs = [], from = ''; for (let p = 0; p < 12; p++) { const j = await get(`${INFO}/api/v1/c-chart/us-s/${c}/day:1?count=400&useAdjustedRate=true` + (from ? `&from=${encodeURIComponent(from)}` : '')); const k = j.result.candles || []; cs = k.slice().reverse().concat(cs); from = j.result.nextDateTime; if (!from || k.length < 400) break; }
     const today = etDay(); const m = {}; cs.forEach(x => { const d = x.dt.slice(0, 10); if (d < today) m[d] = { o: x.open, h: x.high, l: x.low, c: x.close }; }); return m; };
   const GR = ['B', 'B+', 'A', 'S'];
+  const gradeOf = (win, e20) => { if (win == null || e20 == null || !(e20 > 0)) return 'B'; const sc = win / 100 * e20; return sc >= 4 ? 'S' : sc >= 2 ? 'A' : sc >= 1 ? 'B+' : 'B'; };
 
   window.__weekly = async function () {
     const P = {}; for (const s of ['SPY', 'QQQ', 'TQQQ', 'SOXX', 'USO', 'GLD', 'SLV', 'IEF', 'UGL']) P[s] = await hist(s);
@@ -69,14 +71,15 @@
     const stat = (tr, b) => ({ n: tr.length, win: tr.length ? Math.round(tr.filter(t => t.ret > 0).length / tr.length * 100) : null, avg: tr.length ? +(avg(tr.map(t => t.ret)) * 100).toFixed(1) : null, edge: tr.length ? +((avg(tr.map(t => t.ret)) - b) * 100).toFixed(1) : null });
     for (const rule of ['①', '②', '③', '⑤', '⑥']) { const X = R[rule]; if (!X) { out.rules[rule] = { g: 'B', n: 0 }; continue; }
       const bAll = avg(base(X.veh, X.h)); const all = stat(X.trades, bAll), r3 = stat(X.trades.filter(t => t.d >= y3), bAll), r1 = stat(X.trades.filter(t => t.d >= y1), bAll);
-      const use = r3.n >= 5 ? r3 : all; let g = 'B'; if (use.win >= 80 && use.edge >= 4) g = 'S'; else if (use.win >= 65 && use.edge > 0) g = 'A'; else if (use.win >= 55 && use.edge > 0) g = 'B+';
+      const use = r3.n >= 5 ? r3 : all; const e20 = use.edge == null ? null : +(use.edge * 20 / X.h).toFixed(1); const g = gradeOf(use.win, e20); const score = e20 == null ? null : +(use.win / 100 * e20).toFixed(2);
       const lv = live[rule] || []; const lvDone = lv.filter(x => x.done);
-      out.rules[rule] = { g, veh: X.veh, h: X.h, n: all.n, win: all.win, avg: all.avg, edge: all.edge, n3: r3.n, win3: r3.win, avg3: r3.avg, edge3: r3.edge, n1: r1.n, win1: r1.win, live: { n: lvDone.length, win: lvDone.length ? Math.round(lvDone.filter(x => x.r > 0).length / lvDone.length * 100) : null, avg: lvDone.length ? +(avg(lvDone.map(x => x.r)) * 100).toFixed(1) : null, open: lv.length - lvDone.length } };
+      out.rules[rule] = { g, basis: r3.n >= 5 ? '3년' : '전체', bn: use.n, bwin: use.win, e20, score, veh: X.veh, h: X.h, n: all.n, win: all.win, avg: all.avg, edge: all.edge, n3: r3.n, win3: r3.win, avg3: r3.avg, edge3: r3.edge, n1: r1.n, win1: r1.win, live: { n: lvDone.length, win: lvDone.length ? Math.round(lvDone.filter(x => x.r > 0).length / lvDone.length * 100) : null, avg: lvDone.length ? +(avg(lvDone.map(x => x.r)) * 100).toFixed(1) : null, open: lv.length - lvDone.length } };
       const pg = prev && prev.rules && prev.rules[rule] && prev.rules[rule].g; if (pg && pg !== g) out.changed.push(`${rule} ${pg}→${g}`); }
     // 과거 재검증이 매주 어려운 규칙(④ 댓글, ⑦ 1분봉, ⑧ 상위 500 종목)은 실전 기록으로만 채점. 기록 10건 전까지는 처음 검증한 등급 유지
     for (const [rule, g0] of [['④', 'A'], ['⑦', 'B+'], ['⑧', 'A']]) { const lv = live[rule] || []; const done = lv.filter(x => x.done); const win = done.length ? Math.round(done.filter(x => x.r > 0).length / done.length * 100) : null, a = done.length ? +(avg(done.map(x => x.r)) * 100).toFixed(1) : null;
-      let g = g0; if (done.length >= 10) { g = win >= 65 && a > 0 ? 'A' : win >= 55 && a > 0 ? 'B+' : 'B'; if (GR.indexOf(g) > GR.indexOf(g0)) g = g0; }
-      out.rules[rule] = { g, liveOnly: true, live: { n: done.length, win, avg: a, open: lv.length - done.length } };
+      const H = { '④': 20, '⑦': 1, '⑧': 20 }[rule]; const e20 = a == null ? null : +(a * 20 / H).toFixed(1); const score = e20 == null || win == null ? null : +(win / 100 * e20).toFixed(2);
+      let g = g0; if (done.length >= 10) { g = gradeOf(win, e20); if (GR.indexOf(g) > GR.indexOf(g0)) g = g0; }
+      out.rules[rule] = { g, liveOnly: true, basis: '실전', bn: done.length, bwin: win, e20, score, live: { n: done.length, win, avg: a, open: lv.length - done.length } };
       const pg = prev && prev.rules && prev.rules[rule] && prev.rules[rule].g; if (pg && pg !== g) out.changed.push(`${rule} ${pg}→${g}`); }
     try { localStorage.setItem('ruleStats', JSON.stringify(out)); } catch (e) {}
     return out;
@@ -84,7 +87,7 @@
 
   // 앱·웹 공시용 짧은 성적표: { at, r: { '①': [등급, 3년 건수, 3년 승률, 3년 기준 대비, 실전 건수, 실전 승률] } }
   window.__statsCompact = function () { let st = null; try { st = JSON.parse(localStorage.getItem('ruleStats') || 'null'); } catch (e) {} if (!st) return null;
-    const r = {}; for (const k in st.rules) { const x = st.rules[k]; r[k] = [x.g, x.liveOnly ? null : x.n3, x.liveOnly ? null : x.win3, x.liveOnly ? null : x.edge3, x.live ? x.live.n : 0, x.live ? x.live.win : null]; } return { at: st.at, r }; };
+    const r = {}; for (const k in st.rules) { const x = st.rules[k]; r[k] = [x.g, x.basis || '', x.bn || 0, x.bwin, x.e20, x.score, x.live ? x.live.n : 0, x.live ? x.live.win : null]; } return { at: st.at, v: 2, r }; }; // [등급, 기준 기간, 건수, 승률, 기대 이익(20일 환산 %p), 점수, 실전 건수, 실전 승률]
 
   // 카드 등급에 규칙 상한 적용(B면 알림 대상에서 빼서 참고로)
   window.__applyRuleCaps = function (A) {
