@@ -221,8 +221,8 @@
   // tags: 'req' = 요청 응답, 'quiet' = 앱 화면만 갱신하고 알림은 안 울림
   window.__berryPublish = async function (alert, extraTags) {
     const enc = new TextEncoder(), cs = (alert.cards || []).slice();
-    let body = JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs });
-    while (enc.encode(body).length > 3800 && cs.length > 1) { cs.pop(); body = JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs }); }
+    let body = JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs, st: alert.st || undefined });
+    while (enc.encode(body).length > 3800 && cs.length > 1) { cs.pop(); body = JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs, st: alert.st || undefined }); }
     const tags = [alert.level || 'info'].concat(extraTags || []);
     // 알림 중복 막기(정시·요청 모두): 이미 추천해 계속 남아 있는 카드(같은 종목·같은 규칙)는 다시 울리지 않는다.
     // 새 카드가 있을 때만 울림. 3일 넘게 사라졌다 다시 뜬 카드는 새 신호로 본다.
@@ -263,6 +263,21 @@
         window.__D6.vscan = { at: new Date().toISOString(), hits: v.length };
       }
     } catch (e) { window.__D6.vscanErr = String(e); }
+    // 주간 규칙 점검(토요일 아침 6:30~9:00, 주 1회) → 등급 상한 적용 → 띄운 카드 기록 → 성적표 첨부
+    try {
+      (0, eval)(await window.__berryLoad('bb/alert/weekly.js'));
+      const kst = new Date(Date.now() + 9 * 3600e3), wk = kst.toISOString().slice(0, 10), km = kst.getUTCHours() * 60 + kst.getUTCMinutes();
+      let wkDone = ''; try { wkDone = localStorage.getItem('wkDone') || ''; } catch (e) {}
+      if (kst.getUTCDay() === 6 && km >= 390 && km <= 540 && wkDone !== wk) {
+        const W = await window.__weekly(); try { localStorage.setItem('wkDone', wk); } catch (e) {}
+        window.__D6.weekly = W;
+        if (W.changed.length) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '주간 규칙 점검: 등급 변경 ' + W.changed.join(', '), message: '규칙 화면(i)에서 이번 주 성적표를 확인하세요. ' + W.changed.join(' · '), tags: ['info'] }) });
+      }
+      window.__applyRuleCaps(window.__D6);
+      window.__D6.st = window.__statsCompact();
+      window.__logCards(window.__D6);
+      window.__D6.title = window.__D6.cards.length ? '매수 의견: ' + window.__D6.cards.map(c => c.g + '등급 ' + c.n).join(' · ') : window.__D6.title;
+    } catch (e) { window.__D6.weeklyErr = String(e); }
     window.__ALERT = window.__D6;
     return 'ok ' + window.__D6.cards.length + ' cards';
   };
