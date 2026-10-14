@@ -55,6 +55,56 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 .why{font-size:12px;color:var(--body);padding-top:8px;line-height:1.45;white-space:pre-line}
 .status{text-align:center;font-size:11px;color:var(--muted);padding:14px 0 4px}
 .status.bad{color:var(--warn)}
+/* 트레이딩 카드(규칙 그림 + 기술 설명) */
+.tc{--ty:#5c7cfa;--ty2:#dbe4ff;position:relative;margin:6px auto 18px;max-width:420px;border-radius:16px;padding:9px;background:linear-gradient(145deg,#ffe066,#f5c518 40%,#e0a800 60%,#ffe680);box-shadow:0 3px 10px rgba(0,0,0,.18)}
+.tc .in{border-radius:10px;background:linear-gradient(180deg,var(--ty2),#fff 55%,var(--ty2));padding:8px 10px 10px;border:1px solid rgba(0,0,0,.08)}
+.tc .hd{display:flex;align-items:flex-end;gap:8px}
+.tc .stage{font-size:10px;font-weight:700;color:#fff;background:var(--ty);border-radius:4px;padding:1px 6px;align-self:center}
+.tc .nm{flex:1;min-width:0;font-size:21px;font-weight:900;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc .nm small{font-size:12px;font-weight:600;color:var(--muted);margin-left:5px}
+.tc .hp{display:flex;align-items:baseline;gap:3px;font-weight:900;color:#c92a2a;white-space:nowrap}
+.tc .hp small{font-size:10px;font-weight:700}
+.tc .hp b{font-size:22px}
+.tc .orb{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:radial-gradient(circle at 35% 30%,#fff,var(--ty) 70%);box-shadow:0 1px 2px rgba(0,0,0,.3);align-self:center}
+.tc .art{position:relative;margin-top:6px;aspect-ratio:4/3;border:4px solid;border-color:#e9ecef #adb5bd #adb5bd #e9ecef;background:linear-gradient(135deg,var(--ty2),var(--ty));overflow:hidden;max-width:100%}
+.tc .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.tc .art .no{position:absolute;inset:0;display:grid;place-items:center;font-size:64px;color:rgba(255,255,255,.85);font-weight:900}
+.tc .dex{margin:4px 6px 0;font-size:11px;font-style:italic;color:#495057;text-align:center;background:linear-gradient(90deg,transparent,rgba(255,224,102,.7),transparent);padding:2px 0;font-variant-numeric:tabular-nums}
+.tc .mv{padding:10px 2px 4px}
+.tc .mvh{display:flex;align-items:center;gap:6px}
+.tc .cost{display:flex;gap:2px}
+.tc .cost i{width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,var(--ty) 70%);box-shadow:0 1px 1px rgba(0,0,0,.3)}
+.tc .mvn{flex:1;min-width:0;font-size:17px;font-weight:900;letter-spacing:-.3px}
+.tc .dmg{font-size:22px;font-weight:900;color:#2b8a3e;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tc .mvd{font-size:13px;line-height:1.5;color:#343a40;padding:4px 0 0;white-space:pre-line}
+.tc .tg{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:8px;border-top:2px solid var(--ty);border-bottom:2px solid var(--ty)}
+.tc .tg>div{text-align:center;padding:5px 2px;min-width:0}
+.tc .tg>div+div{border-left:1px dashed rgba(0,0,0,.15)}
+.tc .tg .l{font-size:10px;color:#868e96;font-weight:700}
+.tc .tg .v{font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;word-break:keep-all}
+.tc .tg .s{font-size:10px;font-weight:700}
+.tc .fl{margin-top:8px;font-size:11.5px;line-height:1.45;color:#495057;font-style:italic;border:1px solid rgba(0,0,0,.12);border-radius:6px;padding:6px 8px;background:rgba(255,255,255,.7);white-space:pre-line}
+.tc .ft{display:flex;justify-content:space-between;font-size:9px;color:#868e96;padding-top:5px}
+.tc .spark{padding:4px 0 0}
+.tc .spark svg{height:28px}
+/* 규칙 카드 도감 */
+.rules .rtext{white-space:pre-line;padding-top:18px;border-top:1px solid var(--line);margin-top:16px}
+.rules{white-space:normal}
+.bdh{font-size:12px;color:var(--muted);padding-bottom:8px}
+.bind{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.mc{border:0;padding:5px;border-radius:10px;background:linear-gradient(145deg,#ffe066,#f5c518 40%,#e0a800 60%,#ffe680);cursor:pointer;text-align:left;font:inherit;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.15);-webkit-tap-highlight-color:transparent}
+.mc:active{transform:scale(.97)}
+.mci{border-radius:7px;background:linear-gradient(180deg,var(--ty2),#fff 60%);padding:5px 6px 7px}
+.mh{display:flex;justify-content:space-between;align-items:center;font-size:15px}
+.mh span{font-size:12px;font-weight:900;color:#c92a2a}
+.ma{position:relative;aspect-ratio:1/1;margin-top:3px;border:3px solid;border-color:#e9ecef #adb5bd #adb5bd #e9ecef;background:linear-gradient(135deg,var(--ty2),var(--ty));overflow:hidden}
+.ma img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ma .no{position:absolute;inset:0;display:grid;place-items:center;font-size:40px;color:rgba(255,255,255,.85);font-weight:900}
+.mn{font-size:13px;font-weight:900;padding-top:5px;line-height:1.3;letter-spacing:-.3px}
+.mw{font-size:11px;color:var(--muted);padding-top:2px}
+.ov{position:fixed;inset:0;z-index:70;background:rgba(10,14,20,.72);overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0)) 14px calc(70px + env(safe-area-inset-bottom,0))}
+.ov .tc{margin-top:0}
+.ovX{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0));border:0;border-radius:18px;background:#fff;color:var(--ink);font-weight:800;font-size:15px;padding:9px 22px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 /* 시트(상담·규칙) */
 .sheet{position:fixed;inset:0;background:#f4f5f7;display:none;flex-direction:column;z-index:50}
 .sheet.on{display:flex}
@@ -128,6 +178,7 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
   <div class="sbar"><div class="t"><b>매수 규칙</b><small>백테스트를 통과한 규칙만 매수 의견을 내요</small></div><button id="infoClose">닫기</button></div>
   <div class="rules" id="rules"></div>
 </div>
+<div class="ov" id="ov" hidden><div class="ovIn" id="ovIn"></div><button class="ovX" id="ovX">닫기</button></div>
 <div class="toast" id="toast"></div>
 <div class="rbar" id="rbar" hidden><div class="rin"><div class="rnum" id="rnum"></div><div class="rtx"><span class="rl" id="rl">반반도체지수</span><div class="rsub" id="rsub" style="font-size:13px;font-weight:700;opacity:1"></div></div><div class="rgo">›</div></div></div>
 <div class="sheet" id="rk">
@@ -181,19 +232,63 @@ function spark(v, g){
     '<div class="lab">' + v.length + '일<b style="color:' + (ch >= 0 ? 'var(--good)' : 'var(--bad)') + '">' + (ch >= 0 ? '+' : '−') + Math.abs(ch*100).toFixed(1) + '%</b></div></div>';
 }
 function cell(l, v, s, col){ return '<div class="cell"><div class="l">' + esc(l) + '</div><div class="v" style="color:' + col + '">' + esc(v || '-') + '</div>' + (s ? '<div class="s" style="color:' + col + '">' + esc(s) + '</div>' : '') + '</div>'; }
+// 규칙별 타입(색) — 그림은 a/art/rNN.webp (맥 바탕화면 '박스권헌터 카드' 폴더와 같은 그림)
+var RTYPE = {1:['#1c7ed6','#d0ebff','💧','급락 초입'],2:['#7048e8','#e5dbff','🔮','박스'],3:['#f76707','#ffe8cc','🔥','유가'],4:['#495057','#e9ecef','🌙','공포'],
+  5:['#f59f00','#fff3bf','✨','금·은'],6:['#fab005','#fff9db','⚡','반도체'],7:['#37b24d','#d3f9d8','🍃','V자'],8:['#c92a2a','#ffe3e3','👊','과매도'],
+  9:['#1098ad','#c5f6fa','⚙️','반등'],10:['#5f3dc4','#d0bfff','👻','인버스'],11:['#e8590c','#fff4e6','🐉','위기']};
+var CIRC = '①②③④⑤⑥⑦⑧⑨⑩⑪';
+function ruleNo(s){ var i = CIRC.indexOf((s || '').trim().charAt(0)); return i < 0 ? 0 : i + 1; }
 function card(c){
-  var g = c.g || 'B', kr = c.m === 'KR';
-  var sub = (c.s || '') + (c.when ? ' · ' + c.when : '') + (!kr && c.kn && c.kn !== c.n ? ' · ' + c.kn : '');
-  var why = (c.why || '') + '\n보유 ' + (c.hold || '-') + (c.rr && c.rr !== '-' ? ' · 손익비 ' + c.rr : '');
-  return '<div class="card"><img class="badge" src="a/grades/' + key(g) + '.png" alt="' + esc(g) + '등급">' +
-    '<div class="frame" style="--fr:url(a/frames/' + key(g) + '.png)"><div class="inner">' +
-    '<div class="top"><div class="tk">' + esc(c.n) + '</div><div class="flag">' + (kr ? '🇰🇷' : '🇺🇸') + '</div></div>' +
-    '<div class="sub">' + esc(sub) + '</div>' +
-    '<div class="now">현재가&nbsp; ' + esc(c.px || '-') + '&nbsp;&nbsp; ' + esc(c.ch || '') + '</div>' +
+  var g = c.g || 'B', kr = c.m === 'KR', no = ruleNo(c.s), ty = RTYPE[no] || ['#5c7cfa','#dbe4ff','★','규칙'];
+  var nn = no < 10 ? '0' + no : '' + no;
+  var mvName = (c.s || '').replace(/^[①-⑪]\s*/, '');
+  var hold = (c.hold || '').split(' · ')[0] || '-';
+  var cost = ({S:4,'A+':3,A:3,'B+':2,B:2,C:1})[g] || 2, ci = ''; for (var i = 0; i < cost; i++) ci += '<i></i>';
+  var desc = (c.when ? '언제 · ' + c.when : '') + (c.hold ? '\n어떻게 · ' + c.hold : '');
+  var sub = !kr && c.kn && c.kn !== c.n ? c.kn : (kr && c.code ? c.code : '');
+  return '<div class="tc" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="in">' +
+    '<div class="hd"><span class="stage">' + esc(ty[3]) + '</span><div class="nm">' + esc(c.n) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' +
+      '<div class="hp"><small>등급</small><b>' + esc(g) + '</b></div><div class="orb">' + ty[2] + '</div></div>' +
+    '<div class="art"><div class="no">' + (CIRC.charAt(no - 1) || '★') + '</div>' + (no ? '<img src="a/art/r' + nn + '.webp" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+    '<div class="dex">' + (c.dex ? esc(c.dex) : (kr ? '🇰🇷' : '🇺🇸') + ' 현재가 ' + esc(c.px || '-') + ' · 오늘 ' + esc(c.ch || '-')) + '</div>' +
+    '<div class="mv"><div class="mvh"><div class="cost">' + ci + '</div><div class="mvn">' + esc(mvName || '매수 의견') + '</div><div class="dmg">' + esc(c.tp || '') + '</div></div>' +
+      '<div class="mvd">' + esc(desc) + '</div></div>' +
+    (c.grid ? '<div class="tg">' + c.grid.map(function(x){ return '<div><div class="l">' + esc(x[0]) + '</div><div class="v" style="font-size:12px;color:' + (x[2] || 'inherit') + '">' + esc(x[1]) + '</div></div>'; }).join('') + '</div>' :
+    '<div class="tg"><div><div class="l">매수 상한</div><div class="v">' + esc(c.buy || '-') + '</div></div>' +
+      '<div><div class="l">익절가</div><div class="v" style="color:#2b8a3e">' + esc(c.tgt || '-') + '</div><div class="s" style="color:#2b8a3e">' + esc(c.tp || '') + '</div></div>' +
+      '<div><div class="l">손절가</div><div class="v" style="color:#e03131">' + esc(c.stop || '-') + '</div><div class="s" style="color:#e03131">' + esc(c.sp || '') + '</div></div>' +
+      '<div><div class="l">보유기간</div><div class="v" style="font-size:12px">' + esc(hold) + '</div></div></div>') +
     spark(c.ln, g) +
-    '<div class="tbl">' + cell('매수 상한', c.buy, '', 'var(--ink)') + cell('목표가', c.tgt, c.tp, '#2b8a3e') + cell('손절가', c.stop, c.sp, '#e03131') + '</div>' +
-    '<div class="why">' + esc(why) + '</div></div></div></div>';
+    '<div class="fl">' + esc(c.why || '') + '</div>' +
+    '<div class="ft"><span>박스권 헌터 · 규칙 ' + (CIRC.charAt(no - 1) || '') + '</span><span>' + (c.rr && c.rr !== '-' ? '손익비 ' + esc(c.rr) : '') + '</span></div>' +
+  '</div></div>';
 }
+// ── 규칙 카드 도감(매수 규칙 화면)
+var RCARDS = [
+ [1,'QQQ','나스닥100','A','S&P가 60일 고점 대비 −7% 이상, 직전 25일 안에 고점 근처였던 \'초입\'만','발동 뒤 3일 안 정규장 시가 · 며칠 늦어도 괜찮아요','+7.1%','40일 보유','없음','40거래일','23회 · 40일 +7.1% · 승 74%','시장이 막 미끄러지기 시작할 때가 가장 싸게 담을 수 있는 순간. 깊이 빠진 뒤가 아니라 \'처음\' 꺾일 때 받아요.'],
+ [2,'TQQQ','나스닥100 3배','S·A','QQQ가 60일간 +12% 오른 뒤 폭 4~12% 박스(15일 이상·바닥 2번 확인), 박스 하단 20% 안, 200일선 위. 50일선 −3% 이내면 S','2일 안에 사기 · QQQ 박스 바닥 −4% 닿으면 바로 자동매도','박스 75%','박스 75%','QQQ 바닥 −4%','최대 15일','S 승률 약 90% · A 약 73%(전체 검증)','오른 뒤 쉬어 가는 상자 안에서, 바닥을 두 번 확인하고 튀어 오를 때를 노려요.'],
+ [3,'TQQQ','나스닥100 3배','A','유가(USO)가 하루 +5% 이상 오르는데 S&P는 하락, QQQ는 200일선 위','발동 뒤 3일 안','+13.5%','20~30일 보유','없음','20~30일','TQQQ 20일 +13.5% · 승 78%','유가 충격에 놀라 같이 빠진 나스닥은 대개 금방 제자리로 돌아왔어요.'],
+ [4,'개별주','실적 좋은 종목','A','3일 −8% 이상 급락한 실적주(매출↑·흑자·부채비율 200% 미만) + 토스 댓글에 \'무섭·패닉·끝났\' 같은 감정형 공포가 \'줍줍\'보다 많을 때','다음 날 정규장','+12~19%','20~60일 보유','없음','20~60일','20일 +12~19% · 승 79~87%(표본 작음)','모두가 겁에 질려 던질 때, 실적이 멀쩡한 보석만 조용히 줍습니다.'],
+ [5,'UGL','금 2배','S·A','금리(IEF)·금·은이 하루에 모두 평소보다 크게 빠진 \'다 팔아치우는 날\'. S&P도 하락이면 A, 금이 50일선 위면 S','발동 뒤 3일 안','+7.0%','20일 보유','없음','20일','UGL 20일 +7.0% · 승 77%','현금이 급해 금까지 내다 판 날, 쏟아진 금화를 상자에 담아요.'],
+ [6,'TQQQ','나스닥100 3배','A','QQQ는 200일선 위인데 반도체(SOXX)만 5일 −7% 이상','다음 날 시가까지','+8.7%','20일 보유','−15%(필수)','20일','34건 · 20일 +8.7% · 승 74%','시장은 멀쩡한데 반도체만 넘어졌다면, 일으켜 세우는 쪽에 걸어요.'],
+ [7,'개별주','관찰 후보','B+','미국장 개장 후 1시간 반, 나스닥과 같이 빠졌다가 1분봉 V자로 회복한 종목','지금 소액 · 오늘 정규장 종가에 매도','','오늘 종가','V 저점(참고)','당일','관찰 중 · 알림 없이 화면·기록만','빠르게 꺾였다 돌아온 V자를 돋보기로 지켜보는 중. 아직 연습 카드예요.'],
+ [8,'개별주','급락일 과매도','A·B+','나스닥 −1.5% 이상 빠진 날, 평소 움직임(베타)보다 −5%p 이상 더 빠진 종목. 실적 발표 때문에 빠진 종목은 자동 제외','급락 직후 데이마켓 · 아침 8시 50분 검색 · 기다리면 수익 절반','+5.9%p','시장 대비 +3~6%p','−15%(참고)','5~20일','반도체 20일 +5.9%p 승 63% · 그 외 +2.8%p 승 55%','협곡 바닥까지 과하게 떨어진 종목은 스프링처럼 튀어 올라요. 늦을수록 손해.'],
+ [9,'SOXL','반도체 3배','A','SOXX 종가가 직전 20거래일 최고 종가보다 −12% 이상. 반도체만 단체 급락한 날(SOXX −3%↓, S&P는 덜)엔 2거래일 기다림','다음 날 시가 · 익절·손절 자동 주문 걸기 · 위험 모드면 절반만','+40%','+40%','−20%(SOXX 약 −7%)','최대 15거래일','아무 날보다 건당 +9.2 / +1.5 / +7.7%p · 승 57~67%','크게 파인 분화구에서 반도체가 3배 속도로 솟아오를 때.'],
+ [10,'SOXS','반도체 3배 인버스','B+','반반도체지수 90 이상(위험 모드)인데 SOXX 종가가 20일선을 처음 밑돌 때','다음 날 시가 · 손절 자동 주문 필수 · 소액','+15%','+15%','−10%(반드시)','최대 10거래일','30건 건당 +2.2~3.0% · 승 33~50%','무너지는 칩 탑 옆으로 내리꽂는 한 수. 이기는 건 절반뿐이라 방패(손절)가 생명.'],
+ [11,'QQQ·SOXX','위기 매수','S','최고가 대비 −30% · −40% · −50%에 처음 닿을 때(몇 년에 한 번)','총 매수 계획을 1차 30% · 2차 30% · 3차 40%로 나눠서. −15% 안으로 회복하면 처음부터','','1~3년 보유','없음(나눠 사기)','1~3년','2020 코로나 1년 +135% · 2022 3년 +154% (2008·닷컴은 −30%에서 더 빠짐)','폭풍이 와도 상자는 버팁니다. 동전은 한 번에 붓지 말고 세 번에 나눠서.']
+];
+function liveGrade(no){ var st = state.result && state.result.st; var x = st && st.r && st.r[CIRC.charAt(no - 1)]; return x ? x[0] : ''; }
+function ruleCardObj(r){ var lg = liveGrade(r[0]);
+  return { g: lg || r[3].split('·')[0], m: 'US', n: r[1], kn: r[2], s: CIRC.charAt(r[0] - 1) + ' ' + (RTYPE[r[0]] ? ({1:'급락 초입',2:'나스닥 박스 하단',3:'유가 급등',4:'실적주 공포 여론',5:'금·금리 동반 하락',6:'반도체만 급락',7:'V자 반등 후 횡보',8:'급락일 과하게 빠진 종목',9:'반도체 급락 반등',10:'위험 모드 추세 이탈',11:'위기 매수'})[r[0]] : ''),
+    tp: r[6], when: r[4], hold: r[5], dex: '📜 ' + r[10] + (lg ? ' · 이번 주 ' + lg + '등급' : ''), why: r[11],
+    grid: [['익절', r[7], '#2b8a3e'], ['손절', r[8], '#e03131'], ['보유기간', r[9]], ['처음 등급', r[3]]] }; }
+function binderHTML(){ var h = '<div class="bdh">카드를 누르면 크게 볼 수 있어요</div><div class="bind">';
+  RCARDS.forEach(function(r, i){ var ty = RTYPE[r[0]], nn = r[0] < 10 ? '0' + r[0] : '' + r[0], lg = liveGrade(r[0]) || r[3];
+    h += '<button class="mc" data-i="' + i + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="mci"><div class="mh"><b>' + CIRC.charAt(r[0] - 1) + '</b><span>' + esc(lg) + '</span></div>' +
+      '<div class="ma"><div class="no">' + CIRC.charAt(r[0] - 1) + '</div><img src="a/art/r' + nn + '.webp" alt="" loading="lazy" onerror="this.remove()"></div>' +
+      '<div class="mn">' + esc(ruleCardObj(r).s.slice(2)) + '</div><div class="mw">' + ty[2] + ' ' + esc(r[1]) + '</div></div></button>'; });
+  return h + '</div>'; }
+function openRuleCard(i){ $('ovIn').innerHTML = card(ruleCardObj(RCARDS[i])); $('ov').hidden = false; }
 function render(){
   var L = $('list'), html = '';
   if (state.fail) html += '<div class="note" style="color:var(--warn)">' + esc(state.fail) + '</div>';
@@ -413,7 +508,10 @@ function statsText(){ var st = state.result && state.result.st; if (!st || !st.r
     if (x[1] !== '실전') t += ' · 실전 ' + (x[6] ? x[6] + '건 승률 ' + x[7] + '%' : '기록 쌓는 중');
     t += '\n'; });
   return t + '\n등급: S 점수 4↑ · A 2↑ · B+ 1↑ · 그 밖 또는 기대 이익 0 이하는 B\n\n'; }
-$('bInfo').onclick = function(){ $('rules').textContent = statsText() + RULES; $('info').classList.add('on'); };
+$('bInfo').onclick = function(){ var rest = RULES.replace(/■ [①-⑪][\s\S]*?(?=■ 화면 아래)/, '');
+  $('rules').innerHTML = binderHTML() + '<div class="rtext">' + esc(statsText() + rest) + '</div>'; $('info').classList.add('on'); };
+$('rules').addEventListener('click', function(e){ var b = e.target.closest('.mc'); if (b) openRuleCard(+b.dataset.i); });
+$('ov').onclick = function(e){ if (e.target.id === 'ov' || e.target.id === 'ovX') $('ov').hidden = true; };
 $('rbar').onclick = rkOpen;
 $('infoClose').onclick = function(){ $('info').classList.remove('on'); };
 $('send').onclick = sendChat;
