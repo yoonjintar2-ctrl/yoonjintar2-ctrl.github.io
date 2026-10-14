@@ -312,7 +312,7 @@ function card(c){
   return '<div class="tc g' + tier(g) + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="in">' +
     '<div class="hd"><span class="stage">' + esc(ty[3]) + '</span><div class="nm">' + (ep ? '<span class="ep">' + esc(ep) + '</span> ' : '') + esc(c.n) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' +
       badge(g, 1) + '<div class="orb">' + ty[2] + '</div></div>' +
-    '<div class="art"><div class="no">' + (CIRC.charAt(no - 1) || '★') + '</div>' + (no ? '<img src="a/art/r' + nn + '.webp" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+    '<div class="art"><div class="no">' + (CIRC.charAt(no - 1) || '★') + '</div>' + (no ? '<img src="a/art/' + (c.art || 'r' + nn) + '.webp" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
     '<div class="dex">' + (c.dex ? esc(c.dex) : (kr ? '🇰🇷' : '🇺🇸') + ' 현재가 ' + esc(c.px || '-') + ' · 오늘 ' + esc(c.ch || '-')) + '</div>' +
     '<div class="mv"><div class="mvh"><div class="cost">' + ci + '</div><div class="mvn">' + esc(mvName || '매수 의견') + '</div><div class="dmg">' + esc(c.tp || '') + '</div></div>' +
       '<div class="mvd">' + esc(desc) + '</div></div>' +
