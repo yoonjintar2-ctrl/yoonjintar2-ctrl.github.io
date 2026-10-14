@@ -76,8 +76,8 @@
       out.rules[rule] = { g, basis: r3.n >= 5 ? '3년' : '전체', bn: use.n, bwin: use.win, e20, score, veh: X.veh, h: X.h, n: all.n, win: all.win, avg: all.avg, edge: all.edge, n3: r3.n, win3: r3.win, avg3: r3.avg, edge3: r3.edge, n1: r1.n, win1: r1.win, live: { n: lvDone.length, win: lvDone.length ? Math.round(lvDone.filter(x => x.r > 0).length / lvDone.length * 100) : null, avg: lvDone.length ? +(avg(lvDone.map(x => x.r)) * 100).toFixed(1) : null, open: lv.length - lvDone.length } };
       const pg = prev && prev.rules && prev.rules[rule] && prev.rules[rule].g; if (pg && pg !== g) out.changed.push(`${rule} ${pg}→${g}`); }
     // 과거 재검증이 매주 어려운 규칙(④ 댓글, ⑦ 1분봉, ⑧ 상위 500 종목)은 실전 기록으로만 채점. 기록 10건 전까지는 처음 검증한 등급 유지
-    for (const [rule, g0] of [['④', 'A'], ['⑦', 'B+'], ['⑧', 'A']]) { const lv = live[rule] || []; const done = lv.filter(x => x.done); const win = done.length ? Math.round(done.filter(x => x.r > 0).length / done.length * 100) : null, a = done.length ? +(avg(done.map(x => x.r)) * 100).toFixed(1) : null;
-      const H = { '④': 20, '⑦': 1, '⑧': 20 }[rule]; const e20 = a == null ? null : +(a * 20 / H).toFixed(1); const score = e20 == null || win == null ? null : +(win / 100 * e20).toFixed(2);
+    for (const [rule, g0] of [['④', 'A'], ['⑦', 'B+'], ['⑧', 'A'], ['⑨', 'A'], ['⑩', 'B+']]) { const lv = live[rule] || []; const done = lv.filter(x => x.done); const win = done.length ? Math.round(done.filter(x => x.r > 0).length / done.length * 100) : null, a = done.length ? +(avg(done.map(x => x.r)) * 100).toFixed(1) : null;
+      const H = { '④': 20, '⑦': 1, '⑧': 20, '⑨': 15, '⑩': 10 }[rule]; const e20 = a == null ? null : +(a * 20 / H).toFixed(1); const score = e20 == null || win == null ? null : +(win / 100 * e20).toFixed(2);
       let g = g0; if (done.length >= 10) { g = gradeOf(win, e20); if (GR.indexOf(g) > GR.indexOf(g0)) g = g0; }
       out.rules[rule] = { g, liveOnly: true, basis: '실전', bn: done.length, bwin: win, e20, score, live: { n: done.length, win, avg: a, open: lv.length - done.length } };
       const pg = prev && prev.rules && prev.rules[rule] && prev.rules[rule].g; if (pg && pg !== g) out.changed.push(`${rule} ${pg}→${g}`); }
@@ -102,7 +102,7 @@
 
   // 띄운 카드를 실전 기록에 남김(규칙·종목·날짜당 한 번)
   window.__logCards = function (A) {
-    const HOLD = { '①': 40, '②': 15, '③': 20, '④': 20, '⑤': 20, '⑥': 20, '⑧': 20 }; // ⑦은 당일 매매라 vlog로 따로
+    const HOLD = { '①': 40, '②': 15, '③': 20, '④': 20, '⑤': 20, '⑥': 20, '⑧': 20, '⑨': 15, '⑩': 10 }; // ⑦은 당일 매매라 vlog로 따로
     let log = []; try { log = JSON.parse(localStorage.getItem('cardlog') || '[]'); } catch (e) {}
     for (const c of A.cards || []) { const r = (c.s || '').trim().charAt(0); const px = +(String(c.px || '').replace(/[^0-9.]/g, '')); if (!HOLD[r] || !(px > 0)) continue;
       const d = A.lastDay || new Date().toISOString().slice(0, 10); if (log.some(x => x.r === r && x.n === c.n && Math.abs(new Date(x.d) - new Date(d)) < 5 * 864e5)) continue;
