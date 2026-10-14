@@ -22,7 +22,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="수리수리진타리">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1d232a">
 <link rel="apple-touch-icon" href="a/icon180.png?v=2">
 <link rel="icon" href="a/icon180.png?v=2">
@@ -116,8 +116,8 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 /* 도감 미니 카드: 칸 높이가 달라도 위아래 여백 같게 */
 .mc{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
 .mc .mci{flex:1}
-.tc .shr{flex:none;width:30px;height:30px;margin-left:-2px;border:0;padding:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#343a40;background:radial-gradient(circle at 35% 30%,#fff,#dee2e6 80%);box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.35);-webkit-tap-highlight-color:transparent}
-.tc .shr svg{width:16px;height:16px;display:block}
+.tc .shr{flex:none;width:24px;height:24px;border:0;padding:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#343a40;background:radial-gradient(circle at 35% 30%,#fff,#dee2e6 80%);box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.35);-webkit-tap-highlight-color:transparent}
+.tc .shr svg{width:13px;height:13px;display:block}
 .tc .shr .ck{display:none}
 .tc .shr.ok{color:#fff;background:radial-gradient(circle at 35% 30%,#8ce99a,#2b8a3e 80%)}
 .tc .shr.ok .lk{display:none}.tc .shr.ok .ck{display:block}
@@ -127,7 +127,12 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 @keyframes hl{0%{box-shadow:0 0 0 0 rgba(255,212,59,.95)}60%{box-shadow:0 0 0 14px rgba(255,212,59,0)}100%{box-shadow:0 0 0 0 rgba(255,212,59,0)}}
 /* 테두리 색 = 등급: S~SSS 금(반짝임) · A-~A+ 은 · B+ 이하 동 */
 .tc.gS,.mc.gS{background:linear-gradient(135deg,#fff3bf,#e8a400 22%,#ffe066 40%,#b8860b 62%,#ffd43b 80%,#c99700);background-size:200% 200%;animation:goldflow 4s ease-in-out infinite alternate}
-.tc.gA,.mc.gA{background:linear-gradient(135deg,#f8f9fa,#ced4da 22%,#f1f3f5 40%,#adb5bd 62%,#e9ecef 80%,#ced4da)}
+.tc.gA,.mc.gA{background:linear-gradient(135deg,#ffffff,#b9c3d0 18%,#f4f6f9 34%,#8e9aab 54%,#e7ebf0 72%,#aeb8c6 88%,#ffffff);background-size:220% 220%;animation:goldflow 5s ease-in-out infinite alternate}
+/* A: 백금 테두리 + 테두리를 따라 도는 금·하늘빛 + 은은한 빛줄기 */
+.tc.gA{box-shadow:0 0 0 1.5px #e0b100,0 4px 18px rgba(116,192,252,.45),0 2px 6px rgba(0,0,0,.12)}
+.tc.gA::before,.mc.gA::before{content:"";position:absolute;left:50%;top:50%;width:160%;aspect-ratio:1;z-index:0;pointer-events:none;transform:translate(-50%,-50%) rotate(0deg);background:conic-gradient(from 0deg,transparent 0 20%,#fff 28%,#ffd43b 33%,#74c0fc 38%,transparent 46% 70%,#fff 78%,#ffd43b 83%,#74c0fc 88%,transparent 96%);animation:aspin 5s linear infinite}
+.tc.gA::after,.mc.gA::after{content:"";position:absolute;inset:-40%;z-index:3;pointer-events:none;background:linear-gradient(115deg,transparent 46%,rgba(255,255,255,.32) 50%,transparent 54%);animation:sweep 5.2s ease-in-out infinite}
+@keyframes aspin{to{transform:translate(-50%,-50%) rotate(360deg)}}
 .tc.gBp,.tc.gB,.mc.gBp,.mc.gB{background:linear-gradient(135deg,#c98a63,#6b3a1f 25%,#a8643c 45%,#4e2a14 65%,#93562f 82%,#5c3218)}
 @keyframes goldflow{from{background-position:0% 0%}to{background-position:100% 100%}}
 .tc.gS{box-shadow:0 0 0 1px rgba(184,134,11,.4),0 4px 18px rgba(232,164,0,.45)}
@@ -138,7 +143,7 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 @keyframes holo{from{background-position:0% 50%}to{background-position:300% 50%}}
 @keyframes sweep{0%{transform:translate(-45%,-45%)}60%,100%{transform:translate(45%,45%)}}
 @keyframes twinkle{from{opacity:.2}to{opacity:.9}}
-@media (prefers-reduced-motion:reduce){.bdg,.tc,.mc,.tc::after,.tc .in::before,.tc .in::after,.mc::after{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.bdg,.tc,.mc,.tc::before,.mc::before,.tc::after,.tc .in::before,.tc .in::after,.mc::after{animation:none!important}}
 /* C등급 상시 카드: 톤 낮게 · 눈에 덜 띄게(무광 회색 테두리, 흐린 그림, 작은 글씨) */
 .tc.gC{background:#dee2e6;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:5px}
 .tc.gC .in{background:#f8f9fa;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)}
@@ -191,6 +196,8 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 /* 맨 위 이름 영역: 어두운 바탕 + 밝은 글씨(아래 카드 영역과 구분) */
 .mast{position:relative;background:#1d232a;color:#f1f3f5;margin:0 -14px 14px;padding:env(safe-area-inset-top,0) 14px 10px;box-shadow:0 0 0 100vmax #1d232a;clip-path:inset(0 -100vmax)}
 .mast .clock{color:#adb5bd}
+html{background:#1d232a}
+@media (display-mode:standalone){.mast{padding-top:calc(env(safe-area-inset-top,0px) + 16px)}}
 .mast .head h1{color:#fff}
 .mast .head h1 small{color:#adb5bd}
 .mast .upd{color:#adb5bd}
@@ -789,7 +796,7 @@ $('list').addEventListener('click', function(e){
     toast('카드 링크를 복사했어요');
   });
 });
-window.__hx = { RCARDS: RCARDS, rc: ruleCardObj, sl: shareSlug, card: card, EPI: EPI, RTYPE: RTYPE, tier: tier };
+window.__hx = { RCARDS: RCARDS, rc: ruleCardObj, sl: shareSlug, card: card, EPI: EPI, RTYPE: RTYPE, tier: tier, badge: badge };
 render(); refresh().then(function(){ ancPolled = true; render(); }, function(){ ancPolled = true; goAnchor(); }).then(connect);
 })();
 </script>
