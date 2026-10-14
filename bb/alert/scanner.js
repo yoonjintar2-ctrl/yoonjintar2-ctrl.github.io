@@ -285,7 +285,7 @@
     // ⑪ 위기 매수(QQQ·SOXX 고점 −30/−40/−50%, 계획의 30/30/40%)
     try { (0, eval)(await window.__berryLoad('bb/alert/crisis.js')); const c11 = await window.__crisis(); const A = window.__D6; if (c11.cards.length) { A.cards = A.cards.concat(c11.cards); A.sPlus = (A.sPlus || []).concat(c11.cards.map(c => c.g + ' ' + c.n)); } if (c11.near.length) A.near = (A.near || []).concat(c11.near); } catch (e11) { window.__D6.crisisErr = String(e11); }
     // ⑨ 반도체 급락 반등(SOXL) · ⑩ 위험 모드 추세 이탈(SOXS)
-    try { (0, eval)(await window.__berryLoad('bb/alert/semi9.js')); const c9 = await window.__semi9(window.__D6.rk); if (c9.length) { const A = window.__D6; A.cards = A.cards.concat(c9); A.sPlus = (A.sPlus || []).concat(c9.map(c => c.g + ' ' + c.n)); } } catch (e9) { window.__D6.semi9Err = String(e9); }
+    try { (0, eval)(await window.__berryLoad('bb/alert/semi9.js')); const c9 = await window.__semi9(window.__D6.rk); if (c9.length) { const A = window.__D6; A.cards = A.cards.concat(c9); A.sPlus = (A.sPlus || []).concat(c9.map(c => c.g + ' ' + c.n)); } const fz = window.__semi9froth; if (fz) window.__D6.cards.forEach(c => { if (/^[⑥⑨⑫]/.test(c.s || '') && c.g !== 'C+') { c.g = 'B'; c.why = `⚠ 반도체 과열 뒤 꺾임(${fz.d.slice(5)}, ${fz.left}거래일 남음): 이 기간엔 줍지 않는 게 나았어요 → 참고(B)로 낮춤\n` + (c.why || ''); } }); } catch (e9) { window.__D6.semi9Err = String(e9); }
     // 주간 규칙 점검(토요일 아침 6:30~9:00, 주 1회) → 등급 상한 적용 → 띄운 카드 기록 → 성적표 첨부
     try {
       (0, eval)(await window.__berryLoad('bb/alert/weekly.js'));
@@ -302,7 +302,7 @@
       window.__D6.title = window.__D6.cards.length ? '매수 의견: ' + window.__D6.cards.map(c => c.g + '등급 ' + c.n).join(' · ') : window.__D6.title;
     } catch (e) { window.__D6.weeklyErr = String(e); }
     // ⓒ 상시 카드(C 등급, 교과서적 장기 전략): 알림·성적표와 별도로 화면 맨 아래에만
-    try { (0, eval)(await window.__berryLoad('bb/alert/evergreen.js')); const ev = await window.__evergreen(); window.__D6.base = ev.filter(c => c.always); window.__D6.cond = ev.filter(c => !c.always); /* 상시(QQQM 적립)와 조건 C카드(SGOV·QLD·IEF) 분리 */ (0, eval)(await window.__berryLoad('bb/alert/zcard.js')); window.__D6.z = await window.__zcard(); } catch (eC) { window.__D6.baseErr = String(eC); }
+    try { (0, eval)(await window.__berryLoad('bb/alert/evergreen.js')); const ev = await window.__evergreen(); window.__D6.base = ev.filter(c => c.always); window.__D6.cond = ev.filter(c => !c.always); /* 상시(QQQM 적립)와 조건 C카드(SGOV·QLD·IEF) 분리 */ (0, eval)(await window.__berryLoad('bb/alert/zcard.js')); window.__D6.z = (await window.__zcard()).concat(window.__semi9z || []); } catch (eC) { window.__D6.baseErr = String(eC); }
     window.__ALERT = window.__D6;
     return 'ok ' + window.__D6.cards.length + ' cards';
   };

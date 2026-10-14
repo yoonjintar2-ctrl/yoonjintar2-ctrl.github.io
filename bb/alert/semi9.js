@@ -5,6 +5,7 @@
 //    같은 기준 27개 익절·손절·보유 조합 중 14개가 세 기간 모두 아무 날보다 나음(−10%·−15%는 3·9개, 5일 급락 속도는 0개)
 // ⑩ 반반도체지수 90 이상(위험 모드)인데 SOXX 종가가 20일선을 처음 밑돌면 → 다음 날 SOXS 매수, 익절 +15% · 손절 −10%(반드시) · 최대 10거래일
 //    건당 +2.2%(2012~18, 12건 50%) · +3.0%(2019~22, 12건 50%) · +2.8%(2023~26, 6건 33%) vs 아무 날 SOXS −1.5 / −1.2 / −2.2%. 36개 조합 중 14개가 세 기간 모두 플러스. 표본 작아 B+
+// ⑫ 조용한 눌림 · Ⓩ 반도체 과열 뒤 꺾임(매수 금지) — 아래 본문 주석 참고. window.__semi9z(매수 금지 카드), window.__semi9froth(과열 창)
 // await window.__semi9(rk) → [card, ...]
 (function () {
   const INFO = 'https://wts-info-api.tossinvest.com';
@@ -44,6 +45,35 @@
       buy: fu(pL * 1.02), tgt: fu(pL * 1.12), tp: '+12.0%', stop: fu(pL * 0.88), sp: '−12.0%', rr: '1.0',
       when: '오늘 밤 정규장 시가', hold: '최대 5거래일 · 실제 산 값 기준 +12% 익절 / −12% 손절 · 5일째 종가 매도 · 소액',
       why: `아직 효과 검증 중인 관찰 후보(C+). ${day.slice(5)} SOXX ${pct(dd)}(20일 최고 종가 대비, 큰 신호 −12%보다 얕음). 2010~2026 165건 5일 안에 58% 성공, 평균 +1.8% · 2019~22엔 아무 날과 비슷했음` });
+    // ── 반도체 과열 뒤 꺾임(매수 금지 C-) · ⑫ 조용한 눌림(SOXL 매수 B+) — 2026-10-14 검증(SOXX·SOXL 일봉 2010~2026)
+    //   과열 = SOXL 거래대금 20일 평균이 그 전 250일 평균의 1.5배 이상(개인 레버리지 쏠림). 상승 = SOXX 60일 +12% 이상
+    //   꺾임 = 20일선 첫 이탈(직전 30일 중 27일 이상 20일선 위) 또는 7일 넘게 10일 고점 갱신 없이 60일 고점 −3~8%
+    //   두 꺾임 기준 합쳐 20일 안 첫 신호만: 13번, 20일 뒤 SOXX −0.6%(46%) · 기준별로는 과열+꺾임 → 20일 뒤 SOXX −4.5%(7건, 오른 비율 14%) / −1.8%(13건, 38%) vs 과열 없는 꺾임 +3.3%(24건 83%) / +3.9%(37건 73%), 8가지 기준 모두 같은 방향
+    //   ⑨ 중 직전 과열이 있던 9건 −3.1%(승 44%) vs 없던 31건 +5.9% → 과열 뒤 20거래일 동안 ⑥·⑨ 매수 카드는 B로 낮춤(scanner.js)
+    //   ⑫ 과열 없는 상승 뒤 20일선 첫 이탈 → 다음 날 SOXL, +40% 익절 / −20% 손절 / 최대 20거래일: 16건 평균 +8.3% 승 75%(아무 날 +3.2% 53%), 2010~18 +1.8 · 2019~22 +11.7 · 2023~ +8.7%
+    window.__semi9z = []; window.__semi9froth = null;
+    try {
+      const [X, Lv] = await Promise.all([daily('SOXX', 140), daily('SOXL', 330)]);
+      const C = X.map(x => x.close), N = C.length, am = {}; Lv.forEach(x => am[x.dt.slice(0, 10)] = x.amount || 0);
+      const A = X.map(x => am[x.dt.slice(0, 10)]); const LA = Lv.map(x => x.amount || 0), LD = Lv.map(x => x.dt.slice(0, 10));
+      const fr = (t) => { const d = X[t].dt.slice(0, 10); const j = LD.indexOf(d); if (j < 270) return null; let a = 0, b = 0; for (let k = j - 19; k <= j; k++) a += LA[k]; for (let k = j - 269; k <= j - 20; k++) b += LA[k]; return (a / 20) / (b / 250); };
+      const MA = (k) => C.slice(k - 19, k + 1).reduce((x, y) => x + y, 0) / 20;
+      const run = (t) => C[t] / C[t - 60] - 1;
+      const brk = (t) => { if (!(C[t] < MA(t) && C[t - 1] >= MA(t - 1))) return false; let up = 0; for (let k = t - 30; k < t; k++) if (C[k] > MA(k)) up++; return up >= 27; };
+      const stall = (t) => { let hi = 0; for (let k = t - 60; k <= t; k++) hi = Math.max(hi, C[k]); let h10 = 0, hI = 0; for (let k = t - 10; k <= t; k++) if (C[k] > h10) { h10 = C[k]; hI = k; } const dd = 1 - C[t] / hi; return t - hI >= 7 && dd >= 0.03 && dd <= 0.08; };
+      let trig = -1, trigFr = null;
+      for (let t = Math.max(80, N - 21); t < N; t++) { const f = fr(t); if (f != null && f >= 1.5 && run(t) >= 0.12 && (brk(t) || stall(t))) { trig = t; trigFr = f; } }
+      if (trig >= 0) { const left = 20 - (N - 1 - trig); window.__semi9froth = { d: X[trig].dt.slice(0, 10), left, fr: trigFr };
+        window.__semi9z.push({ g: 'C-', z: 1, v: 1, art: 'z2', m: 'US', n: 'SOXL·SOXX', kn: '반도체 전체', s: 'Ⓩ 반도체 과열 뒤 꺾임', px: '-', ch: '', buy: '반도체 새로 사지 않기', tgt: '꺾임 뒤 20거래일', stop: '기존 카드 손절 그대로', sp: '', rr: '',
+          when: `${X[trig].dt.slice(5, 10)} 꺾임 · ${left}거래일 남음`, hold: '이 기간 ⑥·⑨ 반도체 매수 카드는 B(참고)로 낮춰 보여 줘요',
+          why: `반도체가 60일 새 크게 오른 뒤 꺾였는데, 개인 레버리지(SOXL) 거래대금이 1년 평균의 ${trigFr.toFixed(1)}배로 몰려 있었어요. 이런 '과열 뒤 꺾임'(2010~2026 13번) 다음 20일 SOXX는 평균 −0.6%(오른 비율 46%)로, 과열 없는 꺾임(+3~4%, 73~83%)보다 확실히 약했고, 그 사이 SOXL 급락 매수(⑨)는 평균 −3.1%였어요.` }); }
+      // ⑫ 조용한 눌림: 오늘 20일선 첫 이탈 + 과열 아님
+      const f0 = fr(N - 1);
+      if (f0 != null && f0 < 1.5 && run(N - 1) >= 0.12 && brk(N - 1)) cards.push({ g: 'B+', m: 'US', n: 'SOXL', kn: '반도체 3배', s: '⑫ 조용한 눌림', semi: 1, px: fu(pL), ch: pct(chL), ln: lnL,
+        buy: fu(pL * 1.03), tgt: fu(pL * 1.40), tp: '+40%', stop: fu(pL * 0.80), sp: '−20%(필수)', rr: '2.0',
+        when: '오늘 밤 정규장 시가(또는 지금 데이마켓)', hold: '최대 20거래일 · 실제 산 값 기준 +40% 익절 / −20% 손절(자동 주문 걸기) · 20일째 종가 매도',
+        why: `${day.slice(5)} SOXX가 60일 ${pct(run(N - 1))} 오른 뒤 20일선 아래로 처음 내려왔는데, SOXL 거래대금은 1년 평균의 ${f0.toFixed(1)}배로 조용해요(과열 아님). 2010~2026 16건 평균 +8.3% 승 75%(아무 날 +3.2%), 표본 작아 B+` });
+    } catch (eF) { window.__semi9frothErr = String(eF); }
     // ⑩ 위험 모드 + 20일선 처음 이탈
     const vr = rk ? (rk.vr != null ? rk.vr : rk.v) : null; // 검증은 급락 위험 축(v4) 기준
     if (vr != null && vr >= 90 && n >= 21 && c[n - 1] < ma20(n - 1) && c[n - 2] >= ma20(n - 2)) {
