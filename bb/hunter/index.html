@@ -58,9 +58,10 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 /* 트레이딩 카드(규칙 그림 + 기술 설명) */
 .tc{--ty:#5c7cfa;--ty2:#dbe4ff;position:relative;margin:6px auto 18px;max-width:420px;border-radius:16px;padding:9px;background:linear-gradient(145deg,#ffe066,#f5c518 40%,#e0a800 60%,#ffe680);box-shadow:0 3px 10px rgba(0,0,0,.18)}
 .tc .in{border-radius:10px;background:linear-gradient(180deg,var(--ty2),#fff 55%,var(--ty2));padding:8px 10px 10px;border:1px solid rgba(0,0,0,.08)}
-.tc .hd{display:flex;align-items:flex-end;gap:8px}
+.tc .hd{display:flex;align-items:center;gap:8px}
 .tc .stage{font-size:10px;font-weight:700;color:#fff;background:var(--ty);border-radius:4px;padding:1px 6px;align-self:center}
-.tc .nm{flex:1;min-width:0;font-size:21px;font-weight:900;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc .nm{flex:1;min-width:0;font-size:21px;font-weight:900;letter-spacing:-.4px;line-height:1.2;word-break:keep-all}
+.tc .nm .ep{font-size:15px;font-weight:800;color:#343a40}
 .tc .nm small{font-size:12px;font-weight:600;color:var(--muted);margin-left:5px}
 .tc .hp{display:flex;align-items:baseline;gap:3px;font-weight:900;color:#c92a2a;white-space:nowrap}
 .tc .hp small{font-size:10px;font-weight:700}
@@ -237,17 +238,23 @@ var RTYPE = {1:['#1c7ed6','#d0ebff','💧','급락 초입'],2:['#7048e8','#e5dbf
   5:['#f59f00','#fff3bf','✨','금·은'],6:['#fab005','#fff9db','⚡','반도체'],7:['#37b24d','#d3f9d8','🍃','V자'],8:['#c92a2a','#ffe3e3','👊','과매도'],
   9:['#1098ad','#c5f6fa','⚙️','반등'],10:['#5f3dc4','#d0bfff','👻','인버스'],11:['#e8590c','#fff4e6','🐉','위기']};
 var CIRC = '①②③④⑤⑥⑦⑧⑨⑩⑪';
+// 종목 이름 앞 수식어(규칙별, 종목마다 하나 골라 고정)
+var EPI = {1:['막 미끄러지기 시작한','첫발을 헛디딘'],2:['상자 바닥을 딛고 선','웅크렸다 튀어 오를'],3:['유가 폭풍에 휘청인','기름 냄새에 놀란'],4:['겁에 질린 군중 속','모두가 등 돌린'],
+  5:['헐값에 던져진','빗속에서 반짝이는'],6:['혼자 넘어진','툭 털고 일어날'],7:['V자로 튀어 오른','숨 고르는'],8:['너무 깊이 떨어진','용수철을 밟은'],
+  9:['기지개를 켜는','분화구에서 깨어난'],10:['무너지는 탑을 노리는','그림자에 숨은'],11:['폭풍 속에서 버티는','몇 년 만에 찾아온']};
+function epithet(no, n){ var a = EPI[no]; if (!a) return ''; var h = 0; String(n || '').split('').forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) % 997; }); return a[h % a.length]; }
+
 function ruleNo(s){ var i = CIRC.indexOf((s || '').trim().charAt(0)); return i < 0 ? 0 : i + 1; }
 function card(c){
   var g = c.g || 'B', kr = c.m === 'KR', no = ruleNo(c.s), ty = RTYPE[no] || ['#5c7cfa','#dbe4ff','★','규칙'];
-  var nn = no < 10 ? '0' + no : '' + no;
+  var nn = no < 10 ? '0' + no : '' + no, ep = c.ep != null ? c.ep : epithet(no, c.n);
   var mvName = (c.s || '').replace(/^[①-⑪]\s*/, '');
   var hold = (c.hold || '').split(' · ')[0] || '-';
   var cost = ({S:4,'A+':3,A:3,'B+':2,B:2,C:1})[g] || 2, ci = ''; for (var i = 0; i < cost; i++) ci += '<i></i>';
   var desc = (c.when ? '언제 · ' + c.when : '') + (c.hold ? '\n어떻게 · ' + c.hold : '');
   var sub = !kr && c.kn && c.kn !== c.n ? c.kn : (kr && c.code ? c.code : '');
   return '<div class="tc" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="in">' +
-    '<div class="hd"><span class="stage">' + esc(ty[3]) + '</span><div class="nm">' + esc(c.n) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' +
+    '<div class="hd"><span class="stage">' + esc(ty[3]) + '</span><div class="nm">' + (ep ? '<span class="ep">' + esc(ep) + '</span> ' : '') + esc(c.n) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' +
       '<div class="hp"><small>등급</small><b>' + esc(g) + '</b></div><div class="orb">' + ty[2] + '</div></div>' +
     '<div class="art"><div class="no">' + (CIRC.charAt(no - 1) || '★') + '</div>' + (no ? '<img src="a/art/r' + nn + '.webp" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
     '<div class="dex">' + (c.dex ? esc(c.dex) : (kr ? '🇰🇷' : '🇺🇸') + ' 현재가 ' + esc(c.px || '-') + ' · 오늘 ' + esc(c.ch || '-')) + '</div>' +
@@ -280,13 +287,13 @@ var RCARDS = [
 function liveGrade(no){ var st = state.result && state.result.st; var x = st && st.r && st.r[CIRC.charAt(no - 1)]; return x ? x[0] : ''; }
 function ruleCardObj(r){ var lg = liveGrade(r[0]);
   return { g: lg || r[3].split('·')[0], m: 'US', n: r[1], kn: r[2], s: CIRC.charAt(r[0] - 1) + ' ' + (RTYPE[r[0]] ? ({1:'급락 초입',2:'나스닥 박스 하단',3:'유가 급등',4:'실적주 공포 여론',5:'금·금리 동반 하락',6:'반도체만 급락',7:'V자 반등 후 횡보',8:'급락일 과하게 빠진 종목',9:'반도체 급락 반등',10:'위험 모드 추세 이탈',11:'위기 매수'})[r[0]] : ''),
-    tp: r[6], when: r[4], hold: r[5], dex: '📜 ' + r[10] + (lg ? ' · 이번 주 ' + lg + '등급' : ''), why: r[11],
+    ep: EPI[r[0]][0], tp: r[6], when: r[4], hold: r[5], dex: '📜 ' + r[10] + (lg ? ' · 이번 주 ' + lg + '등급' : ''), why: r[11],
     grid: [['익절', r[7], '#2b8a3e'], ['손절', r[8], '#e03131'], ['보유기간', r[9]], ['처음 등급', r[3]]] }; }
 function binderHTML(){ var h = '<div class="bdh">카드를 누르면 크게 볼 수 있어요</div><div class="bind">';
   RCARDS.forEach(function(r, i){ var ty = RTYPE[r[0]], nn = r[0] < 10 ? '0' + r[0] : '' + r[0], lg = liveGrade(r[0]) || r[3];
     h += '<button class="mc" data-i="' + i + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="mci"><div class="mh"><b>' + CIRC.charAt(r[0] - 1) + '</b><span>' + esc(lg) + '</span></div>' +
       '<div class="ma"><div class="no">' + CIRC.charAt(r[0] - 1) + '</div><img src="a/art/r' + nn + '.webp" alt="" loading="lazy" onerror="this.remove()"></div>' +
-      '<div class="mn">' + esc(ruleCardObj(r).s.slice(2)) + '</div><div class="mw">' + ty[2] + ' ' + esc(r[1]) + '</div></div></button>'; });
+      '<div class="mn">' + esc(ruleCardObj(r).s.slice(2)) + '</div><div class="mw">' + ty[2] + ' ' + esc(EPI[r[0]][0] + ' ' + r[1]) + '</div></div></button>'; });
   return h + '</div>'; }
 function openRuleCard(i){ $('ovIn').innerHTML = card(ruleCardObj(RCARDS[i])); $('ov').hidden = false; }
 function render(){
