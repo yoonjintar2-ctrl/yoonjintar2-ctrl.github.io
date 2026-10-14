@@ -23,15 +23,18 @@
       const c = cs.map(x => x.close), n = c.length, day = cs[n - 1].dt.slice(0, 10);
       const hi = Math.max(...c.slice(0, n)), dd = c[n - 1] / hi - 1; // 최근 약 3년(가져온 범위) 최고가 대비
       const s = st[sym] || {}; if (dd > -0.15) { st[sym] = {}; continue; } // −15% 안으로 회복하면 다시 장전
-      for (const [th, lab, w] of TIERS) {
-        if (dd > th) continue;
-        if (s[lab] && (Date.parse(day) - Date.parse(s[lab])) / 864e5 > 3) continue; // 닿은 날부터 3일 동안만 카드(같은 카드는 다시 안 울림)
-        if (!s[lab]) s[lab] = day;
-        const done = TIERS.filter(([t2, l2]) => s[l2] && s[l2] < s[lab]).reduce((a, x) => a + x[2], 0);
-        const nextT = TIERS.find(([t2, l2]) => !s[l2] && t2 < th);
+      // 이번에 해당하는 단계들(한 번에 여러 단계를 건너뛰면 한 카드로 합침)
+      const hit = TIERS.filter(([th, lab]) => dd <= th && (!s[lab] || (Date.parse(day) - Date.parse(s[lab])) / 864e5 <= 3));
+      if (hit.length) {
+        hit.forEach(([th, lab]) => { if (!s[lab]) s[lab] = day; });
+        const first = hit[0][1]; const t0 = s[first];
+        const grp = hit.filter(([th, lab]) => s[lab] === t0); // 같은 날 닿은 단계끼리
+        const lab = grp.map(x => x[1]).join('·'), w = grp.reduce((a, x) => a + x[2], 0);
+        const done = TIERS.filter(([t2, l2]) => s[l2] && s[l2] < t0).reduce((a, x) => a + x[2], 0);
+        const nextT = TIERS.find(([t2, l2]) => !s[l2]);
         cards.push({ g: 'S', m: 'US', n: sym, kn: sym === 'QQQ' ? '나스닥100' : '반도체', s: `⑪ 위기 매수 ${lab}`, px: fu(c[n - 1]), ch: pct(c[n - 1] / c[n - 2] - 1), ln: c.slice(-40),
           buy: fu(c[n - 1] * 1.03), tgt: '1~3년 보유', tp: '', stop: '없음(나눠 사기)', sp: '', rr: '',
-          when: `지금 · 총 매수 계획의 ${w}%만`, hold: `1~3년 · ${lab} ${w}%${done ? `(이미 ${done}% 샀으면 합쳐 ${done + w}%)` : ''}${nextT ? ` · 다음 ${nextT[1]}은 고점 ${Math.round(nextT[0] * 100)}%에서 ${nextT[2]}%` : ' · 마지막 단계'}`,
+          when: `지금 · 총 매수 계획의 ${w}%만`, hold: `1~3년 · ${lab} ${w}%${done ? `(앞서 ${done}% 샀으니 합쳐 ${done + w}%)` : ''}${nextT ? ` · 다음 ${nextT[1]}는 최고가 대비 −${Math.round(-nextT[0] * 100)}%에서 ${nextT[2]}%` : ' · 마지막 단계'}`,
           why: `${sym} ${day.slice(5)} 최고가(${fu(hi)}) 대비 ${pct(dd)} — 몇 년에 한 번 오는 위기 구간. 총 매수 계획을 1차 30% · 2차 30% · 3차 40%로 나눠 −30% · −40% · −50%에서 삽니다. 지금은 ${lab}: 계획의 ${w}%만. 과거: ${HIST[sym]}` });
       }
       st[sym] = s;
