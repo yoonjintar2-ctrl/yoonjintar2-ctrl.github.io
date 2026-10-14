@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>박스권 헌터</title>
+<title>수리수리진타리</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="박스권 헌터">
+<meta name="apple-mobile-web-app-title" content="수리수리진타리">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#ffffff">
 <link rel="apple-touch-icon" href="a/icon180.png?v=2">
@@ -21,7 +21,9 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 .clock{text-align:center;font-size:11px;color:var(--muted);padding-top:8px;font-variant-numeric:tabular-nums}
 .clock span{margin:0 8px;white-space:nowrap}
 .head{display:flex;align-items:center;gap:8px;padding:6px 0 10px}
-.head h1{flex:1;margin:0;font-size:22px;font-weight:800;letter-spacing:-.3px}
+.head h1{flex:1;min-width:0;margin:0;font-size:22px;font-weight:900;letter-spacing:-.4px;display:flex;align-items:center;gap:8px;line-height:1.1}
+.head h1 .bi{width:40px;height:40px;flex:none;object-fit:contain}
+.head h1 small{display:block;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:0;padding-top:3px}
 .right{display:flex;flex-direction:column;align-items:flex-end}
 .icons{display:flex;gap:8px}
 .icons button{width:34px;height:34px;border:0;padding:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -234,7 +236,7 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 <div class="wrap">
   <div class="clock" id="clock"></div>
   <div class="head">
-    <h1>박스권 헌터</h1>
+    <h1><img class="bi" src="a/logo.webp" alt="" onerror="this.remove()"><span>수리수리진타리<small>진탈이의 돈 버는 마법 카드</small></span></h1>
     <div class="right">
       <div class="icons">
         <button id="bChat" aria-label="상담"><img src="a/icons/chat.png" alt=""></button>
@@ -250,7 +252,7 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 </div>
 
 <div class="sheet" id="chat">
-  <div class="sbar"><div class="t"><b>박스권 헌터 상담</b><small>집 맥북의 Claude가 장부·규칙·최근 결과를 보고 답해요</small></div><button id="chatClose">닫기</button></div>
+  <div class="sbar"><div class="t"><b>수리수리진타리 상담</b><small>집 맥북의 Claude가 장부·규칙·최근 결과를 보고 답해요</small></div><button id="chatClose">닫기</button></div>
   <div class="msgs" id="msgs"></div>
   <div class="inrow"><textarea id="q" rows="1" placeholder="메시지 입력"></textarea><button id="send">보내기</button></div>
 </div>
@@ -362,7 +364,7 @@ function card(c){
     spark(c.ln, g) +
     '<div class="fl">' + esc(c.why || '') + '</div>' +
     (RSIM[key] ? '<div class="freq">' + esc(freqLine(key)) + '</div>' : '') +
-    '<div class="ft"><span>박스권 헌터 · 규칙 ' + (CIRC.charAt(no - 1) || '') + (c.rr && c.rr !== '-' ? ' · 손익비 ' + esc(c.rr) : '') + '</span><b>' + esc(ty[3]) + ' ' + esc(g) + '</b></div>' +
+    '<div class="ft"><span>수리수리진타리 · 규칙 ' + (CIRC.charAt(no - 1) || '') + (c.rr && c.rr !== '-' ? ' · 손익비 ' + esc(c.rr) : '') + '</span><b>' + esc(ty[3]) + ' ' + esc(g) + '</b></div>' +
   '</div></div>';
 }
 // ── 규칙 카드 도감(매수 규칙 화면)
