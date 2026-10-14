@@ -124,6 +124,10 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .tc.dark .shr{color:#e9ecef;background:radial-gradient(circle at 35% 30%,#868e96,#212529 80%);box-shadow:0 0 0 2px #495057,0 1px 3px rgba(0,0,0,.5)}
 .tc{scroll-margin-top:14px}
 .tc.hl{animation:hl 1.6s ease-out 2}
+/* A·S 진주빛 펄 코팅(2026-10-15 석진 선택): 카드 전체에 파스텔 펄 막이 천천히 돌고, 문지르면 빛이 따라옴 */
+.pl{position:absolute;inset:0;z-index:3;pointer-events:none;border-radius:inherit;background:conic-gradient(from calc(var(--mx,.5) * 360deg) at 30% 20%,#ffd6e7,#fff3bf,#d3f9d8,#d0ebff,#e5dbff,#ffd6e7);mix-blend-mode:multiply;opacity:.5}
+.mc .pl{opacity:.45}
+.tc .gl{position:absolute;inset:0;z-index:5;pointer-events:none;border-radius:inherit;background:radial-gradient(circle at calc(var(--mx,.5) * 100%) calc(var(--my,.3) * 100%),rgba(255,255,255,.55),rgba(255,255,255,0) 42%);mix-blend-mode:soft-light}
 @keyframes hl{0%{box-shadow:0 0 0 0 rgba(255,212,59,.95)}60%{box-shadow:0 0 0 14px rgba(255,212,59,0)}100%{box-shadow:0 0 0 0 rgba(255,212,59,0)}}
 /* 테두리 색 = 등급: S~SSS 금(반짝임) · A-~A+ 은 · B+ 이하 동 */
 .tc.gS,.mc.gS{background:linear-gradient(135deg,#fff3bf,#e8a400 22%,#ffe066 40%,#b8860b 62%,#ffd43b 80%,#c99700);background-size:200% 200%;animation:goldflow 4s ease-in-out infinite alternate}
@@ -423,7 +427,7 @@ function card(c, sh){
     spark(c.ln, g) +
     '<div class="fl">' + esc(c.why || '') + '</div>' +
     '<div class="ft"><span>수리수리진타리 · 규칙 ' + (CIRC.charAt(no - 1) || '') + (c.rr && c.rr !== '-' ? ' · 손익비 ' + esc(c.rr) : '') + '</span><b>' + esc(ty[3]) + ' ' + esc(g) + '</b></div>' +
-  '</div></div>' + (RSIM[key] ? '<div class="freqo">' + esc(freqLine(key)) + '</div>' : '');
+  '</div>' + (T === 'A' || T === 'S' ? '<div class="pl"></div><div class="gl"></div>' : '') + '</div>' + (RSIM[key] ? '<div class="freqo">' + esc(freqLine(key)) + '</div>' : '');
 }
 // ── 규칙 카드 도감(매수 규칙 화면)
 var RCARDS = [
@@ -517,7 +521,7 @@ function binderHTML(){ var h = '<div class="glegend"><b>등급</b> S 강력 매�
   ord.forEach(function(i){ var r = RCARDS[i], ty = RTYPE[r[0]], nn = r[0] < 10 ? '0' + r[0] : '' + r[0], lg = (r[12] ? '' : liveGrade(r[0])) || r[3];
     var T = r[0] === 13 ? 'Z' : tier(lg.split('·')[0]); h += '<button class="mc g' + T + (r[0] === 10 || r[0] === 13 ? ' dark' : '') + '" data-i="' + i + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="mci"><div class="mh"><b>' + (CIRC.charAt(r[0] - 1) || 'ⓒ') + '</b>' + badge(lg.split('·')[0], 0, T) + '</div>' +
       '<div class="ma"><div class="no">' + CIRC.charAt(r[0] - 1) + '</div><img src="a/art/' + (r[13] || 'r' + nn) + '.webp" alt="" loading="lazy" onerror="this.remove()"></div>' +
-      '<div class="mn">' + esc(ruleCardObj(r).s.slice(2)) + '</div><div class="mw">' + ty[2] + ' ' + esc(EPI[r[0]][0] + ' ' + r[1]) + '</div></div></button>'; });
+      '<div class="mn">' + esc(ruleCardObj(r).s.slice(2)) + '</div><div class="mw">' + ty[2] + ' ' + esc(EPI[r[0]][0] + ' ' + r[1]) + '</div></div>' + (T === 'A' || T === 'S' ? '<span class="pl"></span>' : '') + '</button>'; });
   return h + '</div>'; }
 function openRuleCard(i){ $('ovIn').innerHTML = card(ruleCardObj(RCARDS[i])); $('ov').hidden = false; }
 function render(){
@@ -792,6 +796,18 @@ $('list').addEventListener('click', function(e){
     toast('카드 링크를 복사했어요');
   });
 });
+// 펄 코팅 빛 움직임: 저절로 천천히 돌고(초당 30번), 카드를 문지르면 1.5초 동안 손가락 위치를 따라감
+(function(){ var els = [], last = 0, touchEl = null, touchAt = 0;
+  function set(el, x, y){ el.style.setProperty('--mx', x.toFixed(3)); el.style.setProperty('--my', y.toFixed(3)); }
+  function mv(e){ var el = e.target.closest && e.target.closest('.tc'); if (!el || !el.querySelector('.pl')) return; var r = el.getBoundingClientRect(), p = e.touches ? e.touches[0] : e;
+    touchEl = el; touchAt = Date.now(); set(el, Math.min(1, Math.max(0, (p.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (p.clientY - r.top) / r.height))); }
+  document.addEventListener('pointermove', mv); document.addEventListener('touchmove', mv, { passive: true });
+  function loop(t){ if (t - last > 33) { if (t - (loop.q || 0) > 1000) { els = [].slice.call(document.querySelectorAll('.tc .pl, .mc .pl')).map(function(p){ return p.parentNode; }); loop.q = t; }
+      var x = .5 + .45 * Math.sin(t / 1400), y = .35 + .3 * Math.sin(t / 2100);
+      for (var i = 0; i < els.length; i++) { if (els[i] === touchEl && Date.now() - touchAt < 1500) continue; set(els[i], x, y); } last = t; }
+    requestAnimationFrame(loop); }
+  if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) requestAnimationFrame(loop);
+})();
 window.__hx = { RCARDS: RCARDS, rc: ruleCardObj, sl: shareSlug, card: card, EPI: EPI, RTYPE: RTYPE, tier: tier, badge: badge };
 render(); refresh().then(function(){ ancPolled = true; render(); }, function(){ ancPolled = true; goAnchor(); }).then(connect);
 })();
