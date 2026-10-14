@@ -127,12 +127,8 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 @keyframes hl{0%{box-shadow:0 0 0 0 rgba(255,212,59,.95)}60%{box-shadow:0 0 0 14px rgba(255,212,59,0)}100%{box-shadow:0 0 0 0 rgba(255,212,59,0)}}
 /* 테두리 색 = 등급: S~SSS 금(반짝임) · A-~A+ 은 · B+ 이하 동 */
 .tc.gS,.mc.gS{background:linear-gradient(135deg,#fff3bf,#e8a400 22%,#ffe066 40%,#b8860b 62%,#ffd43b 80%,#c99700);background-size:200% 200%;animation:goldflow 4s ease-in-out infinite alternate}
-.tc.gA,.mc.gA{background:linear-gradient(135deg,#ffffff,#b9c3d0 18%,#f4f6f9 34%,#8e9aab 54%,#e7ebf0 72%,#aeb8c6 88%,#ffffff);background-size:220% 220%;animation:goldflow 5s ease-in-out infinite alternate}
-/* A: 백금 테두리 + 테두리를 따라 도는 금·하늘빛 + 은은한 빛줄기 */
-.tc.gA{box-shadow:0 0 0 1.5px #e0b100,0 4px 18px rgba(116,192,252,.45),0 2px 6px rgba(0,0,0,.12)}
-.tc.gA::before,.mc.gA::before{content:"";position:absolute;left:50%;top:50%;width:160%;aspect-ratio:1;z-index:0;pointer-events:none;transform:translate(-50%,-50%) rotate(0deg);background:conic-gradient(from 0deg,transparent 0 20%,#fff 28%,#ffd43b 33%,#74c0fc 38%,transparent 46% 70%,#fff 78%,#ffd43b 83%,#74c0fc 88%,transparent 96%);animation:aspin 5s linear infinite}
-.tc.gA::after,.mc.gA::after{content:"";position:absolute;inset:-40%;z-index:3;pointer-events:none;background:linear-gradient(115deg,transparent 46%,rgba(255,255,255,.32) 50%,transparent 54%);animation:sweep 5.2s ease-in-out infinite}
-@keyframes aspin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.tc.gA,.mc.gA{background:linear-gradient(135deg,#ffffff,#d0d6de 20%,#f8f9fa 38%,#b8c0ca 58%,#eef1f4 78%,#c8cfd8)}
+.tc.gA{box-shadow:0 0 0 1px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.14)}
 .tc.gBp,.tc.gB,.mc.gBp,.mc.gB{background:linear-gradient(135deg,#c98a63,#6b3a1f 25%,#a8643c 45%,#4e2a14 65%,#93562f 82%,#5c3218)}
 @keyframes goldflow{from{background-position:0% 0%}to{background-position:100% 100%}}
 .tc.gS{box-shadow:0 0 0 1px rgba(184,134,11,.4),0 4px 18px rgba(232,164,0,.45)}
@@ -143,9 +139,10 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 @keyframes holo{from{background-position:0% 50%}to{background-position:300% 50%}}
 @keyframes sweep{0%{transform:translate(-45%,-45%)}60%,100%{transform:translate(45%,45%)}}
 @keyframes twinkle{from{opacity:.2}to{opacity:.9}}
-@media (prefers-reduced-motion:reduce){.bdg,.tc,.mc,.tc::before,.mc::before,.tc::after,.tc .in::before,.tc .in::after,.mc::after{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.bdg,.tc,.mc,.tc::after,.tc .in::before,.tc .in::after,.mc::after{animation:none!important}}
 /* C등급 상시 카드: 톤 낮게 · 눈에 덜 띄게(무광 회색 테두리, 흐린 그림, 작은 글씨) */
-.tc.gC{background:#dee2e6;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:5px}
+.mc.gC{background:#9aa1a9}
+.tc.gC{background:#9aa1a9;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:5px}
 .tc.gC .in{background:#f8f9fa;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)}
 .tc.gC .art{aspect-ratio:16/6;border-width:1px;background:#e9ecef;box-shadow:none}
 .tc.gC .art img{filter:saturate(.35) brightness(1.04);opacity:.85}
@@ -205,7 +202,7 @@ html{background:#1d232a}
 .mast .icons button img{filter:invert(1)}
 .mast .head h1 .bi{background:rgba(255,255,255,.08);border-radius:10px;padding:3px}
 /* C+ 관찰 카드: 무광 회색 테두리(동색 B와 구분), 등급 표시도 회색 */
-.tc.gCp,.mc.gCp{background:linear-gradient(135deg,#e9ecef,#868e96 25%,#ced4da 45%,#6c757d 65%,#adb5bd 82%,#868e96)}
+.tc.gCp,.mc.gCp{background:linear-gradient(135deg,#6c757d,#3d434a 30%,#59616a 55%,#2f343a 80%,#4f565e)}
 .bdg.tCp{background:#e9ecef;color:#495057;box-shadow:0 0 0 1.5px #adb5bd}
 /* 매수 금지 카드(등급은 따로, 예: C-): 검은 테두리 + 붉은 기운 */
 .tc.gZ,.mc.gZ{background:linear-gradient(135deg,#495057,#0b0d10 25%,#343a40 45%,#000 65%,#5c1f1f 85%,#212529)}
