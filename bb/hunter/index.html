@@ -9,8 +9,8 @@
 <meta name="apple-mobile-web-app-title" content="박스권 헌터">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#ffffff">
-<link rel="apple-touch-icon" href="a/icon180.png">
-<link rel="icon" href="a/icon180.png">
+<link rel="apple-touch-icon" href="a/icon180.png?v=2">
+<link rel="icon" href="a/icon180.png?v=2">
 <link rel="manifest" href="manifest.json">
 <style>
 :root{--bg:#fff;--ink:#1d232a;--muted:#6b7580;--warn:#d9480f;--info:#1c6fc9;--good:#2b8a3e;--bad:#d6336c;--box:#f3f4f6;--line:#e6e9ec;--body:#495057}
@@ -56,8 +56,8 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 .status{text-align:center;font-size:11px;color:var(--muted);padding:14px 0 4px}
 .status.bad{color:var(--warn)}
 /* 트레이딩 카드(규칙 그림 + 기술 설명) */
-.tc{--ty:#5c7cfa;--ty2:#dbe4ff;position:relative;margin:6px auto 18px;max-width:420px;padding:0;background:linear-gradient(160deg,var(--ty),var(--ty2) 50%,var(--ty));box-shadow:0 3px 10px rgba(0,0,0,.18)}
-.tc .in{border-radius:6px;background:linear-gradient(180deg,var(--ty2),#fff 55%,var(--ty2));padding:8px 10px 10px;border:1px solid rgba(0,0,0,.08)}
+.tc{--ty:#5c7cfa;--ty2:#dbe4ff;position:relative;overflow:hidden;margin:6px auto 18px;max-width:420px;padding:11px;border-radius:20px;background:linear-gradient(150deg,var(--ty2) 0%,var(--ty) 35%,color-mix(in srgb,var(--ty) 70%,#000) 70%,var(--ty) 100%);box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.tc .in{position:relative;z-index:1;border-radius:12px;background:linear-gradient(180deg,var(--ty2),#fff 55%,var(--ty2));padding:8px 10px 10px;border:1px solid rgba(0,0,0,.08)}
 .tc .hd{display:flex;align-items:center;gap:8px}
 .tc .stage{font-size:10px;font-weight:700;color:#fff;background:var(--ty);border-radius:4px;padding:1px 6px;align-self:center}
 .tc .nm{flex:1;min-width:0;font-size:21px;font-weight:900;letter-spacing:-.4px;line-height:1.2;word-break:keep-all}
@@ -88,18 +88,30 @@ body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 .tc .ft{display:flex;justify-content:space-between;font-size:9px;color:#868e96;padding-top:5px}
 .tc .spark{padding:4px 0 0}
 .tc .spark svg{height:28px}
-.bdg{position:relative;display:inline-grid;place-items:center;width:30px;height:30px;background:center/contain no-repeat;flex:none}
-.bdg b{font-size:12px;font-weight:900;color:#212529;text-shadow:0 0 3px #fff,0 0 2px #fff;letter-spacing:-.5px}
-.bdg.big{width:42px;height:42px}
-.bdg.big b{font-size:16px}
+/* 등급: 문구 + 반짝임(S 무지개 홀로 · A 금빛 · B+ 은빛 · B 없음) */
+.bdg{display:inline-flex;align-items:baseline;gap:2px;flex:none;font-weight:900;font-size:13px;line-height:1;padding:4px 8px;border-radius:999px;color:#fff;background:#868e96;letter-spacing:-.3px;white-space:nowrap}
+.bdg small{font-size:10px;font-weight:800;opacity:.9}
+.bdg.big{font-size:18px;padding:5px 10px}
+.bdg.tA{background:linear-gradient(110deg,#b8860b 0%,#f5c518 30%,#fff3b0 45%,#f5c518 60%,#b8860b 100%);background-size:250% 100%;color:#4a3300;animation:shine 2.6s linear infinite}
+.bdg.tS{background:linear-gradient(110deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7,#b197fc,#ff6b6b);background-size:300% 100%;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45);animation:shine 2s linear infinite;box-shadow:0 0 8px rgba(255,255,255,.9)}
+.bdg.tBp{background:linear-gradient(110deg,#868e96,#dee2e6 45%,#868e96);background-size:250% 100%;color:#212529;animation:shine 3.5s linear infinite}
+@keyframes shine{from{background-position:100% 0}to{background-position:-100% 0}}
+/* 카드 전체 반짝임: S는 무지개 빛줄기 + 별, A는 금빛 빛줄기 */
+.tc.gS::after,.tc.gA::after,.mc.gS::after,.mc.gA::after{content:"";position:absolute;inset:-40%;z-index:0;pointer-events:none;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.75) 50%,transparent 58%);animation:sweep 3.2s ease-in-out infinite}
+.tc.gS .in::after,.tc.gA .in::after,.mc.gS .mci::after,.mc.gA .mci::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.22) 50%,transparent 60%);background-size:300% 100%;animation:shine 3.2s ease-in-out infinite}
+.tc.gS::after,.mc.gS::after{background:linear-gradient(115deg,transparent 34%,rgba(255,120,120,.7) 42%,rgba(255,240,150,.8) 47%,rgba(150,255,200,.75) 52%,rgba(140,190,255,.7) 57%,transparent 65%);animation-duration:2.6s}
+.tc.gS::before,.mc.gS::before{content:"✦  ✧   ✦    ✧  ✦";position:absolute;left:0;right:0;top:0;z-index:2;pointer-events:none;color:#fff;font-size:12px;letter-spacing:6px;text-align:center;opacity:.85;animation:twinkle 1.6s ease-in-out infinite alternate}
+@keyframes sweep{0%{transform:translateX(-60%)}60%,100%{transform:translateX(60%)}}
+@keyframes twinkle{from{opacity:.25}to{opacity:.95}}
+@media (prefers-reduced-motion:reduce){.bdg,.tc::after,.mc::after,.tc::before,.mc::before{animation:none!important}}
 /* 규칙 카드 도감 */
 .rules .rtext{white-space:pre-line;padding-top:18px;border-top:1px solid var(--line);margin-top:16px}
 .rules{white-space:normal}
 .bdh{font-size:12px;color:var(--muted);padding-bottom:8px}
 .bind{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.mc{padding:0;background:linear-gradient(160deg,var(--ty),var(--ty2) 50%,var(--ty));cursor:pointer;text-align:left;font:inherit;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.15);-webkit-tap-highlight-color:transparent}
+.mc{position:relative;overflow:hidden;border:0;padding:6px;border-radius:12px;background:linear-gradient(150deg,var(--ty2) 0%,var(--ty) 35%,color-mix(in srgb,var(--ty) 70%,#000) 70%,var(--ty) 100%);cursor:pointer;text-align:left;font:inherit;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.15);-webkit-tap-highlight-color:transparent}
 .mc:active{transform:scale(.97)}
-.mci{border-radius:4px;background:linear-gradient(180deg,var(--ty2),#fff 60%);padding:5px 6px 7px}
+.mci{position:relative;z-index:1;border-radius:8px;background:linear-gradient(180deg,var(--ty2),#fff 60%);padding:5px 6px 7px}
 .mh{display:flex;justify-content:space-between;align-items:center;font-size:15px}
 .mh span{font-size:12px;font-weight:900;color:#c92a2a}
 .ma{position:relative;aspect-ratio:1/1;margin-top:3px;border:3px solid;border-color:#e9ecef #adb5bd #adb5bd #e9ecef;background:linear-gradient(135deg,var(--ty2),var(--ty));overflow:hidden}
@@ -245,8 +257,8 @@ var RTYPE = {1:['#1c7ed6','#d0ebff','💧','지수'],2:['#3b5bdb','#dbe4ff','�
   10:['#6741d9','#e5dbff','🌑','인버스'],11:['#e03131','#ffe3e3','🔥','위기']};
 // 등급별 테두리(GPT가 그린 그림, 가운데는 비움): S 홀로 · A 금 · B+ 은 · B 동
 function tier(g){ g = String(g || 'B'); return g[0] === 'S' ? 'S' : g[0] === 'A' ? 'A' : g === 'B+' ? 'Bp' : 'B'; }
-function frameCss(g, w){ return 'border:' + w + 'px solid transparent;border-image:url(a/tcg/f' + tier(g) + '.webp) 90 stretch;'; }
-function badge(g, big){ return '<span class="bdg' + (big ? ' big' : '') + '" style="background-image:url(a/tcg/b' + tier(g) + '.webp)"><b>' + esc(g) + '</b></span>'; }
+function frameCss(g, w){ return ''; }
+function badge(g, big){ return '<span class="bdg t' + tier(g) + (big ? ' big' : '') + '">' + esc(g) + (big ? '<small>등급</small>' : '') + '</span>'; }
 
 var CIRC = '①②③④⑤⑥⑦⑧⑨⑩⑪';
 // 종목 이름 앞 수식어(규칙별, 종목마다 하나 골라 고정)
@@ -264,7 +276,7 @@ function card(c){
   var cost = ({S:4,'A+':3,A:3,'B+':2,B:2,C:1})[g] || 2, ci = ''; for (var i = 0; i < cost; i++) ci += '<i></i>';
   var desc = (c.when ? '언제 · ' + c.when : '') + (c.hold ? '\n어떻게 · ' + c.hold : '');
   var sub = !kr && c.kn && c.kn !== c.n ? c.kn : (kr && c.code ? c.code : '');
-  return '<div class="tc" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + ';' + frameCss(g, 26) + '"><div class="in">' +
+  return '<div class="tc g' + tier(g) + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="in">' +
     '<div class="hd"><span class="stage">' + esc(ty[3]) + '</span><div class="nm">' + (ep ? '<span class="ep">' + esc(ep) + '</span> ' : '') + esc(c.n) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' +
       badge(g, 1) + '<div class="orb">' + ty[2] + '</div></div>' +
     '<div class="art"><div class="no">' + (CIRC.charAt(no - 1) || '★') + '</div>' + (no ? '<img src="a/art/r' + nn + '.webp" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
@@ -302,7 +314,7 @@ function ruleCardObj(r){ var lg = liveGrade(r[0]);
     grid: [['익절', r[7], '#2b8a3e'], ['손절', r[8], '#e03131'], ['보유기간', r[9]], ['처음 등급', r[3]]] }; }
 function binderHTML(){ var h = '<div class="bdh">카드를 누르면 크게 볼 수 있어요</div><div class="bind">';
   RCARDS.forEach(function(r, i){ var ty = RTYPE[r[0]], nn = r[0] < 10 ? '0' + r[0] : '' + r[0], lg = liveGrade(r[0]) || r[3];
-    h += '<button class="mc" data-i="' + i + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + ';' + frameCss(lg.split('·')[0], 15) + '"><div class="mci"><div class="mh"><b>' + CIRC.charAt(r[0] - 1) + '</b>' + badge(lg.split('·')[0]) + '</div>' +
+    h += '<button class="mc g' + tier(lg.split('·')[0]) + '" data-i="' + i + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="mci"><div class="mh"><b>' + CIRC.charAt(r[0] - 1) + '</b>' + badge(lg.split('·')[0]) + '</div>' +
       '<div class="ma"><div class="no">' + CIRC.charAt(r[0] - 1) + '</div><img src="a/art/r' + nn + '.webp" alt="" loading="lazy" onerror="this.remove()"></div>' +
       '<div class="mn">' + esc(ruleCardObj(r).s.slice(2)) + '</div><div class="mw">' + ty[2] + ' ' + esc(EPI[r[0]][0] + ' ' + r[1]) + '</div></div></button>'; });
   return h + '</div>'; }
