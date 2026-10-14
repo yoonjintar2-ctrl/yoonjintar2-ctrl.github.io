@@ -411,7 +411,7 @@ function card(c, sh){
   if (p0 && num(c.stop) && !/[0-9]%/.test(c.sp || '')) c.sp = pctOf(num(c.stop)) + (c.sp ? ' ' + c.sp : '');
   var cost = ({S:4,'A+':3,A:3,'B+':2,B:2,C:1})[g] || 2, ci = ''; for (var i = 0; i < cost; i++) ci += '<i></i>';
   var key = c.v ? no + 's' : no;
-  var desc = c.base && CSAY[c.n] ? CSAY[c.n] : c.say ? c.say : RTEXT[key] ? RTEXT[key] + (RPICK[key] ? '\n\n고르는 종목 · ' + RPICK[key] : '') : (c.when ? '언제 · ' + c.when : '') + (c.hold ? '\n어떻게 · ' + c.hold : '');
+  var desc = c.base && CSAY[c.n] ? CSAY[c.n] : c.say ? c.say : RTEXT[key] ? RTEXT[key] + (RPICK[key] ? '\n✅ 실적·재무가 튼튼하고 최근 악재 뉴스가 없는 회사만 골라요.\n\n고르는 종목 · ' + RPICK[key] : '') : (c.when ? '언제 · ' + c.when : '') + (c.hold ? '\n어떻게 · ' + c.hold : '');
   var sub = !kr && c.kn && c.kn !== c.n ? c.kn : (kr && c.code ? c.code : '');
   var T = no === 13 || c.z ? 'Z' : tier(g); // 매수 금지 카드는 등급과 상관없이 어두운 테두리
   var sl = shareSlug(c), aid = sh ? cardAnchor(c) : '';
