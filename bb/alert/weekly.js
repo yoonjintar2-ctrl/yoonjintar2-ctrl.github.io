@@ -12,6 +12,8 @@
   const hist = async (sym) => { const c = await code(sym); let cs = [], from = ''; for (let p = 0; p < 12; p++) { const j = await get(`${INFO}/api/v1/c-chart/us-s/${c}/day:1?count=400&useAdjustedRate=true` + (from ? `&from=${encodeURIComponent(from)}` : '')); const k = j.result.candles || []; cs = k.slice().reverse().concat(cs); from = j.result.nextDateTime; if (!from || k.length < 400) break; }
     const today = etDay(); const m = {}; cs.forEach(x => { const d = x.dt.slice(0, 10); if (d < today) m[d] = { o: x.open, h: x.high, l: x.low, c: x.close }; }); return m; };
   const GR = ['B', 'B+', 'A', 'S'];
+  const HARD = { '②': 'B+' }; // 2026-10-15 견고성 재점검으로 정한 등급 상한(주간 성적이 좋아도 넘지 않음)
+  const capG = (k, g) => !HARD[k] || !g ? g : (GR.indexOf(g) > GR.indexOf(HARD[k]) ? HARD[k] : g);
   const gradeOf = (win, e20) => { if (win == null || e20 == null || !(e20 > 0)) return 'B'; const sc = win / 100 * e20; return sc >= 4 ? 'S' : sc >= 2 ? 'A' : sc >= 1 ? 'B+' : 'B'; };
 
   window.__weekly = async function () {
@@ -87,13 +89,13 @@
 
   // 앱·웹 공시용 짧은 성적표: { at, r: { '①': [등급, 3년 건수, 3년 승률, 3년 기준 대비, 실전 건수, 실전 승률] } }
   window.__statsCompact = function () { let st = null; try { st = JSON.parse(localStorage.getItem('ruleStats') || 'null'); } catch (e) {} if (!st) return null;
-    const r = {}; for (const k in st.rules) { const x = st.rules[k]; r[k] = [x.g, x.basis || '', x.bn || 0, x.bwin, x.e20, x.score, x.live ? x.live.n : 0, x.live ? x.live.win : null]; } return { at: st.at, v: 2, r }; }; // [등급, 기준 기간, 건수, 승률, 기대 이익(20일 환산 %p), 점수, 실전 건수, 실전 승률]
+    const r = {}; for (const k in st.rules) { const x = st.rules[k]; r[k] = [capG(k, x.g), x.basis || '', x.bn || 0, x.bwin, x.e20, x.score, x.live ? x.live.n : 0, x.live ? x.live.win : null]; } return { at: st.at, v: 2, r }; }; // [등급, 기준 기간, 건수, 승률, 기대 이익(20일 환산 %p), 점수, 실전 건수, 실전 승률]
 
   // 카드 등급에 규칙 상한 적용(B면 알림 대상에서 빼서 참고로)
   window.__applyRuleCaps = function (A) {
     let st = null; try { st = JSON.parse(localStorage.getItem('ruleStats') || 'null'); } catch (e) {} if (!st) return A;
     const keep = [], toNear = [];
-    for (const c of A.cards) { const r = (c.s || '').trim().charAt(0); const cap = !c.v && st.rules[r] && st.rules[r].g; if (!cap) { keep.push(c); continue; } // 단타 버전은 자기 기록으로 따로
+    for (const c of A.cards) { const r = (c.s || '').trim().charAt(0); const cap = !c.v && st.rules[r] && capG(r, st.rules[r].g); if (!cap) { keep.push(c); continue; } // 단타 버전은 자기 기록으로 따로
       if (cap === 'B') { c.g = 'B'; c.why = (c.why || '') + ' · 주간 점검에서 B(알림 멈춤)'; toNear.push(c); continue; }
       if (GR.indexOf(c.g) > GR.indexOf(cap)) { c.why = (c.why || '') + ` · 주간 점검 상한 ${cap}(원래 ${c.g})`; c.g = cap; }
       keep.push(c); }

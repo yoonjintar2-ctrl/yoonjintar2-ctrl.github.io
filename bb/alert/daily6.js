@@ -70,7 +70,7 @@
       }
       state.push(box ? `② QQQ 박스 ${fu(box.lo)}~${fu(box.hi)} 중 ${Math.round(100 * (Q[nQ - 1] - box.lo) / (box.hi - box.lo))}%` : '② 박스 없음');
       if (sig) { const qc = Q[nQ - 1], tc = px.TQQQ || 0, lvl = sig.box.lo + 0.75 * (sig.box.hi - sig.box.lo), qStop = sig.box.lo * 0.96, toT = (q) => tc * (1 + 3 * (q / qc - 1));
-        const g = sig.m50 >= 0.97 ? 'S' : sig.m50 >= 0.96 ? 'A' : 'B';
+        const g = sig.m50 >= 0.96 ? 'B+' : 'B'; // 2026-10-15 재점검: 조합 108개 중 49%만 플러스(보유 기간·진입만 바꿔도 흔들림) → S·A에서 B+로
         const c = card(g, '② 박스 하단', 'TQQQ', '나스닥100 3배', tc, { tgt: fu(toT(lvl)), stop: fu(toT(qStop)), hold: '최대 15일 · QQQ ' + fu(qStop) + ' 닿으면 바로 자동매도 · 2일 안에 사야 함',
           why: `QQQ 박스 ${fu(sig.box.lo)}~${fu(sig.box.hi)} 하단 ${Math.round(sig.bp * 100)}% · QQQ/50일선 ${(sig.m50 * 100).toFixed(1)}% · 목표 QQQ ${fu(lvl)}` });
         (g === 'B' ? near : cards).push(c); } }
@@ -92,7 +92,7 @@
       let hit = null; for (let i = n - 3; i < n; i++) { const zg = z(dg, i), zs = z(ds, i), zi = z(di, i); if (zg <= -1 && zs <= -1 && zi >= 1) { const sp = r(dsp, i) < 0; const G = gld.map(x => x.close); const gi = gld.findIndex(x => x.dt.slice(0, 10) === days[i]); const g50 = G[gi] > ma(G, 50, gi); hit = { d: days[i], g: sp && g50 ? 'S' : sp ? 'A' : 'B', zg, zs }; } }
       state.push('⑤ 금 전일 ' + pct(r(dg, n - 1)));
       if (hit) { const c = card(hit.g, '⑤ 금·금리 동반 하락', 'UGL', '금 2배', px.UGL, { tgt: px.UGL ? fu(px.UGL * 1.15) : '+15%', stop: px.UGL ? fu(px.UGL * 0.90) : '−10%', hold: '최대 20거래일 · 실제 산 값 기준 +15% 익절 / −10% 손절 · 20일째 종가 매도 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `금리·금·은 함께 급락(금 z ${hit.zg.toFixed(1)}) · ${hit.g === 'B' ? 'S&P 상승일이라 약함' : 'S&P도 하락'}. UGL 20일 +7.0% 승 77%` }); (hit.g === 'B' ? near : cards).push(c);
-        if (hit.g !== 'B' && px.UGL) cards.push(card('B+', '⑤ 금·금리 동반 하락 · 단타', 'UGL', '금 2배', px.UGL, { v: 1, hd: 10, tgt: fu(px.UGL * 1.08), stop: fu(px.UGL * 0.92), hold: '최대 10거래일 · 실제 산 값 기준 +8% 익절 / −8% 손절 · 10일째 종가 매도', why: '같은 신호를 짧게: 2009~2026 30건 10일 안에 67% 성공, 평균 +2.4%(세 기간 모두 아무 날보다 나음)' })); } }
+        if (hit.g !== 'B' && px.UGL) cards.push(card('A', '⑤ 금·금리 동반 하락 · 단타', /* 2026-10-15 재점검: 48개 조합 100% 플러스 → A */ 'UGL', '금 2배', px.UGL, { v: 1, hd: 10, tgt: fu(px.UGL * 1.08), stop: fu(px.UGL * 0.92), hold: '최대 10거래일 · 실제 산 값 기준 +8% 익절 / −8% 손절 · 10일째 종가 매도', why: '같은 신호를 짧게: 2009~2026 30건 10일 안에 67% 성공, 평균 +2.4%(세 기간 모두 아무 날보다 나음)' })); } }
 
     // ⑥ QQQ 200일선 위 + 반도체 5일 −7% → TQQQ 20일(−15% 손절)
     { const X = soxx.map(x => x.close), nX = X.length; const s5 = (t) => X[t] / X[t - 5] - 1; const recent = [...Array(10).keys()].some(k => s5(nX - 2 - k) <= -0.07);
