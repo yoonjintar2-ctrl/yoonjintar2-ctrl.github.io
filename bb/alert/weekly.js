@@ -7,7 +7,7 @@
   const avg = (a) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN;
   const sd = (a) => { const m = avg(a); return Math.sqrt(avg(a.map(v => (v - m) ** 2))); };
   const code = async (sym) => { const j = await get(`${INFO}/api/v2/stock-infos/code-or-symbol/${encodeURIComponent(sym)}`); return j.result.code || j.result.stockCode; };
-  const etDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const etDay = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false }).formatToParts(new Date()).map(x => [x.type, x.value])); const d = p.year + '-' + p.month + '-' + p.day; return +p.hour % 24 >= 16 ? d + 'z' : d; }; // 장 마감 뒤면 오늘도 포함
   const hist = async (sym) => { const c = await code(sym); let cs = [], from = ''; for (let p = 0; p < 12; p++) { const j = await get(`${INFO}/api/v1/c-chart/us-s/${c}/day:1?count=400&useAdjustedRate=true` + (from ? `&from=${encodeURIComponent(from)}` : '')); const k = j.result.candles || []; cs = k.slice().reverse().concat(cs); from = j.result.nextDateTime; if (!from || k.length < 400) break; }
     const today = etDay(); const m = {}; cs.forEach(x => { const d = x.dt.slice(0, 10); if (d < today) m[d] = { o: x.open, h: x.high, l: x.low, c: x.close }; }); return m; };
   const GR = ['B', 'B+', 'A', 'S'];

@@ -283,7 +283,13 @@ var RULES = "■ 원칙\n백테스트를 통과한 규칙만 매수 의견을 �
 $('bScan').onclick = requestScan;
 $('bChat').onclick = function(){ $('chat').classList.add('on'); renderChat(); poll(T.chat, '12h').then(renderChat).catch(function(){}); setTimeout(function(){ $('q').focus(); }, 50); };
 $('chatClose').onclick = function(){ $('chat').classList.remove('on'); };
-$('bInfo').onclick = function(){ $('rules').textContent = RULES; $('info').classList.add('on'); };
+function statsText(){ var st = state.result && state.result.st; if (!st || !st.r) return '';
+  var names = { '①':'급락 초입 → QQQ', '②':'나스닥 박스 하단 → TQQQ', '③':'유가 급등 → TQQQ', '④':'실적주 공포 여론', '⑤':'금·금리 동반 하락 → UGL', '⑥':'반도체만 급락 → TQQQ', '⑦':'1분봉 V자(관찰)', '⑧':'급락일 과하게 빠진 종목' };
+  var t = '■ 이번 주 성적표 (' + st.at + ' 미국장 마감까지, 매주 토요일 아침 갱신)\n';
+  Object.keys(names).forEach(function(k){ var x = st.r[k]; if (!x) return; var g = x[0];
+    t += k + ' ' + names[k] + ' — ' + g + '등급' + (g === 'B' ? '(알림 멈춤)' : '') + ' · ' + (x[1] != null ? '최근 3년 ' + x[1] + '건 승률 ' + x[2] + '% · 기준 대비 ' + (x[3] >= 0 ? '+' : '') + x[3] + '%p' : '과거 재검증 없음') + ' · 실전 ' + (x[4] ? x[4] + '건 승률 ' + x[5] + '%' : '기록 쌓는 중') + '\n'; });
+  return t + '등급 상한: S 승률 80%↑·기준 +4%p↑ / A 65%↑ / B+ 55%↑ / 그 밖 B\n\n'; }
+$('bInfo').onclick = function(){ $('rules').textContent = statsText() + RULES; $('info').classList.add('on'); };
 $('infoClose').onclick = function(){ $('info').classList.remove('on'); };
 $('send').onclick = sendChat;
 $('q').addEventListener('input', autoGrow);
