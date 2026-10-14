@@ -64,10 +64,10 @@
       try { sym = (await get(`${INFO}/api/v2/stock-infos/${h.u.code}`)).result.symbol || sym; } catch (e) {}
       try { const j = await get(`${INFO}/api/v1/c-chart/us-s/${h.u.code}/day:1?count=41&useAdjustedRate=true`); const cs = (j.result.candles || []).slice().reverse().filter(x => x.dt.slice(0, 10) < E.d); ln = cs.slice(-40).map(x => x.close); pc = ln[ln.length - 1]; } catch (e) {}
       const p = h.a[h.a.length - 1][4], hm = (t) => { const m = t + 570; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
-      cards.push({ quietCard: true, g: 'B+', m: 'US', n: sym, kn: h.u.name, s: '⑦ V자 반등 후 횡보(관찰)', px: fu(p), ch: pc ? pct(p / pc - 1) : '', ln: ln.concat([p]).slice(-40),
+      cards.push({ quietCard: true, g: 'C+', m: 'US', n: sym, kn: h.u.name, s: '⑦ V자 반등 후 횡보(관찰)', px: fu(p), ch: pc ? pct(p / pc - 1) : '', ln: ln.concat([p]).slice(-40),
         buy: fu(p * 1.003), tgt: '오늘 종가', tp: '', stop: fu(h.v.L), sp: pct(h.v.L / p - 1) + ' V 저점(참고)', rr: '',
         when: '지금 사서 오늘 정규장 종가에 매도', hold: '당일(정규장 종가 매도) · 관찰 후보라 소액',
-        why: `미국 ${hm(h.v.tL)} V자 ${pct(h.v.depth)}(같은 때 나스닥 ${pct(h.v.qV)}, 시장과 함께 빠진 V) → 회복 후 ${hm(h.v.te)}까지 20분 횡보. 5분봉 2025~26 135건 종가까지 +0.93% 승 58%(2025 +1.12 / 2026 +0.66). 관찰 후보` });
+        why: `아직 효과 검증 중인 관찰 후보(C+) · 소액만. 미국 ${hm(h.v.tL)} V자 ${pct(h.v.depth)}(같은 때 나스닥 ${pct(h.v.qV)}, 시장과 함께 빠진 V) → 회복 후 ${hm(h.v.te)}까지 20분 횡보. 5분봉 2025~26 135건 종가까지 +0.93% 승 58%(2025 +1.12 / 2026 +0.66). 관찰 후보` });
     }
     // 실제 결과 검증용 기록(오늘 종가와 비교는 나중에)
     try { const log = JSON.parse(localStorage.getItem('vlog') || '[]'); cards.forEach(c => { if (!log.some(x => x.d === E.d && x.n === c.n)) log.push({ d: E.d, n: c.n, code: (hits.find(h => h.u.name === c.kn) || {}).u?.code, px: c.px, t: E.t }); }); localStorage.setItem('vlog', JSON.stringify(log.slice(-300))); } catch (e) {}

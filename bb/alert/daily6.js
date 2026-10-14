@@ -53,7 +53,7 @@
       const fresh = (t) => { for (let k = t - 25; k < t; k++) if (dd(k) < 0.03) return true; return false; };
       let trig = -1, nearT = -1; for (let t = nS - 21; t < nS; t++) { if (dd(t) >= 0.07 && fresh(t) && trig < 0) trig = t; if (dd(t) >= 0.05 && dd(t) < 0.07 && fresh(t)) nearT = t; }
       const dNow = dd(nS - 1); state.push('① S&P 고점 대비 ' + pct(-dNow));
-      if (trig >= 0 && nS - 1 - trig <= 3) cards.push(card('A', '① 급락 초입', 'QQQ', '나스닥100', px.QQQ, { tgt: '40일 보유', stop: '없음(40일 보유)', hold: '40일 · 발동 ' + spy[trig].dt.slice(5, 10) + ' (3일 안에 사면 됨)', why: `S&P가 60일 고점 대비 ${pct(-dd(trig))} · 급락 초입. 2014~2026 23회 40일 +7.1% 승 74%` }));
+      if (trig >= 0 && nS - 1 - trig <= 3) cards.push(card('A', '① 급락 초입', 'QQQ', '나스닥100', px.QQQ, { tgt: px.QQQ ? fu(px.QQQ * 1.20) : '+20%', stop: px.QQQ ? fu(px.QQQ * 0.85) : '−15%', hold: '최대 40거래일 · 실제 산 값 기준 +20% 익절 / −15% 손절(거의 안 닿는 안전장치) · 40일째 종가 매도 · 발동 ' + spy[trig].dt.slice(5, 10) + ' (3일 안에 사면 됨)', why: `S&P가 60일 고점 대비 ${pct(-dd(trig))} · 급락 초입. 2014~2026 23회 40일 +7.1% 승 74%` }));
       else if (nearT === nS - 1) near.push(card('B', '① 급락 근접', 'QQQ', '나스닥100', px.QQQ, { tgt: '-', stop: '-', hold: '매수 안 함', why: `S&P 고점 대비 ${pct(-dNow)} (발동 −7%)` })); }
 
     // ② 나스닥 상승 후 박스 하단 → TQQQ
@@ -80,7 +80,7 @@
       let hit = null; for (let t = nU - 3; t < nU; t++) { const d = uso[t].dt.slice(0, 10), ur = U[t] / U[t - 1] - 1; const si = spy.findIndex(x => x.dt.slice(0, 10) === d); if (si < 1) continue; const sr = S[si] / S[si - 1] - 1; const qi = qqq.findIndex(x => x.dt.slice(0, 10) === d); const up = qi >= 200 && Q[qi] > ma(Q, 200, qi);
         if (sr < 0 && up && ur >= 0.05) hit = { d, ur, sr, g: 'A' }; else if (sr < 0 && up && ur >= 0.04 && t === nU - 1) hit = hit || { d, ur, sr, g: 'B' }; }
       state.push('③ 유가(USO) 전일 ' + pct(U[nU - 1] / U[nU - 2] - 1));
-      if (hit) { const c = card(hit.g, '③ 유가 급등', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: '20~30일 보유', stop: '없음(검증 기준)', hold: '20~30일 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `유가 ${pct(hit.ur)} · S&P ${pct(hit.sr)} · QQQ 200일선 위. 2004~2026 TQQQ 20일 +13.5% 승 78%` }); (hit.g === 'B' ? near : cards).push(c); } }
+      if (hit) { const c = card(hit.g, '③ 유가 급등', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: px.TQQQ ? fu(px.TQQQ * 1.30) : '+30%', stop: px.TQQQ ? fu(px.TQQQ * 0.85) : '−15%', hold: '최대 20거래일 · 실제 산 값 기준 +30% 익절 / −15% 손절 · 20일째 종가 매도 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `유가 ${pct(hit.ur)} · S&P ${pct(hit.sr)} · QQQ 200일선 위. 2004~2026 TQQQ 20일 +13.5% 승 78%` }); (hit.g === 'B' ? near : cards).push(c); } }
 
     // ⑤ 금리·금·은 동반 하락 → UGL 20일 (금리는 IEF로 대신: 금리 하락 = IEF 상승)
     { const dg = byDate(gld), ds = byDate(slv), di = byDate(ief), dsp = byDate(spy);
@@ -89,12 +89,12 @@
       const z = (m, i) => { const xs = []; for (let k = i - 250; k < i; k++) xs.push(r(m, k)); return (r(m, i) - avg(xs)) / sd(xs); };
       let hit = null; for (let i = n - 3; i < n; i++) { const zg = z(dg, i), zs = z(ds, i), zi = z(di, i); if (zg <= -1 && zs <= -1 && zi >= 1) { const sp = r(dsp, i) < 0; const G = gld.map(x => x.close); const gi = gld.findIndex(x => x.dt.slice(0, 10) === days[i]); const g50 = G[gi] > ma(G, 50, gi); hit = { d: days[i], g: sp && g50 ? 'S' : sp ? 'A' : 'B', zg, zs }; } }
       state.push('⑤ 금 전일 ' + pct(r(dg, n - 1)));
-      if (hit) { const c = card(hit.g, '⑤ 금·금리 동반 하락', 'UGL', '금 2배', px.UGL, { tgt: '20일 보유', stop: '없음(검증 기준)', hold: '20일 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `금리·금·은 함께 급락(금 z ${hit.zg.toFixed(1)}) · ${hit.g === 'B' ? 'S&P 상승일이라 약함' : 'S&P도 하락'}. UGL 20일 +7.0% 승 77%` }); (hit.g === 'B' ? near : cards).push(c); } }
+      if (hit) { const c = card(hit.g, '⑤ 금·금리 동반 하락', 'UGL', '금 2배', px.UGL, { tgt: px.UGL ? fu(px.UGL * 1.15) : '+15%', stop: px.UGL ? fu(px.UGL * 0.90) : '−10%', hold: '최대 20거래일 · 실제 산 값 기준 +15% 익절 / −10% 손절 · 20일째 종가 매도 · 발동 ' + hit.d.slice(5) + ' (3일 안에 사면 됨)', why: `금리·금·은 함께 급락(금 z ${hit.zg.toFixed(1)}) · ${hit.g === 'B' ? 'S&P 상승일이라 약함' : 'S&P도 하락'}. UGL 20일 +7.0% 승 77%` }); (hit.g === 'B' ? near : cards).push(c); } }
 
     // ⑥ QQQ 200일선 위 + 반도체 5일 −7% → TQQQ 20일(−15% 손절)
     { const X = soxx.map(x => x.close), nX = X.length; const s5 = (t) => X[t] / X[t - 5] - 1; const recent = [...Array(10).keys()].some(k => s5(nX - 2 - k) <= -0.07);
       state.push('⑥ 반도체 5일 ' + pct(s5(nX - 1)));
-      if (qUp200 && s5(nX - 1) <= -0.07 && !recent) cards.push(card('A', '⑥ 반도체만 급락', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: '20일 보유', stop: px.TQQQ ? fu(px.TQQQ * 0.85) : '−15%', hold: '20일 · TQQQ −15% 손절 필수 · 오늘 밤 정규장 시가까지 사야 함(늦으면 수익 급감)', why: `반도체(SOXX) 5일 ${pct(s5(nX - 1))} · QQQ 200일선 위. TQQQ 20일 +8.7% 승 74%` }));
+      if (qUp200 && s5(nX - 1) <= -0.07 && !recent) cards.push(card('A', '⑥ 반도체만 급락', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: px.TQQQ ? fu(px.TQQQ * 1.25) : '+25%', stop: px.TQQQ ? fu(px.TQQQ * 0.85) : '−15%', hold: '최대 20거래일 · 실제 산 값 기준 +25% 익절 / −15% 손절 필수 · 20일째 종가 매도 · 오늘 밤 정규장 시가까지 사야 함(늦으면 수익 급감)', why: `반도체(SOXX) 5일 ${pct(s5(nX - 1))} · QQQ 200일선 위. TQQQ 20일 +8.7% 승 74%` }));
       else if (qUp200 && s5(nX - 1) <= -0.05 && !recent) near.push(card('B', '⑥ 반도체 급락 근접', 'TQQQ', '나스닥100 3배', px.TQQQ, { tgt: '-', stop: '-', hold: '매수 안 함', why: `반도체 5일 ${pct(s5(nX - 1))} (발동 −7%)` })); }
 
     // ④ 실적 좋은 종목 급락 + 커뮤니티 공포 여론
@@ -126,7 +126,7 @@
         const sh = (re) => all.filter(m => re.test(m)).length / all.length; const emo = sh(EMO), buy = sh(BUY), wry = sh(WRY), fear = sh(FEAR);
         let g = null; if (emo >= 0.05 && buy < emo && wry < emo) g = 'S'; else if (emo >= 0.03 && buy < emo) g = 'A'; else if (fear >= 0.07) g = 'B';
         if (!g) continue;
-        LN[s.name] = s.ln; const c = card(g, '④ 실적주 공포 여론', s.name, s.name, s.px, { code: s.code, tgt: '20~60일 보유', stop: '없음(검증 기준)', hold: '20~60일', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%` });
+        LN[s.name] = s.ln; const c = card(g, '④ 실적주 공포 여론', s.name, s.name, s.px, { code: s.code, tgt: s.px ? fu(s.px * 1.20) : '+20%', stop: s.px ? fu(s.px * 0.85) : '−15%', hold: '20~60일 · 실제 산 값 기준 +20% 익절 / −15% 손절(일반 가이드, 개별주 검증 전) · 60일째 종가 매도', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%` });
         (g === 'B' ? near : cards).push(c);
       }
       state.push(`④ 급락 후보 ${drops.length}개`);
