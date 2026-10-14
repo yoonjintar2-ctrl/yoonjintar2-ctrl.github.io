@@ -352,7 +352,7 @@ function cell(l, v, s, col){ return '<div class="cell"><div class="l">' + esc(l)
 var RTYPE = {1:['#1c7ed6','#d0ebff','💧','지수'],2:['#339af0','#d0ebff','💧','지수'],3:['#1971c2','#d0ebff','💧','지수'],
   4:['#2b8a3e','#d3f9d8','🍃','개별주'],7:['#37b24d','#ebfbee','🍃','개별주'],8:['#40c057','#d3f9d8','🍃','개별주'],
   5:['#d9822b','#ffe8cc','✨','금'],6:['#f59f00','#fff3bf','⚡','반도체'],9:['#fab005','#fff9db','⚡','반도체'],
-  10:['#343a40','#495057','🌑','인버스'],11:['#e03131','#ffe3e3','🔥','위기'],12:['#868e96','#f1f3f5','·','상시'],13:['#212529','#343a40','⛈','매수 금지'],14:['#e8590c','#fff4e6','⚡','반도체']};
+  10:['#343a40','#495057','🌑','인버스'],11:['#e03131','#ffe3e3','🔥','위기'],12:['#868e96','#f1f3f5','·','상시'],13:['#212529','#343a40','⛈','매수 금지'],14:['#f08c00','#fff9db','⚡','반도체']};
 // 등급별 테두리(GPT가 그린 그림, 가운데는 비움): S 홀로 · A 금 · B+ 은 · B 동
 function tier(g){ g = String(g || 'B'); return g[0] === 'S' ? 'S' : g[0] === 'A' ? 'A' : g === 'B+' ? 'Bp' : g === 'C+' ? 'Cp' : g === 'C' ? 'C' : g === 'Z' ? 'Z' : 'B'; }
 function frameCss(g, w){ return ''; }
@@ -481,7 +481,7 @@ var RSIM = {
 function simLine(no){ var r = RSIM[no]; if (!r) return ''; return '<div class="simln" data-no="' + no + '">📊 시뮬레이션 ' + esc(r.s) + ' <u>자세히</u></div>'; }
 function freqLine(no){ var r = RSIM[no]; if (!r) return ''; if (r.y == null) return '올해 발동 횟수는 실전 기록으로 세는 중'; if (r === RSIM[13]) return '1년에 4번(엔비디아 실적 때마다)'; return '올해 ' + r.y + '번 발동' + (r.a != null ? ' · ' + (r.ap || '최근 10년') + ' 평균 1년에 ' + r.a + '번' : ' · 몇 년에 한 번'); }
 function brk(s){ return esc(s).replace(/\s*\(/, '<br>('); }
-function ruleCardObj(r){ if (r[0] === 13 && typeof r[12] === 'string') return { g: 'C-', z: 1, v: 1, m: 'US', n: r[1], kn: r[2], s: 'Ⓩ ' + r[12], art: r[13], ep: EPI[13][1], rule: 1, dex: '매수 금지 카드 · 반도체 새로 사지 않기', why: r[11], grid: [['살 것', '반도체 새로 사지 않기', '#e03131'], ['언제까지', '꺾인 뒤 20거래일', '#2b8a3e'], ['기존 카드', '익절·손절 그대로']] };
+function ruleCardObj(r){ if (r[0] === 13 && typeof r[12] === 'string') return { g: 'C-', z: 1, v: 1, m: 'US', n: r[1], kn: r[2], s: 'Ⓩ ' + r[12], art: r[13], ep: EPI[13][0], rule: 1, dex: '매수 금지 카드 · 반도체 새로 사지 않기', why: r[11], grid: [['살 것', '반도체 새로 사지 않기', '#e03131'], ['언제까지', '꺾인 뒤 20거래일', '#2b8a3e'], ['기존 카드', '익절·손절 그대로']] };
   if (r[0] === 13) return { g: 'C-', z: 1, m: 'US', n: r[1], kn: r[2], s: 'Ⓩ 큰 이벤트 앞 매수 금지', art: 'z', ep: EPI[13][0], rule: 1, dex: '매수 금지 카드 · 사지 말고 쉬어 가기', why: r[11], grid: [['살 것', '새로 사지 않기', '#e03131'], ['언제까지', '이벤트 다음 날', '#2b8a3e'], ['기존 카드', '익절·손절 그대로']] };
   if (r[0] === 12) return { g: 'C', base: 1, m: 'US', n: r[1], kn: r[2], s: 'ⓒ ' + r[14], art: r[13], ep: EPI[12][0], rule: 1, dex: r[15], grid: [['목표', r[7], '#2b8a3e'], ['손절', r[8], '#e03131'], ['보유기간', r[9]]] };
   var lg = r[12] ? '' : liveGrade(r[0]);
