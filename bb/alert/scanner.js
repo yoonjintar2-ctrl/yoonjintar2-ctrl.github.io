@@ -221,8 +221,11 @@
   // tags: 'req' = 요청 응답, 'quiet' = 앱 화면만 갱신하고 알림은 안 울림
   window.__berryPublish = async function (alert, extraTags) {
     const enc = new TextEncoder(), cs = (alert.cards || []).slice();
-    const mk = () => JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs, st: alert.st || undefined, rk: alert.rk || undefined });
+    // ⓒ 상시 카드(C등급)는 꺾은선 빼고 짧게 실어 화면 맨 아래에만. 글자 수가 넘치면 상시 카드부터 뺀다
+    const bs = (alert.base || []).map(c => Object.assign({}, c, { ln: undefined, why: (c.why || '').slice(0, 150) }));
+    const mk = () => JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs, base: bs.length ? bs : undefined, st: alert.st || undefined, rk: alert.rk || undefined });
     let body = mk();
+    while (enc.encode(body).length > 3800 && bs.length) { bs.pop(); body = mk(); }
     while (enc.encode(body).length > 3800 && cs.length > 1) { cs.pop(); body = mk(); }
     const tags = [alert.level || 'info'].concat(extraTags || []);
     // 알림 중복 막기(정시·요청 모두): 이미 추천해 계속 남아 있는 카드(같은 종목·같은 규칙)는 다시 울리지 않는다.
@@ -230,7 +233,9 @@
     const now = Date.now(), key = (c) => c.n + '|' + c.s;
     let seen = {}; try { seen = JSON.parse(localStorage.getItem('d6seen') || '{}'); } catch (e) {}
     const all = alert.cards || [];
-    const fresh = all.filter(c => !c.quietCard && !(seen[key(c)] && now - seen[key(c)] < 3 * 86400e3)); // quietCard(⑦ 관찰)는 화면에만, 알림 안 울림
+    // 알림은 B+ 이상만(2026-10-14 석진): B·C등급과 quietCard(⑦ 관찰)는 화면에만, 알림 안 울림
+    const LOUD = ['SSS', 'SS', 'S', 'A+', 'A', 'A-', 'B+'];
+    const fresh = all.filter(c => !c.quietCard && LOUD.includes(c.g) && !(seen[key(c)] && now - seen[key(c)] < 3 * 86400e3));
     alert.fresh = fresh.map(c => c.g + '등급 ' + c.n);
     if (!fresh.length && tags.indexOf('quiet') < 0) tags.push('quiet');
     const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: alert.title, message: body, tags, priority: (alert.sPlus || []).length ? 4 : 2 }) });
