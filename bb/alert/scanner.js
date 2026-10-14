@@ -229,7 +229,7 @@
     const now = Date.now(), key = (c) => c.n + '|' + c.s;
     let seen = {}; try { seen = JSON.parse(localStorage.getItem('d6seen') || '{}'); } catch (e) {}
     const all = alert.cards || [];
-    const fresh = all.filter(c => !(seen[key(c)] && now - seen[key(c)] < 3 * 86400e3));
+    const fresh = all.filter(c => !c.quietCard && !(seen[key(c)] && now - seen[key(c)] < 3 * 86400e3)); // quietCard(⑦ 관찰)는 화면에만, 알림 안 울림
     alert.fresh = fresh.map(c => c.g + '등급 ' + c.n);
     if (!fresh.length && tags.indexOf('quiet') < 0) tags.push('quiet');
     const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: alert.title, message: body, tags, priority: (alert.sPlus || []).length ? 4 : 2 }) });
