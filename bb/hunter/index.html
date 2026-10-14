@@ -116,6 +116,15 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 /* 도감 미니 카드: 칸 높이가 달라도 위아래 여백 같게 */
 .mc{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
 .mc .mci{flex:1}
+.tc .shr{flex:none;width:30px;height:30px;margin-left:-2px;border:0;padding:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#343a40;background:radial-gradient(circle at 35% 30%,#fff,#dee2e6 80%);box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.35);-webkit-tap-highlight-color:transparent}
+.tc .shr svg{width:16px;height:16px;display:block}
+.tc .shr .ck{display:none}
+.tc .shr.ok{color:#fff;background:radial-gradient(circle at 35% 30%,#8ce99a,#2b8a3e 80%)}
+.tc .shr.ok .lk{display:none}.tc .shr.ok .ck{display:block}
+.tc.dark .shr{color:#e9ecef;background:radial-gradient(circle at 35% 30%,#868e96,#212529 80%);box-shadow:0 0 0 2px #495057,0 1px 3px rgba(0,0,0,.5)}
+.tc{scroll-margin-top:14px}
+.tc.hl{animation:hl 1.6s ease-out 2}
+@keyframes hl{0%{box-shadow:0 0 0 0 rgba(255,212,59,.95)}60%{box-shadow:0 0 0 14px rgba(255,212,59,0)}100%{box-shadow:0 0 0 0 rgba(255,212,59,0)}}
 /* 테두리 색 = 등급: S~SSS 금(반짝임) · A-~A+ 은 · B+ 이하 동 */
 .tc.gS,.mc.gS{background:linear-gradient(135deg,#fff3bf,#e8a400 22%,#ffe066 40%,#b8860b 62%,#ffd43b 80%,#c99700);background-size:200% 200%;animation:goldflow 4s ease-in-out infinite alternate}
 .tc.gA,.mc.gA{background:linear-gradient(135deg,#f8f9fa,#ced4da 22%,#f1f3f5 40%,#adb5bd 62%,#e9ecef 80%,#ced4da)}
@@ -367,7 +376,20 @@ var EPI = {1:['막 미끄러지기 시작한','첫발을 헛디딘'],2:['상자 
 function epithet(no, n){ var a = EPI[no]; if (!a) return ''; var h = 0; String(n || '').split('').forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) % 997; }); return a[h % a.length]; }
 
 function ruleNo(s){ s = (s || '').trim(); if (s.charAt(0) === 'ⓒ') return 12; if (s.charAt(0) === 'Ⓩ') return 13; var i = CIRC.indexOf(s.charAt(0)); return i < 0 ? 0 : i + 1; }
-function card(c){
+// ── 카드 공유: 카드마다 공유용 주소(썸네일이 그 카드 그림) + 앵커로 그 카드 위치에 바로 도착
+var SHARE_HOST = 'https://stock.jintar.co.kr/';
+var SHARE_OK = ['1','2','3','3s','4','4s','5','5s','6','6s','7','8','9','11','13','13s','14','c1','c2','c3','c4']; // stock 저장소 c/<slug>/ 공유 페이지가 있는 카드
+var SHR_ICON = '<svg class="lk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+function shareSlug(c){ var no = ruleNo(c.s); if (no === 12) return /^c\d$/.test(c.art || '') ? c.art : 'c2'; return no ? no + (c.v ? 's' : '') : ''; }
+function tickPart(c){ var t = String((c.m === 'KR' && c.code) || c.n || '').replace(/[^A-Za-z0-9]/g, ''); if (t) return t.slice(0, 24); var h = 0; String(c.n || '').split('').forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) >>> 0; }); return 'k' + h.toString(36); }
+function cardAnchor(c){ return 'c' + shareSlug(c) + '-' + tickPart(c); }
+function shareUrl(c){ var sl = shareSlug(c); return SHARE_OK.indexOf(sl) >= 0 ? SHARE_HOST + 'c/' + sl + '/#' + tickPart(c) : SHARE_HOST + '#' + cardAnchor(c); }
+function copyText(t){
+  var fb = function(){ var a = document.createElement('textarea'); a.value = t; a.setAttribute('readonly', ''); a.style.cssText = 'position:fixed;top:0;left:0;opacity:0'; document.body.appendChild(a); a.select(); a.setSelectionRange(0, t.length); var ok = false; try { ok = document.execCommand('copy'); } catch(e){} a.remove(); return ok; };
+  if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(function(){ return true; }, function(){ return fb(); });
+  return Promise.resolve(fb());
+}
+function card(c, sh){
   var g = c.g || 'B', kr = c.m === 'KR', no = ruleNo(c.s), ty = RTYPE[no] || ['#5c7cfa','#dbe4ff','★','규칙'];
   var nn = no < 10 ? '0' + no : '' + no, ep = c.ep != null ? c.ep : epithet(no, c.n);
   var mvName = (c.s || '').replace(/^[①-⑫ⓒⓏ]\s*/, '');
@@ -382,9 +404,10 @@ function card(c){
   var desc = c.base && CSAY[c.n] ? CSAY[c.n] : c.say ? c.say : RTEXT[key] ? RTEXT[key] + (c.rule ? '' : (c.when || c.hold ? '\n\n이번 카드 메모 · ' + [c.when, c.hold].filter(Boolean).join(' · ') : '')) : (c.when ? '언제 · ' + c.when : '') + (c.hold ? '\n어떻게 · ' + c.hold : '');
   var sub = !kr && c.kn && c.kn !== c.n ? c.kn : (kr && c.code ? c.code : '');
   var T = no === 13 || c.z ? 'Z' : tier(g); // 매수 금지 카드는 등급과 상관없이 어두운 테두리
-  return '<div class="tc g' + T + (no === 10 || no === 13 ? ' dark' : '') + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="in">' +
+  var sl = shareSlug(c), aid = sh ? cardAnchor(c) : '';
+  return '<div class="tc g' + T + (no === 10 || no === 13 ? ' dark' : '') + '"' + (sh ? ' id="' + aid + '" data-sl="' + sl + '"' : '') + ' style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="in">' +
     '<div class="hd"><span class="stage">' + esc(ty[3]) + '</span><div class="nm">' + (ep ? '<span class="ep">' + esc(ep) + '</span> ' : '') + esc(c.n) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' +
-      badge(g, 1, T) + '<div class="orb">' + ty[2] + '</div></div>' +
+      badge(g, 1, T) + '<div class="orb">' + ty[2] + '</div>' + (sh ? '<button class="shr" data-u="' + esc(shareUrl(c)) + '" aria-label="카드 링크 복사">' + SHR_ICON + '</button>' : '') + '</div>' +
     '<div class="art"><div class="no">' + (CIRC.charAt(no - 1) || '★') + '</div>' + (no ? '<img src="a/art/' + (c.art || 'r' + nn) + '.webp" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
     '<div class="dex">' + (c.dex ? esc(c.dex) : (kr ? '🇰🇷' : '🇺🇸') + ' 현재가 ' + esc(c.px || '-') + ' · 오늘 ' + esc(c.ch || '-')) + '</div>' +
     '<div class="mv"><div class="mvh"><div class="cost">' + ci + '</div><div class="mvn">' + esc(mvName || '매수 의견') + '</div></div>' +
@@ -503,16 +526,17 @@ function render(){
   else {
     var cs = (r.cards || []).slice().sort(function(a, b){ return RANK.indexOf(a.g) - RANK.indexOf(b.g); });
     if (!cs.length) { var tt = String(state.title || '매수 의견 없음'), k = tt.indexOf(' · '); html += '<div class="none"><b>' + esc(k > 0 ? tt.slice(0, k) : tt) + '</b>' + (k > 0 ? '<small>' + esc(tt.slice(k + 3)) + '</small>' : '') + '</div>'; }
-    (r.z || []).forEach(function(c){ html += card(c); }); // 매수 금지 카드는 맨 위
-    cs.forEach(function(c){ html += card(c); });
-    (r.cond || []).forEach(function(c){ html += card(c); }); // 조건이 맞을 때만 뜨는 C카드(SGOV·QLD·IEF)
+    (r.z || []).forEach(function(c){ html += card(c, 1); }); // 매수 금지 카드는 맨 위
+    cs.forEach(function(c){ html += card(c, 1); });
+    (r.cond || []).forEach(function(c){ html += card(c, 1); }); // 조건이 맞을 때만 뜨는 C카드(SGOV·QLD·IEF)
     html += '<div class="about">투자하며 떠올린 아이디어를 법칙으로 만들고, 클로드와 실제 데이터로 검증해 성공률에 따라 등급을 매겼다.<br>지금 상황에 가장 맞는 카드를 추천하며, 방법은 주기적으로 다시 검증해 등급을 새로 매긴다.<br><b>투자 선택은 각자의 몫, 참고만 하시길</b> (돈 잃어도 책임 못 짐)</div>';
     var bs = r.base || [];
-    if (bs.length) { html += '<div class="baseh">상시 카드 · C등급 <small>C등급은 아직 효과가 검증되지 않았거나 보유 기간이 긴 방법이에요. 규칙 신호와 상관없이 언제 사도 되는 교과서적 장기 전략(수익은 낮거나 느림)</small></div>'; bs.forEach(function(c){ html += card(c); }); }
+    if (bs.length) { html += '<div class="baseh">상시 카드 · C등급 <small>C등급은 아직 효과가 검증되지 않았거나 보유 기간이 긴 방법이에요. 규칙 신호와 상관없이 언제 사도 되는 교과서적 장기 전략(수익은 낮거나 느림)</small></div>'; bs.forEach(function(c){ html += card(c, 1); }); }
   }
   L.innerHTML = html;
   riskBar(r && r.rk);
   tick();
+  goAnchor();
 }
 // 반반도체지수: 높을수록 진한 빨강(60 아래는 거의 무색)
 function riskColor(v){ if (v == null) return ['#f4f5f7', '#1d232a', '#6b7580'];
@@ -744,7 +768,29 @@ document.addEventListener('keydown', function(e){
 });
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) { refresh(); connect(); } });
 setInterval(function(){ tick(); if (state.chatWaitAt) renderChat(); }, 30000);
-render(); refresh().then(connect);
+// 공유 링크로 들어오면 그 카드로 스크롤(결과가 늦게 와도 한 번 더 시도, 신호가 끝났으면 규칙 카드를 보여 줌)
+var ANC = (location.hash || '').replace(/^#/, ''), ancPolled = false;
+if (!/^c[0-9a-z]+(-[A-Za-z0-9]+)?$/.test(ANC)) ANC = '';
+function goAnchor(){
+  if (!ANC) return;
+  var el = document.getElementById(ANC), sl = ANC.slice(1).split('-')[0];
+  if (!el) el = document.querySelector('#list .tc[data-sl="' + sl + '"]');
+  if (el) { var a = ANC; ANC = ''; var go = function(){ el.scrollIntoView({ block: 'start' }); }; go(); setTimeout(go, 500); setTimeout(go, 1400); el.classList.add('hl'); setTimeout(function(){ el.classList.remove('hl'); }, 3400); return; }
+  if (!ancPolled) return;
+  ANC = '';
+  for (var i = 0; i < RCARDS.length; i++) if (shareSlug(ruleCardObj(RCARDS[i])) === sl) { openRuleCard(i); toast('이 카드는 신호가 끝났어요 · 규칙 카드로 보여 드려요'); return; }
+}
+$('list').addEventListener('click', function(e){
+  var b = e.target.closest && e.target.closest('.shr'); if (!b) return; e.stopPropagation();
+  var u = b.getAttribute('data-u');
+  copyText(u).then(function(ok){
+    if (!ok) { toast('복사가 안 됐어요 · ' + u); return; }
+    b.classList.add('ok'); clearTimeout(b._t); b._t = setTimeout(function(){ b.classList.remove('ok'); }, 2200);
+    toast('카드 링크를 복사했어요');
+  });
+});
+window.__hx = { RCARDS: RCARDS, rc: ruleCardObj, sl: shareSlug, card: card, EPI: EPI, RTYPE: RTYPE };
+render(); refresh().then(function(){ ancPolled = true; render(); }, function(){ ancPolled = true; goAnchor(); }).then(connect);
 })();
 </script>
 </body>
