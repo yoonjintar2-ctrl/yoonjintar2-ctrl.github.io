@@ -110,33 +110,45 @@
       const EMO = /무섭|무서워|무서운|말이\s?되|말이\s?돼|말이\s?됨|말이냐|한강|눈물|울고|운다|끝났|끝남|망했|망함|패닉|공포/;
       const BUY = /줍줍|추매|담았|분할\s?매수|물타|낙폭|과매도|바겐|세일|하따|정찰병/;
       const WRY = /어디까지|끝이\s?없|바닥이\s?없|이정도|이렇게까지|꼬라박|처박|쳐박|떨어질까|더\s?빠지|살려|제발|멘붕|어떡|어쩌/;
+      const UJ = /억까|억울|개미\s?털|털기|흔들기|흔드|세력|작전/; // ④ 억까 여론(C+)
       const FEAR = /한강|무섭|무서워|말이\s?되|말이\s?돼|미쳤|살려|패닉|공포|멘붕|어떡|무너|대폭락|눈물|ㅠㅠ|ㅜㅜ|끝났|끝남|상폐|반토막|지옥|탈출|도망/;
       for (const s of drops) {
         const dt = new Date(s.d).getTime();
-        const rv = (await post(`${INFO}/api/v2/stock-infos/revenue-and-net-profit/${s.code}`, { range: 5, period: 'Q' })).result; const oi = (await post(`${INFO}/api/v2/stock-infos/operating-income/${s.code}`, { range: 5, period: 'Q' })).result;
-        const om = {}; (oi && oi.graph || []).forEach(g => om[g.period] = g.operatingIncome);
-        const av = (rv && rv.graph || []).map(g => ({ p: g.period, rev: g.revenue, oi: om[g.period] })).filter(q => { const [y, m] = q.p.split('-').map(Number); return new Date(y, m, 0).getTime() + 50 * 864e5 <= dt && q.rev != null; });
-        if (av.length < 8) continue; const L = av.length, t4 = av.slice(L - 4), p4 = av.slice(L - 8, L - 4);
-        const good = t4.reduce((x, q) => x + q.rev, 0) > p4.reduce((x, q) => x + q.rev, 0) && t4.reduce((x, q) => x + (q.oi || 0), 0) > 0 && av[L - 1].rev > av[L - 5].rev; if (!good) continue;
-        let stb = null; try { stb = (await post(`${INFO}/api/v2/stock-infos/stability/${s.code}`, {})).result; } catch (e) {}
-        if (!stb || stb.liabilityRatio == null || stb.liabilityRatio >= 200 || (stb.interestCoverageRatio != null && stb.interestCoverageRatio <= 3)) continue;
-        // 급락일(미국 날짜 D) 기준 한국시각 D−1 12:00 ~ D+1 12:00 사이 댓글을 세 구간에서 최대 33개씩
+        // 실적·재무(④ 조건) — 여기서 실패해도 ④ 억까 여론(C+) 확인은 계속
+        let good = false, stb = null;
+        try {
+          const rv = (await post(`${INFO}/api/v2/stock-infos/revenue-and-net-profit/${s.code}`, { range: 5, period: 'Q' })).result; const oi = (await post(`${INFO}/api/v2/stock-infos/operating-income/${s.code}`, { range: 5, period: 'Q' })).result;
+          const om = {}; (oi && oi.graph || []).forEach(g => om[g.period] = g.operatingIncome);
+          const av = (rv && rv.graph || []).map(g => ({ p: g.period, rev: g.revenue, oi: om[g.period] })).filter(q => { const [y, m] = q.p.split('-').map(Number); return new Date(y, m, 0).getTime() + 50 * 864e5 <= dt && q.rev != null; });
+          if (av.length >= 8) { const L = av.length, t4 = av.slice(L - 4), p4 = av.slice(L - 8, L - 4);
+            good = t4.reduce((x, q) => x + q.rev, 0) > p4.reduce((x, q) => x + q.rev, 0) && t4.reduce((x, q) => x + (q.oi || 0), 0) > 0 && av[L - 1].rev > av[L - 5].rev; }
+          if (good) { try { stb = (await post(`${INFO}/api/v2/stock-infos/stability/${s.code}`, {})).result; } catch (e) {}
+            if (!stb || stb.liabilityRatio == null || stb.liabilityRatio >= 200 || (stb.interestCoverageRatio != null && stb.interestCoverageRatio <= 3)) good = false; }
+        } catch (e) {}
+        // 급락일(미국 날짜 D) 기준 한국시각 D−1 12:00 ~ D+1 12:00 사이 댓글을 세 구간에서 최대 33개씩 + 구간 안 전체 댓글 수(nIn)
         const D0 = new Date(s.d + 'T00:00:00+09:00').getTime(), wins = [6, 30, 36].map(h => [D0 + (h - 18) * 3600e3, D0 + h * 3600e3]);
-        const got = wins.map(() => []); let id = null;
+        const got = wins.map(() => []); let id = null, nIn = 0;
         for (let p = 0; p < 40; p++) { const j = await get(`${CERT}/api/v4/comments?subjectType=STOCK&subjectId=${s.code}&commentSortType=RECENT` + (id ? '&lastCommentId=' + id : '')); const r = (j.result && j.result.results) || []; if (!r.length) break;
-          for (const x of r) { const t = new Date(x.createdAt).getTime(); const m = ((x.message && x.message.title) || '') + ' ' + ((x.message && x.message.message) || ''); wins.forEach((w, k) => { if (t >= w[0] && t <= w[1] && got[k].length < 33) got[k].push(m); }); }
+          for (const x of r) { const t = new Date(x.createdAt).getTime(); const m = ((x.message && x.message.title) || '') + ' ' + ((x.message && x.message.message) || ''); if (t >= wins[0][0] && t <= wins[2][1]) nIn++; wins.forEach((w, k) => { if (t >= w[0] && t <= w[1] && got[k].length < 33) got[k].push(m); }); }
           id = r[r.length - 1].commentId; if (new Date(r[r.length - 1].createdAt).getTime() < wins[0][0]) break; }
         const all = [].concat(...got); if (all.length < 15) continue;
         const sh = (re) => all.filter(m => re.test(m)).length / all.length; const emo = sh(EMO), buy = sh(BUY), wry = sh(WRY), fear = sh(FEAR);
-        let g = null; if (emo >= 0.05 && buy < emo && wry < emo) g = 'S'; else if (emo >= 0.03 && buy < emo) g = 'A'; else if (fear >= 0.07) g = 'B';
-        if (!g) continue;
-        LN[s.name] = s.ln; const c = card(g, '④ 실적주 공포 여론', s.name, s.name, s.px, { code: s.code, tgt: s.px ? fu(s.px * 1.20) : '+20%', stop: s.px ? fu(s.px * 0.85) : '−15%', hold: '20~60일 · 실제 산 값 기준 +20% 익절 / −15% 손절(일반 가이드, 개별주 검증 전) · 60일째 종가 매도', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%` });
-        (g === 'B' ? near : cards).push(c);
+        let g = null; if (good) { if (emo >= 0.05 && buy < emo && wry < emo) g = 'S'; else if (emo >= 0.03 && buy < emo) g = 'A'; else if (fear >= 0.07) g = 'B'; }
+        if (g) {
+          LN[s.name] = s.ln; const c = card(g, '④ 실적주 공포 여론', s.name, s.name, s.px, { code: s.code, tgt: s.px ? fu(s.px * 1.20) : '+20%', stop: s.px ? fu(s.px * 0.85) : '−15%', hold: '20~60일 · 실제 산 값 기준 +20% 익절 / −15% 손절(일반 가이드, 개별주 검증 전) · 60일째 종가 매도', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%` });
+          (g === 'B' ? near : cards).push(c); continue;
+        }
+        // ④ 억까 여론(C+ 관찰, 2026-10-14): 댓글 많은 급락주에서 '억까·세력·작전·털기'(억울하다·누가 일부러 누른다) 말이 3% 이상
+        //   검증(토스 댓글, 2023~2026 3일 −8% 급락 중 급락 전후 댓글 80개 이상 327건): 16건 20일 +11.0%(승 75%) 60일 +24.6% vs 전체 +3.4%(53%) — 우연 확률 7%, 2025~26 12건 +5.7%
+        //   반대로 '이유를 모르겠다·왜 빠지냐'는 오히려 나빴음(20일 +1.4% vs 없을 때 +5.0%), '너무 빠졌다·과하다'는 차이 없음
+        const uj = sh(UJ);
+        if (nIn >= 80 && uj >= 0.03 && s.px) { LN[s.name] = s.ln;
+          cards.push(card('C+', '④ 억까 여론', s.name, s.name, s.px, { v: 1, hd: 20, code: s.code, tgt: fu(s.px * 1.20), stop: fu(s.px * 0.85), hold: '최대 20거래일 · 실제 산 값 기준 +20% 익절 / −15% 손절(검증 전 일반 가이드) · 20일째 종가 매도', why: `아직 효과 검증 중인 관찰 후보(C+) · 소액만. 3일 ${pct(s.r3)} · 급락 전후 댓글 ${nIn}개 · '억까·세력·작전·털기' ${(uj * 100).toFixed(0)}%` })); }
       }
       state.push(`④ 급락 후보 ${drops.length}개`);
     } catch (e) { state.push('④ 오류: ' + String(e).slice(0, 60)); } }
 
-    const ord = { S: 0, A: 1, B: 2 }; cards.sort((a, b) => ord[a.g] - ord[b.g]);
+    const ord = { SSS: 0, SS: 0, S: 0, 'A+': 1, A: 1, 'A-': 1, 'B+': 2, B: 2, 'C+': 3 }; cards.sort((a, b) => ord[a.g] - ord[b.g]);
     const kst = new Date(Date.now() + 9 * 3600e3), hhmm = String(kst.getUTCHours()).padStart(2, '0') + ':' + String(kst.getUTCMinutes()).padStart(2, '0');
     const title = (cards.length ? '매수 의견: ' + cards.map(c => c.g + '등급 ' + c.n).join(' · ') : '매수 의견 없음') + (near.length ? ' · 참고(B등급): ' + near.map(c => c.n).join(', ') : '') + (cards.length ? '' : ' · ' + state.slice(0, 3).join(' · '));
     const line = (c) => `${c.g} · ${c.n} (${c.s}) — 매수 상한 ${c.buy} · ${c.stop !== '-' ? '손절/자동매도 ' + c.stop + ' · ' : ''}${c.hold}\n   ${c.why}`;
