@@ -221,8 +221,9 @@
   // tags: 'req' = 요청 응답, 'quiet' = 앱 화면만 갱신하고 알림은 안 울림
   window.__berryPublish = async function (alert, extraTags) {
     const enc = new TextEncoder(), cs = (alert.cards || []).slice();
-    let body = JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs, st: alert.st || undefined });
-    while (enc.encode(body).length > 3800 && cs.length > 1) { cs.pop(); body = JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs, st: alert.st || undefined }); }
+    const mk = () => JSON.stringify({ v: 3, slot: alert.slot, time: alert.time, cards: cs, st: alert.st || undefined, rk: alert.rk || undefined });
+    let body = mk();
+    while (enc.encode(body).length > 3800 && cs.length > 1) { cs.pop(); body = mk(); }
     const tags = [alert.level || 'info'].concat(extraTags || []);
     // 알림 중복 막기(정시·요청 모두): 이미 추천해 계속 남아 있는 카드(같은 종목·같은 규칙)는 다시 울리지 않는다.
     // 새 카드가 있을 때만 울림. 3일 넘게 사라졌다 다시 뜬 카드는 새 신호로 본다.
@@ -278,6 +279,16 @@
       window.__logCards(window.__D6);
       window.__D6.title = window.__D6.cards.length ? '매수 의견: ' + window.__D6.cards.map(c => c.g + '등급 ' + c.n).join(' · ') : window.__D6.title;
     } catch (e) { window.__D6.weeklyErr = String(e); }
+    // 클석진 반도체 위험지수(화면 하단 상시 표시) · 90 이상 위험 모드면 TQQQ 매수 의견은 절반만 · 위험 모드 진입/반도체 충격 때 알림
+    try {
+      (0, eval)(await window.__berryLoad('bb/alert/risk.js'));
+      const rk = await window.__risk();
+      if (rk) {
+        window.__D6.rk = { d: rk.d, v: rk.v, lv: rk.lv, h: rk.h, dd: rk.dd, sh: rk.sh };
+        if (rk.v >= 90) window.__D6.cards.forEach(c => { if (c.n === 'TQQQ') { c.risk = 1; c.why = '⚠ 위험 모드(위험지수 ' + rk.v + '): 평소의 절반만 매수\n' + (c.why || ''); } });
+        window.__D6.rkSent = await window.__riskAlert(rk, window.__BERRY.alerts);
+      }
+    } catch (e) { window.__D6.rkErr = String(e); }
     window.__ALERT = window.__D6;
     return 'ok ' + window.__D6.cards.length + ' cards';
   };
