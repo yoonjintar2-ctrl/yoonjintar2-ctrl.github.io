@@ -58,11 +58,15 @@
       if (gap - beta * ixGap <= -0.04) continue;
       // 실적 발표 급락 제외(뉴스 제목으로 판단)
       try { if (await earnNews(h.u.code)) continue; } catch (e) {}
+      // 사업성 확인(실적·부채·최근 3일 악재 뉴스, fund.js). 2022~26 재현: 통과 종목 매매 평균 +1.97%(손절 18%) vs 탈락 +1.44%(손절 21%)
+      if (!window.__fundCheck) try { (0, eval)(await window.__berryLoad('bb/alert/fund.js')); } catch (e) {}
+      let fc = null; try { fc = window.__fundCheck ? await window.__fundCheck(h.u.code) : null; } catch (e) {}
+      if (!fc || !fc.ok) continue;
       cards.push({ resid, card: {
         g: semi ? 'A' : 'B+', semi: semi ? 1 : 0, m: 'US', n: sym, kn: h.u.name, s: '⑧ 시장 급락일 과하게 빠진 종목', px: fu(L.close), ch: pct(h.r), ln: cs.slice(-40).map(x => x.close),
         buy: fu(L.close * 1.03), tgt: fu(L.close * (semi ? 1.10 : 1.08)), tp: semi ? '+10.0%' : '+8.0%', stop: fu(L.close * 0.85), sp: '−15.0%', rr: '',
         when: '지금 데이마켓(또는 오늘 밤 정규장 시가까지)', hold: '최대 20거래일 · 실제 산 값 기준 ' + (semi ? '+10%' : '+8%') + ' 익절 / −15% 손절(일반 가이드: 검증은 시장 대비 ' + (semi ? '+5.9%p' : '+2.8%p') + ') · 20일째 종가 매도 · 반등이 빨라 늦게 살수록 손해',
-        why: `${day.slice(5)} 나스닥 ${pct(qr)}${spr != null ? ' · S&P ' + pct(spr) : ''}${sxr != null ? ' · 반도체 ' + pct(sxr) : ''}${all3 ? '(셋 다 하락)' : ''}. 이 종목 ${pct(h.r)}, 평소대로면 ${pct(beta * ix)}(베타 ${beta.toFixed(2)}) → ${pct(resid)}p 더 빠짐. ${semi ? '반도체 112건 20일 +5.9%p 승 63%' : '대형주 1,755건 20일 +2.8%p 승 55%'}. 실적 발표 때문인지 확인` } });
+        why: `${day.slice(5)} 나스닥 ${pct(qr)}${spr != null ? ' · S&P ' + pct(spr) : ''}${sxr != null ? ' · 반도체 ' + pct(sxr) : ''}${all3 ? '(셋 다 하락)' : ''}. 이 종목 ${pct(h.r)}, 평소대로면 ${pct(beta * ix)}(베타 ${beta.toFixed(2)}) → ${pct(resid)}p 더 빠짐. ${semi ? '반도체 112건 20일 +5.9%p 승 63%' : '대형주 1,755건 20일 +2.8%p 승 55%'}.\n${fc.why}` } });
     }
     cards.sort((a, b) => a.resid - b.resid);
     return { cards: cards.slice(0, 6).map(x => x.card), note: '나스닥 ' + pct(qr) + ' · 후보 ' + cards.length };

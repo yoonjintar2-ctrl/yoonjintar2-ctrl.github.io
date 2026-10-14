@@ -146,16 +146,20 @@
         const nIn = cc.nIn, all = { length: cc.n }; if (cc.n < 100) continue; // 댓글이 너무 적은 종목은 제외
         const sh = (re) => cc.sh[Object.keys(RES).find(k => RES[k] === re)] || 0; const emo = sh(EMO), buy = sh(BUY), wry = sh(WRY), fear = sh(FEAR);
         let g = null; if (good) { if (emo >= 0.05 && buy < emo && wry < emo) g = 'S'; else if (emo >= 0.03 && buy < emo) g = 'A'; else if (fear >= 0.07) g = 'B'; }
+        // 사업성 확인(실적·부채·최근 3일 악재 뉴스, fund.js) — 통과 못 하면 신호가 맞아도 카드 안 띄움
+        const fcOf = async () => { if (!window.__fundCheck) try { (0, eval)(await window.__berryLoad('bb/alert/fund.js')); } catch (e) {} try { return window.__fundCheck ? await window.__fundCheck(s.code) : null; } catch (e) { return null; } };
+        let fc = null;
+        if (g) { fc = await fcOf(); if (!fc || !fc.ok) { state.push('④ ' + s.name + ' 사업성 탈락'); g = null; } }
         if (g) {
-          const tk = await symOf(s.code, s.name); LN[tk] = s.ln; const c = card(g, '④ 실적주 공포 여론', tk, s.name, s.px, { code: s.code, tgt: s.px ? fu(s.px * 1.20) : '+20%', stop: s.px ? fu(s.px * 0.85) : '−15%', hold: '20~60일 · 실제 산 값 기준 +20% 익절 / −15% 손절(일반 가이드, 개별주 검증 전) · 60일째 종가 매도', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%` });
+          const tk = await symOf(s.code, s.name); LN[tk] = s.ln; const c = card(g, '④ 실적주 공포 여론', tk, s.name, s.px, { code: s.code, tgt: s.px ? fu(s.px * 1.20) : '+20%', stop: s.px ? fu(s.px * 0.85) : '−15%', hold: '20~60일 · 실제 산 값 기준 +20% 익절 / −15% 손절(일반 가이드, 개별주 검증 전) · 60일째 종가 매도', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%\n${fc.why}` });
           (g === 'B' ? near : cards).push(c); continue;
         }
         // ④ 억까 여론(C+ 관찰, 2026-10-14): 댓글 많은 급락주에서 '억까·세력·작전·털기'(억울하다·누가 일부러 누른다) 말이 3% 이상
         //   검증(토스 댓글, 2023~2026 3일 −8% 급락 중 급락 전후 댓글 80개 이상 327건): 16건 20일 +11.0%(승 75%) 60일 +24.6% vs 전체 +3.4%(53%) — 우연 확률 7%, 2025~26 12건 +5.7%
         //   반대로 '이유를 모르겠다·왜 빠지냐'는 오히려 나빴음(20일 +1.4% vs 없을 때 +5.0%), '너무 빠졌다·과하다'는 차이 없음
         const uj = sh(UJ);
-        if (nIn >= 80 && uj >= 0.03 && s.px) { const tk = await symOf(s.code, s.name); LN[tk] = s.ln;
-          cards.push(card('C+', '④ 억까 여론', tk, s.name, s.px, { v: 1, hd: 20, art: 'r04u', code: s.code, tgt: fu(s.px * 1.20), stop: fu(s.px * 0.85), hold: '최대 20거래일 · 실제 산 값 기준 +20% 익절 / −15% 손절(검증 전 일반 가이드) · 20일째 종가 매도', why: `아직 효과 검증 중인 관찰 후보(C+) · 소액만. 3일 ${pct(s.r3)} · 급락 전후 댓글 ${nIn}개 · '억까·세력·작전·털기' ${(uj * 100).toFixed(0)}%` })); }
+        if (nIn >= 80 && uj >= 0.03 && s.px) { const fc2 = fc || await fcOf(); if (!fc2 || !fc2.ok) { state.push('④억까 ' + s.name + ' 사업성 탈락'); continue; } const tk = await symOf(s.code, s.name); LN[tk] = s.ln;
+          cards.push(card('C+', '④ 억까 여론', tk, s.name, s.px, { v: 1, hd: 20, art: 'r04u', code: s.code, tgt: fu(s.px * 1.20), stop: fu(s.px * 0.85), hold: '최대 20거래일 · 실제 산 값 기준 +20% 익절 / −15% 손절(검증 전 일반 가이드) · 20일째 종가 매도', why: `아직 효과 검증 중인 관찰 후보(C+) · 소액만. 3일 ${pct(s.r3)} · 급락 전후 댓글 ${nIn}개 · '억까·세력·작전·털기' ${(uj * 100).toFixed(0)}%\n${fc2.why}` })); }
       }
       state.push(`④ 급락 후보 ${drops.length}개`);
     } catch (e) { state.push('④ 오류: ' + String(e).slice(0, 60)); } }
