@@ -10,7 +10,7 @@
   const post = async (u, b) => { const r = await fetch(u, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) }); if (!r.ok) throw new Error(r.status + ' ' + u); return r.json(); };
   const BAD = /소송|피소|조사 ?착수|조사를 ?받|수사|기소|압수 ?수색|법무부|증권거래위원회|\bSEC\b|리콜|회계 ?(부정|오류|문제|조작)|감사인 ?(사임|교체)|재무제표 ?재작성|상장 ?폐지|파산|챕터 ?11|부도|디폴트|유상 ?증자|주식 ?발행|전환사채|가이던스.{0,8}(하향|낮|축소|철회|부진|실망)|(전망|목표).{0,4}(하향|낮춰|철회)|실적 ?(쇼크|부진|악화|하회|미스|실망)|어닝 ?(쇼크|미스)|적자 ?(전환|확대)|(CEO|최고경영자|창업자).{0,6}(사임|사퇴|해임|퇴진|조사)|해킹|(데이터|정보) ?유출|보안 ?사고|제재|벌금|과징금|반독점|(수출|판매) ?(금지|통제|중단)|계약 ?(해지|취소|종료|상실)|(고객|주문) ?(이탈|취소|상실)|공매도 ?(리포트|보고서)|힌덴버그|시트론|머디 ?워터스|FDA.{0,6}(거절|반려|불승인)|임상.{0,4}(실패|중단)|생산 ?중단|공장 ?(화재|폐쇄)|(신용)?등급 ?(하향|강등)|투자 ?의견 ?(하향|강등)/;
   const PRE = /앞두고|앞둔|예정|프리뷰|미리 ?보기|할 ?듯|가능성|우려 ?해소|벗어|종결|기각|승소|합의|무혐의/;
-  const KEY = 'fundck:';
+  const KEY = 'fundck2:';
   window.__fundCheck = async function (code) {
     const day = new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10), ck = KEY + code + ':' + day;
     try { const o = JSON.parse(localStorage.getItem(ck) || 'null'); if (o) return o; } catch (e) {}
@@ -42,7 +42,7 @@
     res.ok = res.fin === true && res.debt !== false && !res.news.length;
     res.why = res.ok ? '사업성 확인: ' + res.finTxt + ' · ' + res.debtTxt + ' · 최근 3일 악재 뉴스 없음'
       : '사업성 탈락: ' + [res.fin !== true ? res.finTxt : '', res.debt === false ? res.debtTxt : '', res.news.length ? '악재 뉴스 "' + res.news[0] + '"' : ''].filter(Boolean).join(' · ');
-    try { localStorage.setItem(ck, JSON.stringify(res)); for (let q = localStorage.length - 1; q >= 0; q--) { const k = localStorage.key(q); if (k && k.startsWith(KEY) && !k.endsWith(day)) localStorage.removeItem(k); } } catch (e) {}
+    try { localStorage.setItem(ck, JSON.stringify(res)); for (let q = localStorage.length - 1; q >= 0; q--) { const k = localStorage.key(q); if (k && ((k.startsWith(KEY) && !k.endsWith(day)) || k.startsWith('fundck:'))) localStorage.removeItem(k); } } catch (e) {}
     return res;
   };
   return 'fund loaded';
