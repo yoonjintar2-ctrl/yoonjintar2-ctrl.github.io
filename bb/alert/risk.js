@@ -56,7 +56,7 @@
     let sh = null;
     if (dd != null && dd <= -0.08) { const c = cscore(t); if (c != null) { const tier = c >= q2 ? 2 : c >= q1 ? 1 : 0; sh = { dd: +(dd * 100).toFixed(1), cs: Math.round(c * 100), t: tier, p: R[tier], base: rate(() => true), n: ev.length }; } }
     const lv = v == null ? '-' : v >= 90 ? '위험 모드' : v >= 80 ? '경계' : v >= 60 ? '주의' : '보통';
-    return { d: D[t], v, lv, h: idx.slice(-10), sh, dd: dd == null ? null : +(dd * 100).toFixed(1), cut: [q1, q2].map(x => Math.round(x * 100)), rates: R, _idx: idx, _D: D };
+    return { d: D[t], v, lv, h: idx.slice(-10), sh, dd: dd == null ? null : +(dd * 100).toFixed(1), cut: [q1, q2].map(x => Math.round(x * 100)), rates: R, _idx: idx, _D: D, _cs: cscore, _sxdd: sxdd, _q: [q1, q2] };
   };
 
   const hist = async (sym) => { const j0 = await get(`${INFO}/api/v2/stock-infos/code-or-symbol/${sym}`); const c = j0.result.code || j0.result.stockCode; let cs = [], from = '';
