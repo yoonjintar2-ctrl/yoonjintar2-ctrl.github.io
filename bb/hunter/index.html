@@ -143,13 +143,18 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 #list .tc:nth-of-type(2n){animation-delay:-3s}#list .tc:nth-of-type(3n){animation-delay:-5.5s}
 @keyframes tcSway{0%,100%{transform:perspective(1100px) rotateY(-1.5deg) rotateX(.3deg)}50%{transform:perspective(1100px) rotateY(1.5deg) rotateX(-.3deg)}}
 .dust{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;border-radius:inherit}
-.dust i{position:absolute;bottom:-4%;width:0;height:0;animation:dustUp 4.5s linear infinite}
-.dust i b{position:absolute;left:0;top:0;width:3px;height:3px;border-radius:50%;background:#fffbe6;box-shadow:0 0 4px 1px rgba(255,232,150,.7);opacity:.68;animation:dustSpin .9s linear infinite}
+.dust i{position:absolute;top:0;height:100%;width:0;will-change:transform;animation:dustUp 5s linear infinite}
+.dust i b{position:absolute;left:0;top:0;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;border-radius:50%;background:#fffbe6;box-shadow:0 0 4px 1px rgba(255,232,150,.7);opacity:.68;will-change:transform,opacity;animation:dustSpin 2.6s ease-in-out infinite alternate}
 .tc.dark .dust i b,.tc.gZ .dust i b{opacity:.45}
-/* S등급: 마법의 금가루 */
-.dust.gold i b{width:3.5px;height:3.5px;background:#ffe066;box-shadow:0 0 5px 1.5px rgba(255,196,0,.75),0 0 1px #fff inset;opacity:.85}
-@keyframes dustUp{0%{bottom:-4%;opacity:0}12%{opacity:1}80%{opacity:.7}100%{bottom:104%;opacity:0}}
-@keyframes dustSpin{from{transform:rotate(0deg) translateX(6px)}to{transform:rotate(360deg) translateX(6px)}}
+/* S등급: 마법의 금가루 — 위로 부드럽게 떠오르며 하나씩 반짝임(빛 세기·색·크기가 바뀌고 반짝일 때 십자 빛) */
+.dust.gold i b{width:3.5px;height:3.5px;opacity:1;background:#ffd84a;box-shadow:0 0 5px 1.5px rgba(255,196,0,.7);animation:dustSpin 2.6s ease-in-out infinite alternate,goldTw 1.6s ease-in-out infinite}
+.dust.gold i b::before,.dust.gold i b::after{content:"";position:absolute;left:50%;top:50%;width:13px;height:1px;margin:-.5px 0 0 -6.5px;border-radius:1px;background:linear-gradient(90deg,transparent,#fff 50%,transparent);opacity:0;animation:goldGlint 1.6s ease-in-out infinite;animation-delay:inherit}
+.dust.gold i b::after{transform:rotate(90deg);animation-name:goldGlintV}
+@keyframes dustUp{0%{transform:translate3d(0,104%,0);opacity:0}12%{opacity:1}82%{opacity:.75}100%{transform:translate3d(0,-4%,0);opacity:0}}
+@keyframes dustSpin{from{transform:translate3d(-5px,0,0)}to{transform:translate3d(5px,0,0)}}
+@keyframes goldTw{0%,100%{opacity:.55;background:#e6b422;box-shadow:0 0 3px 1px rgba(230,170,0,.45)}45%{opacity:1;background:#fff6c8;box-shadow:0 0 7px 2.5px rgba(255,214,60,.95),0 0 2px #fff}55%{opacity:1;background:#fffbe6;box-shadow:0 0 9px 3px rgba(255,224,90,1),0 0 3px #fff}}
+@keyframes goldGlint{0%,38%,72%,100%{opacity:0;transform:scaleX(.3)}52%{opacity:.95;transform:scaleX(1)}}
+@keyframes goldGlintV{0%,38%,72%,100%{opacity:0;transform:rotate(90deg) scaleX(.3)}52%{opacity:.95;transform:rotate(90deg) scaleX(1)}}
 .tc .gl,.mc .gl{position:absolute;inset:0;z-index:5;pointer-events:none;border-radius:inherit;background:radial-gradient(circle at calc(var(--mx,.5) * 100%) calc(var(--my,.3) * 100%),rgba(255,255,255,.55),rgba(255,255,255,0) 42%);mix-blend-mode:soft-light}
 @keyframes hl{0%{box-shadow:0 0 0 0 rgba(255,212,59,.95)}60%{box-shadow:0 0 0 14px rgba(255,212,59,0)}100%{box-shadow:0 0 0 0 rgba(255,212,59,0)}}
 /* 테두리 색 = 등급: S~SSS 금(반짝임) · A-~A+ 은 · B+ 이하 동 */
@@ -431,7 +436,7 @@ function copyText(t){
 // 마법 가루: C등급 이상 카드에 아주 작은 빛가루가 빙글빙글 돌며 카드를 타고 올라감(연하게, 다른 효과보다 튀지 않게)
 function dustHTML(seed, gold){ var h = 7, out = '<div class="dust' + (gold ? ' gold' : '') + '">'; String(seed || '').split('').forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) % 9973; });
   for (var i = 0, nP = gold ? 12 : 9; i < nP; i++) { h = (h * 73 + 41) % 9973; var side = i % 3, x = side === 0 ? 2 + h % 9 : side === 1 ? 89 + h % 9 : 20 + h % 60;
-    out += '<i style="left:' + x + '%;animation-duration:' + (3.6 + (h % 25) / 10) + 's;animation-delay:-' + ((h % 50) / 10) + 's"><b style="animation-duration:' + (0.7 + (h % 6) / 10) + 's"></b></i>'; }
+    var tw = (h % 16) / 10; out += '<i style="left:' + x + '%;animation-duration:' + (4.6 + (h % 25) / 10) + 's;animation-delay:-' + ((h % 60) / 10) + 's"><b style="animation-duration:' + (2 + (h % 12) / 10) + 's' + (gold ? ',' + (1.2 + (h % 9) / 10) + 's;animation-delay:-' + tw + 's,-' + tw + 's' : '') + '"></b></i>'; }
   return out + '</div>'; }
 // ── 클로드 검토(오후 5·8·11시 업데이트 뒤 Claude가 뉴스·실적 일정·가격·규칙 전제를 직접 훑어 review.json에 남김)
 var REV = null;
