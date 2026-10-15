@@ -436,7 +436,7 @@ function dustHTML(seed, gold){ var h = 7, out = '<div class="dust' + (gold ? ' g
 // ── 클로드 검토(오후 5·8·11시 업데이트 뒤 Claude가 뉴스·실적 일정·가격·규칙 전제를 직접 훑어 review.json에 남김)
 var REV = null;
 function loadRev(){ return fetch('review.json?t=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){ if (j && j.t && (!REV || j.t !== REV.t)) { REV = j; render(); } }).catch(function(){}); }
-function revFresh(){ return REV && REV.t && Date.now() / 1000 - REV.t < 9 * 3600; }
+function revFresh(){ return REV && REV.t && Date.now() / 1000 - REV.t < 12 * 3600; }
 function revWhen(){ var kt = new Date((REV.t + 9 * 3600) * 1000), p2 = function(n){ return (n < 10 ? '0' : '') + n; }; return p2(kt.getUTCHours()) + ':' + p2(kt.getUTCMinutes()) + ' 검토'; }
 function revHTML(c){ if (!revFresh() || !REV.cards) return ''; var k = (c.s || '').trim().charAt(0) + ' ' + c.n, v = REV.cards[k]; if (!v || !v.note) return '';
   var lab = { ok: '클로드 검토 · 이상 없음', warn: '클로드 검토 · 주의', hold: '클로드 검토 · 매수 보류 권고' }[v.v] || '클로드 검토'; if (c.revDown) lab += ' (' + c.revDown + ' → ' + c.g + ')';
