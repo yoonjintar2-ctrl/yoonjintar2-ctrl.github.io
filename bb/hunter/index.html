@@ -797,35 +797,43 @@ function goAnchor(){
 function shMenuClose(){ var m = $('shm'); if (m) m.remove(); }
 function copyLink(b){ var u = b.getAttribute('data-u'); copyText(u).then(function(ok){ if (!ok) { toast('복사가 안 됐어요 · ' + u); return; } b.classList.add('ok'); clearTimeout(b._t); b._t = setTimeout(function(){ b.classList.remove('ok'); }, 2200); toast('카드 링크를 복사했어요'); }); }
 function loadH2I(){ return window.htmlToImage ? Promise.resolve() : new Promise(function(res, rej){ var sc = document.createElement('script'); sc.src = 'a/lib/h2i.js'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); }); }
-function saveCardImage(tc){
-  toast('이미지를 만드는 중…');
-  var rt = state.resultTime || Math.floor(Date.now() / 1000), kt = new Date((rt + 9 * 3600) * 1000), p2 = function(n){ return (n < 10 ? '0' : '') + n; };
-  var when = kt.getUTCFullYear() + '.' + p2(kt.getUTCMonth() + 1) + '.' + p2(kt.getUTCDate()) + '(' + '일월화수목금토'.charAt(kt.getUTCDay()) + ') ' + p2(kt.getUTCHours()) + ':' + p2(kt.getUTCMinutes());
-  var tick = (tc.id || 'card').replace(/^c[0-9a-z]+-/, '');
+function cardMeta(){ var rt = state.resultTime || Math.floor(Date.now() / 1000), kt = new Date((rt + 9 * 3600) * 1000), p2 = function(n){ return (n < 10 ? '0' : '') + n; };
+  return { kt: kt, p2: p2, when: kt.getUTCFullYear() + '.' + p2(kt.getUTCMonth() + 1) + '.' + p2(kt.getUTCDate()) + '(' + '일월화수목금토'.charAt(kt.getUTCDay()) + ') ' + p2(kt.getUTCHours()) + ':' + p2(kt.getUTCMinutes()) }; }
+function cardBlob(tc){
+  var M = cardMeta();
   return loadH2I().then(function(){
     var w = tc.offsetWidth, wrap = document.createElement('div');
     wrap.style.cssText = 'position:fixed;left:-20000px;top:0;background:#fff;padding:18px 22px 24px;width:' + (w + 44) + 'px;box-sizing:border-box';
-    wrap.innerHTML = '<div style="text-align:center;font-size:13px;font-weight:800;color:#495057;margin:0 0 14px;letter-spacing:-.2px">' + when + ' 수리수리진타리 카드</div>';
+    wrap.innerHTML = '<div style="text-align:center;font-size:13px;font-weight:800;color:#495057;margin:0 0 14px;letter-spacing:-.2px">' + M.when + ' 수리수리진타리 카드</div>';
     var cl = tc.cloneNode(true); cl.removeAttribute('id'); cl.classList.remove('hl');
     cl.querySelectorAll('.shr, .dust').forEach(function(x){ x.remove(); });
     cl.style.animation = 'none'; cl.style.transform = 'none'; cl.style.margin = '0'; cl.style.width = w + 'px';
     wrap.appendChild(cl); document.body.appendChild(wrap);
     return htmlToImage.toBlob(wrap, { pixelRatio: 2, backgroundColor: '#ffffff', width: wrap.offsetWidth, height: wrap.offsetHeight, style: { position: 'static', left: '0', top: '0' } }).then(function(blob){ wrap.remove(); return blob; }, function(e){ wrap.remove(); throw e; });
-  }).then(function(blob){
-    var name = 'surisuri_' + tick + '_' + kt.getUTCFullYear() + p2(kt.getUTCMonth() + 1) + p2(kt.getUTCDate()) + '.png';
+  });
+}
+// 이미지로 복사(클립보드). 복사를 지원하지 않는 브라우저면 공유창/파일 저장으로 대신
+function copyCardImage(tc){
+  toast('이미지를 만드는 중…');
+  var bp = cardBlob(tc);
+  var fallback = function(){ return bp.then(function(blob){ var M = cardMeta(), name = 'surisuri_' + (tc.id || 'card').replace(/^c[0-9a-z]+-/, '') + '_' + M.kt.getUTCFullYear() + M.p2(M.kt.getUTCMonth() + 1) + M.p2(M.kt.getUTCDate()) + '.png';
     var file = null; try { file = new File([blob], name, { type: 'image/png' }); } catch(e) {}
-    if (file && navigator.canShare && navigator.canShare({ files: [file] }) && /iPhone|iPad|Android/i.test(navigator.userAgent)) return navigator.share({ files: [file] }).catch(function(){});
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 2000); toast('이미지를 저장했어요');
-  }).catch(function(){ toast('이미지를 만들지 못했어요'); });
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file] }).catch(function(){});
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 2000); toast('복사가 안 되는 브라우저라 이미지로 저장했어요'); }); };
+  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+    var item; try { item = new ClipboardItem({ 'image/png': bp }); } catch(e) { item = null; }
+    if (item) return navigator.clipboard.write([item]).then(function(){ toast('카드 이미지를 복사했어요 · 채팅창에 붙여 넣으세요'); }, function(){ return bp.then(function(blob){ return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); }).then(function(){ toast('카드 이미지를 복사했어요 · 채팅창에 붙여 넣으세요'); }, fallback); }).catch(function(){ toast('이미지를 만들지 못했어요'); });
+  }
+  return fallback().catch(function(){ toast('이미지를 만들지 못했어요'); });
 }
 $('list').addEventListener('click', function(e){
   var b = e.target.closest && e.target.closest('.shr'); if (!b) return; e.stopPropagation();
   if ($('shm') && $('shm')._b === b) { shMenuClose(); return; } shMenuClose();
   var r = b.getBoundingClientRect(), m = document.createElement('div'); m.id = 'shm'; m._b = b;
-  m.innerHTML = '<button data-a="img">이미지로 저장</button><button data-a="link">링크 복사</button>';
+  m.innerHTML = '<button data-a="img">이미지로 복사</button><button data-a="link">링크 복사</button>';
   m.style.top = (r.bottom + window.scrollY + 6) + 'px'; m.style.right = Math.max(8, document.documentElement.clientWidth - r.right) + 'px';
   document.body.appendChild(m);
-  m.onclick = function(ev){ var a = ev.target.getAttribute('data-a'); if (!a) return; ev.stopPropagation(); shMenuClose(); if (a === 'link') copyLink(b); else saveCardImage(b.closest('.tc')); };
+  m.onclick = function(ev){ var a = ev.target.getAttribute('data-a'); if (!a) return; ev.stopPropagation(); shMenuClose(); if (a === 'link') copyLink(b); else copyCardImage(b.closest('.tc')); };
 });
 document.addEventListener('click', function(e){ if ($('shm') && !e.target.closest('#shm')) shMenuClose(); });
 // 펄 코팅 빛 움직임: 저절로 천천히 돌고(초당 30번), 카드를 문지르면 1.5초 동안 손가락 위치를 따라감
