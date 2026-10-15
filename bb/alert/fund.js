@@ -18,7 +18,7 @@
   const nameHit = (si) => { const full = String(si.companyName || si.name || '').trim(), tk = full.split(/[ (]/).filter(Boolean), sym = String(si.symbol || '');
     const long = [full, full.replace(/\s+/g, '')].filter(x => x.length >= 3).concat(tk.length > 1 ? [tk[0] + tk[1].charAt(0)] : []);
     const res = [];
-    if (tk[0]) res.push(tk[0].length >= 3 ? null : new RegExp('(^|[^가-힣A-Za-z])' + tk[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^가-힣]|[은는이가을를의도와과에만])'));
+    if (tk[0]) res.push(tk[0].length >= 3 ? null : new RegExp('(^|[^가-힣A-Za-z])(?<!(마이클|창업자|회장|CEO|최고경영자) ?)' + tk[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^가-힣]|[은는이가을를의도와과에만])'));
     if (sym) res.push(sym.length >= 2 ? new RegExp('\\b' + sym + '\\b') : new RegExp('\\(' + sym + '\\)'));
     return (ti) => long.some(n => ti.includes(n)) || (tk[0] && tk[0].length >= 3 && ti.includes(tk[0])) || res.some(r => r && r.test(ti)); };
   window.__fundNameHit = nameHit;
