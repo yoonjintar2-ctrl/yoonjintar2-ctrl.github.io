@@ -722,12 +722,12 @@ function updProg(){
   if (state.sending) { p = .06; lab = '맥에 검색 요청 보내는 중…'; }
   else if (!state.ackAt) { var e1 = (now - state.reqAt) / 1000; p = .12 + .13 * Math.min(1, e1 / 30); lab = '맥이 요청을 받는 중… ' + Math.floor(e1) + '초'; }
   else { var e2 = (now - state.ackAt) / 1000; p = .3 + .65 * (1 - Math.exp(-e2 / 40)); lab = '맥에서 지금 시세로 검색 중… ' + Math.floor(e2) + '초'; }
-  $('progFill').style.width = (p * 100).toFixed(1) + '%'; $('progLab').textContent = lab; $('progLab').style.color = 'var(--info)'; quip();
+  $('progFill').style.width = (p * 100).toFixed(1) + '%'; $('progLab').hidden = true; quip(); // 진행 중엔 파란 상태 글씨 대신 농담만
 }
 function finishProg(ok, msg){
   if (!state.reqAt || state.doneAt) return;
   state.doneAt = Date.now(); clearInterval(progTimer);
-  $('progQuip').textContent = ''; quipAt = 0;
+  $('progQuip').textContent = ''; quipAt = 0; $('progLab').hidden = false;
   if (ok) { $('progFill').style.width = '100%'; $('progLab').textContent = '검색 완료'; $('progLab').style.color = 'var(--good)'; }
   else { $('progLab').textContent = msg || '검색 실패'; $('progLab').style.color = 'var(--warn)'; }
   setTimeout(function(){ $('prog').hidden = true; $('progFill').style.width = '0'; }, ok ? 1500 : 5000);
