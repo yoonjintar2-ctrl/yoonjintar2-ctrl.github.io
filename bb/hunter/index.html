@@ -139,8 +139,10 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 @keyframes tcSway{0%,100%{transform:perspective(1100px) rotateY(-3deg) rotateX(.6deg)}50%{transform:perspective(1100px) rotateY(3deg) rotateX(-.6deg)}}
 .dust{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;border-radius:inherit}
 .dust i{position:absolute;bottom:-4%;width:0;height:0;animation:dustUp 4.5s linear infinite}
-.dust i b{position:absolute;left:0;top:0;width:2.5px;height:2.5px;border-radius:50%;background:#fffbe6;box-shadow:0 0 3px 1px rgba(255,232,150,.55);opacity:.5;animation:dustSpin .9s linear infinite}
-.tc.dark .dust i b,.tc.gZ .dust i b{opacity:.35}
+.dust i b{position:absolute;left:0;top:0;width:3px;height:3px;border-radius:50%;background:#fffbe6;box-shadow:0 0 4px 1px rgba(255,232,150,.7);opacity:.68;animation:dustSpin .9s linear infinite}
+.tc.dark .dust i b,.tc.gZ .dust i b{opacity:.45}
+/* S등급: 마법의 금가루 */
+.dust.gold i b{width:3.5px;height:3.5px;background:#ffe066;box-shadow:0 0 5px 1.5px rgba(255,196,0,.75),0 0 1px #fff inset;opacity:.85}
 @keyframes dustUp{0%{bottom:-4%;opacity:0}12%{opacity:1}80%{opacity:.7}100%{bottom:104%;opacity:0}}
 @keyframes dustSpin{from{transform:rotate(0deg) translateX(6px)}to{transform:rotate(360deg) translateX(6px)}}
 .tc .gl,.mc .gl{position:absolute;inset:0;z-index:5;pointer-events:none;border-radius:inherit;background:radial-gradient(circle at calc(var(--mx,.5) * 100%) calc(var(--my,.3) * 100%),rgba(255,255,255,.55),rgba(255,255,255,0) 42%);mix-blend-mode:soft-light}
@@ -415,8 +417,8 @@ function copyText(t){
   return Promise.resolve(fb());
 }
 // 마법 가루: C등급 이상 카드에 아주 작은 빛가루가 빙글빙글 돌며 카드를 타고 올라감(연하게, 다른 효과보다 튀지 않게)
-function dustHTML(seed){ var h = 7, out = '<div class="dust">'; String(seed || '').split('').forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) % 9973; });
-  for (var i = 0; i < 9; i++) { h = (h * 73 + 41) % 9973; var side = i % 3, x = side === 0 ? 2 + h % 9 : side === 1 ? 89 + h % 9 : 20 + h % 60;
+function dustHTML(seed, gold){ var h = 7, out = '<div class="dust' + (gold ? ' gold' : '') + '">'; String(seed || '').split('').forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) % 9973; });
+  for (var i = 0, nP = gold ? 12 : 9; i < nP; i++) { h = (h * 73 + 41) % 9973; var side = i % 3, x = side === 0 ? 2 + h % 9 : side === 1 ? 89 + h % 9 : 20 + h % 60;
     out += '<i style="left:' + x + '%;animation-duration:' + (3.6 + (h % 25) / 10) + 's;animation-delay:-' + ((h % 50) / 10) + 's"><b style="animation-duration:' + (0.7 + (h % 6) / 10) + 's"></b></i>'; }
   return out + '</div>'; }
 function card(c, sh){
@@ -450,7 +452,7 @@ function card(c, sh){
     spark(c.ln, g) +
     '<div class="fl">' + esc(c.why || '') + '</div>' +
     '<div class="ft"><span>수리수리진타리 · 규칙 ' + (CIRC.charAt(no - 1) || '') + (c.rr && c.rr !== '-' ? ' · 손익비 ' + esc(c.rr) : '') + '</span><b>' + esc(ty[3]) + ' ' + esc(g) + '</b></div>' +
-  '</div>' + (T !== 'Z' && g !== 'C-' ? dustHTML(c.n + no) : '') + (T === 'A' || T === 'S' ? '<div class="pl"></div><div class="gl"></div>' : '') + '</div>' + (RSIM[key] ? '<div class="freqo">' + esc(freqLine(key)) + '</div>' : '');
+  '</div>' + (T !== 'Z' && g !== 'C-' ? dustHTML(c.n + no, T === 'S') : '') + (T === 'A' || T === 'S' ? '<div class="pl"></div><div class="gl"></div>' : '') + '</div>' + (RSIM[key] ? '<div class="freqo">' + esc(freqLine(key)) + '</div>' : '');
 }
 // ── 규칙 카드 도감(매수 규칙 화면)
 var RCARDS = [
