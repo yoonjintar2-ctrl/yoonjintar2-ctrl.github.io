@@ -48,6 +48,7 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .prog{padding:0 0 10px}
 .prog .lab{font-size:12px;color:var(--info);padding-bottom:5px}
 .prog .bar{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.prog .quip{font-size:12px;color:var(--muted);padding-top:6px;min-height:17px;transition:opacity .35s}
 .prog .fill{height:100%;width:0;background:var(--info);border-radius:3px;transition:width .25s linear}
 .note{font-size:13px;color:var(--muted);padding:14px 4px;line-height:1.5}
 .card{position:relative;margin:4px 0 16px;padding-top:14px}
@@ -304,7 +305,7 @@ html{background:#1d232a}
     </div>
   </div>
   </div>
-  <div class="prog" id="prog" hidden><div class="lab" id="progLab"></div><div class="bar"><div class="fill" id="progFill"></div></div></div>
+  <div class="prog" id="prog" hidden><div class="lab" id="progLab"></div><div class="bar"><div class="fill" id="progFill"></div></div><div class="quip" id="progQuip"></div></div>
   <div id="list"></div>
   <div class="status" id="status">연결 준비 중</div>
 </div>
@@ -710,6 +711,10 @@ function requestScan(){
     .catch(function(e){ state.sending = false; finishProg(false, '요청 실패 · ' + e.message); });
 }
 function showProg(){ $('prog').hidden = false; clearInterval(progTimer); progTimer = setInterval(updProg, 250); updProg(); }
+// 로딩 농담(게임 로딩 문구처럼, 3.5초마다 바뀜)
+var QUIPS = ["차트에 마법 가루 뿌리는 중…", "진탈이가 마법봉을 닦고 있어요", "캔들을 하나씩 세는 중… 양봉이 좀 더 많았으면", "나스닥에게 오늘 기분을 묻는 중", "반도체 칩을 귀에 대고 소리 듣는 중", "주가가 도망가지 못하게 울타리 치는 중", "손절선 위치를 다시 한번 확인하는 중", "익절가에 리본 다는 중", "겁먹은 개미들을 토닥이는 중", "세력의 발자국을 줍는 중(아직 못 찾음)", "금괴를 저울에 올려 보는 중", "유가 냄새를 킁킁 맡는 중", "분화구 깊이를 재는 중", "용수철 탄성 점검 중", "상자 바닥이 튼튼한지 두드려 보는 중", "S등급 카드는 아껴 두는 중", "카드 덱 섞는 중… 반칙은 안 해요", "10년 치 차트를 빨리 감기 하는 중", "연준 의장 표정 읽는 중", "CPI 발표 전에 숨 고르는 중", "물타기 할 물을 끓이는 중(아직 안 부어요)", "몰빵 금지 스티커 붙이는 중", "백테스트 기계에 동전 넣는 중", "과거의 나에게 사과하는 중", "‘이번엔 다르다’를 걸러 내는 중", "공포 지수 체온 재는 중", "황소와 곰의 팔씨름 중계 중", "진탈이가 커피를 내리는 중 ☕", "데이마켓 문 두드리는 중", "급등주 유혹을 꾹 참는 중", "손가락이 매수 버튼 누르지 않게 묶는 중", "카드 테두리에 펄 코팅 바르는 중", "확률을 확률적으로 계산하는 중", "행운의 양봉을 부르는 주문 외우는 중", "시장의 소음을 음소거하는 중"];
+var quipAt = 0, quipI = Math.floor(Math.random() * QUIPS.length);
+function quip(){ var e = $('progQuip'); if (Date.now() - quipAt < 3500) return; quipAt = Date.now(); e.style.opacity = 0; setTimeout(function(){ quipI = (quipI + 1 + Math.floor(Math.random() * 3)) % QUIPS.length; e.textContent = QUIPS[quipI]; e.style.opacity = 1; }, 300); }
 function updProg(){
   var now = Date.now(), p, lab;
   if (state.doneAt) return;
@@ -717,11 +722,12 @@ function updProg(){
   if (state.sending) { p = .06; lab = '맥에 검색 요청 보내는 중…'; }
   else if (!state.ackAt) { var e1 = (now - state.reqAt) / 1000; p = .12 + .13 * Math.min(1, e1 / 30); lab = '맥이 요청을 받는 중… ' + Math.floor(e1) + '초'; }
   else { var e2 = (now - state.ackAt) / 1000; p = .3 + .65 * (1 - Math.exp(-e2 / 40)); lab = '맥에서 지금 시세로 검색 중… ' + Math.floor(e2) + '초'; }
-  $('progFill').style.width = (p * 100).toFixed(1) + '%'; $('progLab').textContent = lab; $('progLab').style.color = 'var(--info)';
+  $('progFill').style.width = (p * 100).toFixed(1) + '%'; $('progLab').textContent = lab; $('progLab').style.color = 'var(--info)'; quip();
 }
 function finishProg(ok, msg){
   if (!state.reqAt || state.doneAt) return;
   state.doneAt = Date.now(); clearInterval(progTimer);
+  $('progQuip').textContent = ''; quipAt = 0;
   if (ok) { $('progFill').style.width = '100%'; $('progLab').textContent = '검색 완료'; $('progLab').style.color = 'var(--good)'; }
   else { $('progLab').textContent = msg || '검색 실패'; $('progLab').style.color = 'var(--warn)'; }
   setTimeout(function(){ $('prog').hidden = true; $('progFill').style.width = '0'; }, ok ? 1500 : 5000);
