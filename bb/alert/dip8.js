@@ -23,9 +23,10 @@
   const PRE_RE = /앞두고|앞둔|예정|프리뷰|미리 ?보기|했을 ?듯|할 ?듯|실적 전망$/;
   const earnNews = async (code) => {
     const si = (await get(`${INFO}/api/v2/stock-infos/${code}`)).result; const cc = si.companyCode; if (!cc) return false;
-    const names = [String(si.companyName || si.name || '').split(/[ (]/)[0], si.symbol].filter(x => x && x.length >= 2); // 다른 회사 실적 기사(시장 정리) 빼려고 제목에 회사 이름이 있어야 함
+    if (!window.__fundNameHit) try { (0, eval)(await window.__berryLoad('bb/alert/fund.js')); } catch (e) {}
+    const hit = window.__fundNameHit ? window.__fundNameHit(si) : (ti) => [String(si.companyName || si.name || '').split(/[ (]/)[0], si.symbol].filter(x => x && x.length >= 2).some(nm => ti.includes(nm)); // 다른 회사 실적 기사(시장 정리) 빼려고 제목에 회사 이름이 있어야 함(한 글자 이름 '델'도 잡게 fund.js 함수 사용)
     const j = await get(`${INFO}/api/v2/news/companies/${cc}?size=40&orderBy=latest`); const lo = Date.now() - 48 * 3600e3;
-    return (j.result.body || []).some(x => { const t = Date.parse(String(x.createdAt).slice(0, 19) + '+09:00'); const ti = x.title || ''; return t >= lo && EARN_RE.test(ti) && !PRE_RE.test(ti) && names.some(nm => ti.includes(nm)); });
+    return (j.result.body || []).some(x => { const t = Date.parse(String(x.createdAt).slice(0, 19) + '+09:00'); const ti = x.title || ''; return t >= lo && EARN_RE.test(ti) && !PRE_RE.test(ti) && hit(ti); });
   };
   window.__dip8earn = earnNews;
   window.__dip8 = async function () {
@@ -63,7 +64,7 @@
       let fc = null; try { fc = window.__fundCheck ? await window.__fundCheck(h.u.code) : null; } catch (e) {}
       if (!fc || !fc.ok) continue;
       cards.push({ resid, card: {
-        g: semi ? 'A' : 'B+', semi: semi ? 1 : 0, m: 'US', n: sym, kn: h.u.name, s: '⑧ 시장 급락일 과하게 빠진 종목', px: fu(L.close), ch: pct(h.r), ln: cs.slice(-40).map(x => x.close),
+        g: fc.soft && fc.soft.length ? window.__gradeDown(semi ? 'A' : 'B+') : semi ? 'A' : 'B+', semi: semi ? 1 : 0, m: 'US', n: sym, kn: h.u.name, s: '⑧ 시장 급락일 과하게 빠진 종목', px: fu(L.close), ch: pct(h.r), ln: cs.slice(-40).map(x => x.close),
         buy: fu(L.close * 1.03), tgt: fu(L.close * (semi ? 1.10 : 1.08)), tp: semi ? '+10.0%' : '+8.0%', stop: fu(L.close * 0.85), sp: '−15.0%', rr: '',
         when: '지금 데이마켓(또는 오늘 밤 정규장 시가까지)', hold: '최대 20거래일 · 실제 산 값 기준 ' + (semi ? '+10%' : '+8%') + ' 익절 / −15% 손절(일반 가이드: 검증은 시장 대비 ' + (semi ? '+5.9%p' : '+2.8%p') + ') · 20일째 종가 매도 · 반등이 빨라 늦게 살수록 손해',
         why: `${day.slice(5)} 나스닥 ${pct(qr)}${spr != null ? ' · S&P ' + pct(spr) : ''}${sxr != null ? ' · 반도체 ' + pct(sxr) : ''}${all3 ? '(셋 다 하락)' : ''}. 이 종목 ${pct(h.r)}, 평소대로면 ${pct(beta * ix)}(베타 ${beta.toFixed(2)}) → ${pct(resid)}p 더 빠짐. ${semi ? '반도체 112건 20일 +5.9%p 승 63%' : '대형주 1,755건 20일 +2.8%p 승 55%'}.\n${fc.why}` } });
