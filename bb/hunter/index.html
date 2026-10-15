@@ -251,6 +251,14 @@ html{background:#1d232a}
 .bot .bub{background:#fff;color:var(--ink);border-bottom-left-radius:5px;box-shadow:0 1px 1px rgba(0,0,0,.05)}
 .tm{font-size:10px;color:#9aa3ad;align-self:flex-end;margin:0 5px 2px}
 .wait{font-size:12px;color:var(--muted);padding:4px 6px}
+.mb{display:flex;flex-direction:column;max-width:80%;min-width:0}.mb .bub{max-width:100%}
+.nk{font-size:11px;font-weight:700;color:var(--muted);margin:0 0 3px 4px}
+.nickrow{display:flex;align-items:center;gap:8px;background:#fff;border-top:1px solid #e3e6ea;padding:7px 12px 0;font-size:12px;color:var(--muted)}
+.nickrow b{color:var(--ink);font-size:13px}
+.nickrow button{border:0;background:#f1f3f5;color:#495057;font-size:12px;font-weight:700;border-radius:12px;padding:4px 10px;cursor:pointer}
+.nickrow input{flex:1;min-width:0;border:1px solid #ced4da;border-radius:10px;padding:5px 9px;font-size:16px;font:inherit}
+.mast .icons button{position:relative}
+.mast .icons .dot{position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:50%;background:#fa5252;box-shadow:0 0 0 2px #1d232a}
 .inrow{display:flex;gap:8px;align-items:flex-end;background:#fff;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0))}
 .inrow textarea{flex:1;resize:none;border:0;background:#f1f3f5;border-radius:18px;padding:9px 13px;font:inherit;font-size:16px;color:var(--ink);max-height:120px;outline:none}
 .inrow button{border:0;background:#1c6fc9;color:#fff;font-weight:700;font-size:15px;border-radius:16px;padding:9px 15px;cursor:pointer}
@@ -288,7 +296,7 @@ html{background:#1d232a}
     <h1><img class="bi" src="a/logo.webp" alt="" onerror="this.remove()"><span>수리수리진타리<small>진탈이의 돈 버는 마법 카드</small></span></h1>
     <div class="right">
       <div class="icons">
-        <button id="bChat" aria-label="상담"><img src="a/icons/chat.png" alt=""></button>
+        <button id="bChat" aria-label="채팅방"><img src="a/icons/room.png" alt=""><i class="dot" id="chatDot" hidden></i></button>
         <button id="bScan" aria-label="새로고침"><img src="a/icons/refresh.png" alt=""></button>
         <button id="bInfo" aria-label="규칙"><img src="a/icons/info.png" alt=""></button>
       </div>
@@ -302,8 +310,9 @@ html{background:#1d232a}
 </div>
 
 <div class="sheet" id="chat">
-  <div class="sbar"><div class="t"><b>수리수리진타리 상담</b><small>집 맥북의 Claude가 장부·규칙·최근 결과를 보고 답해요</small></div><button id="chatClose">닫기</button></div>
+  <div class="sbar"><div class="t"><b>수리수리 채팅방</b><small>누구나 함께 이야기해요 · 매일 자정(한국 시간)에 대화가 초기화돼요</small></div><button id="chatClose">닫기</button></div>
   <div class="msgs" id="msgs"></div>
+  <div class="nickrow"><span>내 이름</span><b id="nick"></b><button id="nickEdit">바꾸기</button><input id="nickIn" maxlength="12" hidden><button id="nickSave" hidden>저장</button></div>
   <div class="inrow"><textarea id="q" rows="1" placeholder="메시지 입력"></textarea><button id="send">보내기</button></div>
 </div>
 <div class="sheet" id="info">
@@ -328,7 +337,7 @@ html{background:#1d232a}
 <script>
 (function(){
 'use strict';
-var T = { alerts: 'berry-3059012bcc6b7db9-a', req: 'berry-3059012bcc6b7db9-r', chat: 'berry-3059012bcc6b7db9-c' };
+var T = { alerts: 'berry-3059012bcc6b7db9-a', req: 'berry-3059012bcc6b7db9-r', chat: 'berry-3059012bcc6b7db9-c', room: 'berry-3059012bcc6b7db9-room' };
 var NT = 'https://ntfy.sh/';
 var $ = function(id){ return document.getElementById(id); };
 var LS = { get: function(k, d){ try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
@@ -336,7 +345,7 @@ var LS = { get: function(k, d){ try { var v = localStorage.getItem(k); return v 
 var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
 
 var state = { result: LS.get('bh_result', null), resultTime: LS.get('bh_resultTime', 0), cset: LS.get('bh_cset', null), csetTime: LS.get('bh_csetTime', 0), title: LS.get('bh_title', ''),
-  chat: LS.get('bh_chat', []), seen: {}, reqAt: 0, ackAt: 0, doneAt: 0, fail: '', chatWaitAt: LS.get('bh_chatWait', 0) };
+  room: [], seen: {}, reqAt: 0, ackAt: 0, doneAt: 0, fail: '', roomSeen: LS.get('bh_roomSeen', 0) };
 
 // ── 시계 · n분 전 업데이트
 function fmt(tz){ var p = new Intl.DateTimeFormat('ko-KR', { timeZone: tz, month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()); var g = function(t){ var x = p.find(function(y){ return y.type === t; }); return x ? x.value : ''; }; return g('month') + '/' + g('day') + '(' + g('weekday') + ') ' + g('hour') + ':' + g('minute'); }
@@ -651,8 +660,8 @@ function handle(m, live){
   if (!m || m.event !== 'message' || state.seen[m.id]) return;
   state.seen[m.id] = 1;
   var tags = m.tags || [], body = String(m.message || '');
-  if (m.topic === T.chat) { addChat({ id: m.id, who: 'me', t: m.time, text: body }); return; }
-  if (tags.indexOf('chat') >= 0) { addChat({ id: m.id, who: 'bot', t: m.time, text: body }); state.chatWaitAt = 0; LS.set('bh_chatWait', 0); return; }
+  if (m.topic === T.room) { addRoom(m); return; }
+  if (tags.indexOf('chat') >= 0) return; // 맥 Claude 상담 답장(블랙베리 앱용)은 웹에선 안 보임
   if (tags.indexOf('ack') >= 0) { if (m.time * 1000 >= state.reqAt - 5000) state.ackAt = m.time * 1000; return; }
   if (body.charAt(0) === '{') {
     try { var j = JSON.parse(body); } catch(e) { return; }
@@ -675,14 +684,14 @@ var es = null;
 function connect(){
   if (es) try { es.close(); } catch(e){}
   try {
-    es = new EventSource(NT + T.alerts + ',' + T.chat + '/sse');
+    es = new EventSource(NT + T.alerts + ',' + T.room + '/sse');
     es.onopen = function(){ setStatus('실시간 연결됨 · ' + new Date().toTimeString().slice(0,5)); };
     es.onmessage = function(ev){ try { handle(JSON.parse(ev.data), true); } catch(e){} };
     es.onerror = function(){ setStatus('연결 다시 시도 중…', true); };
   } catch(e) { setStatus('실시간 연결 실패', true); }
 }
 function refresh(){
-  return Promise.all([poll(T.alerts, '12h'), poll(T.chat, '12h')]).then(function(){ render(); renderChat(); setStatus('실시간 연결됨 · ' + new Date().toTimeString().slice(0,5)); })
+  return Promise.all([poll(T.alerts, '12h'), poll(T.room, '24h')]).then(function(){ render(); renderChat(); setStatus('실시간 연결됨 · ' + new Date().toTimeString().slice(0,5)); })
     .catch(function(e){ setStatus('확인 실패 · 인터넷 연결을 확인해 주세요', true); });
 }
 
@@ -718,37 +727,42 @@ function finishProg(ok, msg){
   setTimeout(function(){ $('prog').hidden = true; $('progFill').style.width = '0'; }, ok ? 1500 : 5000);
 }
 
-// ── 상담
-function addChat(c){
-  for (var i = 0; i < state.chat.length; i++) {
-    var x = state.chat[i];
-    if (x.id === c.id) return;
-    if (c.who === 'me' && x.who === 'me' && x.local && x.text === c.text && Math.abs(x.t - c.t) < 120) { x.id = c.id; x.local = false; LS.set('bh_chat', state.chat); return; }
-  }
-  state.chat.push(c); state.chat.sort(function(a, b){ return a.t - b.t; });
-  if (state.chat.length > 120) state.chat = state.chat.slice(-120);
-  LS.set('bh_chat', state.chat); renderChat();
-}
+// ── 채팅방(누구나 대화, ntfy 공개 토픽). 매일 자정(KST) 초기화 · 닉네임은 처음에 랜덤, 바꿀 수 있음
+var NICK_A = ['용감한','느긋한','반짝이는','배고픈','졸린','신난','조용한','날쌘','든든한','엉뚱한','침착한','수상한','행복한','꼼꼼한','씩씩한'];
+var NICK_B = ['황소','곰','다람쥐','고양이','부엉이','수달','펭귄','여우','거북이','토끼','고래','참새','판다','너구리','햄스터'];
+var ME = LS.get('bh_uid', '') || (function(){ var u = Math.random().toString(36).slice(2, 10); LS.set('bh_uid', u); return u; })();
+function myNick(){ var n = LS.get('bh_nick', ''); if (!n) { n = NICK_A[Math.floor(Math.random() * NICK_A.length)] + NICK_B[Math.floor(Math.random() * NICK_B.length)] + Math.floor(10 + Math.random() * 90); LS.set('bh_nick', n); } return n; }
+function kstDay(sec){ return new Date(sec * 1000 + 9 * 3600e3).toISOString().slice(0, 10); }
+function addRoom(m){ var j; try { j = JSON.parse(m.message || ''); } catch(e) { return; } if (!j || typeof j.x !== 'string') return;
+  if (state.room.some(function(x){ return x.id === m.id; })) return;
+  state.room.push({ id: m.id, t: m.time, n: String(j.n || '익명').slice(0, 12), u: String(j.u || ''), x: j.x.slice(0, 300) });
+  state.room.sort(function(a, b){ return a.t - b.t; }); if (state.room.length > 300) state.room = state.room.slice(-300);
+  renderChat(); chatDot(); }
+function todayRoom(){ var d = kstDay(Date.now() / 1000); return state.room.filter(function(x){ return kstDay(x.t) === d; }); }
+function chatDot(){ var open = $('chat').classList.contains('on'); var list = todayRoom(); var last = list.length ? list[list.length - 1].t : 0;
+  if (open) { state.roomSeen = last; LS.set('bh_roomSeen', last); } $('chatDot').hidden = open || !(last > (state.roomSeen || 0)) || (list.length && list[list.length - 1].u === ME); }
 function renderChat(){
+  $('nick').textContent = myNick();
   if (!$('chat').classList.contains('on')) return;
-  var h = '';
-  if (!state.chat.length) h = '<div class="wait">무엇이든 물어보세요. 예: "오늘 TQQQ 사도 돼?", "⑥번 규칙 설명해줘", "새 대화"</div>';
-  state.chat.forEach(function(c){
-    var t = new Date(c.t * 1000).toTimeString().slice(0, 5);
-    h += '<div class="msg ' + c.who + '">' + (c.who === 'me' ? '<span class="tm">' + t + '</span>' : '') + '<div class="bub">' + esc(c.text) + (c.fail ? ' ⚠️' : '') + '</div>' + (c.who === 'bot' ? '<span class="tm">' + t + '</span>' : '') + '</div>';
-  });
-  if (state.chatWaitAt) h += '<div class="wait">' + (Date.now() - state.chatWaitAt > 240000 ? '4분째 답이 없어요. 맥이 꺼져 있을 수 있어요.' : '답장 쓰는 중…') + '</div>';
-  var box = $('msgs'); box.innerHTML = h; box.scrollTop = box.scrollHeight;
-}
+  var list = todayRoom(), h = '', prevN = '';
+  if (!list.length) h = '<div class="wait">오늘 대화가 아직 없어요. 첫 마디를 남겨 보세요. (욕설·광고·개인정보는 올리지 말아 주세요)</div>';
+  list.forEach(function(c){ var me = c.u === ME, t = new Date(c.t * 1000).toTimeString().slice(0, 5);
+    h += '<div class="msg ' + (me ? 'me' : 'bot') + '">' + (me ? '<span class="tm">' + t + '</span>' : '') + '<div class="mb">' + (!me && c.n !== prevN ? '<div class="nk">' + esc(c.n) + '</div>' : '') + '<div class="bub">' + esc(c.x) + '</div></div>' + (!me ? '<span class="tm">' + t + '</span>' : '') + '</div>';
+    prevN = me ? '' : c.n; });
+  var box = $('msgs'), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 80; box.innerHTML = h; if (atEnd || !renderChat.once) box.scrollTop = box.scrollHeight; renderChat.once = 1;
+  chatDot(); }
+var lastSend = 0;
 function sendChat(){
   var q = $('q').value.trim(); if (!q) return;
-  $('q').value = ''; autoGrow();
-  var c = { id: 'me' + Date.now(), who: 'me', t: Math.floor(Date.now() / 1000), text: q, local: true };
-  state.chat.push(c); state.chatWaitAt = Date.now(); LS.set('bh_chatWait', state.chatWaitAt); LS.set('bh_chat', state.chat); renderChat();
-  fetch(NT, { method: 'POST', body: JSON.stringify({ topic: T.chat, title: 'chat', message: q }) })
-    .then(function(r){ if (!r.ok) throw new Error(r.status); })
-    .catch(function(){ c.fail = true; state.chatWaitAt = 0; LS.set('bh_chat', state.chat); renderChat(); toast('보내지 못했어요. 다시 보내 주세요'); });
+  if (Date.now() - lastSend < 3000) { toast('천천히 보내 주세요(3초에 한 번)'); return; }
+  if (q.length > 300) { toast('300자까지 쓸 수 있어요'); return; }
+  lastSend = Date.now(); $('q').value = ''; autoGrow();
+  fetch(NT, { method: 'POST', body: JSON.stringify({ topic: T.room, title: 'room', message: JSON.stringify({ n: myNick(), u: ME, x: q }) }) })
+    .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); }).then(function(m){ if (m && m.id) addRoom({ id: m.id, time: m.time, message: m.message }); })
+    .catch(function(){ $('q').value = q; toast('보내지 못했어요. 다시 보내 주세요'); });
 }
+function nickEdit(on){ $('nick').hidden = on; $('nickEdit').hidden = on; $('nickIn').hidden = !on; $('nickSave').hidden = !on; if (on) { $('nickIn').value = myNick(); $('nickIn').focus(); } }
+function nickSave(){ var v = $('nickIn').value.replace(/[<>&"'\s]+/g, '').slice(0, 12); if (v.length < 2) { toast('두 글자 이상 써 주세요'); return; } LS.set('bh_nick', v); nickEdit(false); renderChat(); toast('이름을 바꿨어요'); }
 function autoGrow(){ var t = $('q'); t.style.height = 'auto'; t.style.height = Math.min(120, t.scrollHeight) + 'px'; }
 
 // ── 규칙
@@ -757,8 +771,9 @@ var RULES = "■ 원칙\n백테스트를 통과한 규칙만 매수 의견을 �
 var RISK = "■ 클석진 반반도체 지수(반반도체지수) v5\n반도체(SOXX)가 앞으로 크게 빠질 위험을 0~100으로 보여 줘요. 매일 미국장 마감 기준으로 다시 계산하고, 두 축 중 낮은 값을 써요(둘 다 높아야 높음).\n\n· 급락 위험 축(주황): 미국 10년 금리 수준, 금융여건(NFCI) 13주 변화, 순유동성 감소, 원달러 수준(3년 대비), 기대인플레·유가 하락, 반도체 가이던스 감속, 장단기 금리차 축소, 2년 금리 120일 상승. 급락 확률은 잘 맞히지만 2023~26엔 높을 때 오히려 크게 오르기도 했어요(양방향 출렁임).\n· 사이클 축(파랑): 순유동성 감소, 반도체 매출 성장 감속, 10년 금리, 미국 반도체 가동률(생산/능력), 반도체 19개사 매출 성장(사이클 고점일수록 높음), 장단기차 축소, 2년 금리 상승. 높을 때 60일 뒤 수익이 세 기간 모두 낮았어요(4.1 vs 7.6% · −6.1 vs 10.9% · −4.2 vs 11.6%).\n\n· 90 이상 = 위험 모드(두 축 모두 90 이상): 그동안 현금으로 바꿨다면 SOXL 연 49.8→58.6%(2013~18) · 13.2→53.5%(2019~22) · 97.8→155.6%(2023~26), SOXX 19.5→21.7 · 21.5→32.1 · 50.4→60.0%. 위험 모드는 전체의 6~14%의 날\n· 한계: 요인을 같은 기간에서 골라 실전은 이보다 못할 수 있어요. 코로나·딥시크 같은 갑작스러운 충격은 못 잡아요. 매출 자료는 실적 시즌마다 갱신해요.\n\n■ 추가 하락 가능성(반도체가 20일 고점 대비 −8% 이상 빠졌을 때만)\n이미 빠진 뒤 '더 빠질까, 멈출까'를 봐요. 급락 위험 축, 금융여건 악화, 원화·달러 강세, 기대인플레 하락, 시장 전체 하락, VIX 단기 공포, 천천히 빠지는지를 합쳐요. 점수 상위 1/3이면 20일 안 −7% 더 빠질 확률 약 50%, 하위 1/3이면 15% 안팎.\n\n■ 알림: 위험 모드에 처음 들어갈 때(80 밑으로 내려갔다 다시 90을 넘으면 또), 반도체 급락(−8%)이 새로 시작될 때\n\n";
 // ── 연결
 $('bScan').onclick = requestScan;
-$('bChat').onclick = function(){ $('chat').classList.add('on'); renderChat(); poll(T.chat, '12h').then(renderChat).catch(function(){}); setTimeout(function(){ $('q').focus(); }, 50); };
-$('chatClose').onclick = function(){ $('chat').classList.remove('on'); };
+$('bChat').onclick = function(){ $('chat').classList.add('on'); renderChat.once = 0; renderChat(); poll(T.room, '24h').then(renderChat).catch(function(){}); };
+$('nickEdit').onclick = function(){ nickEdit(true); }; $('nickSave').onclick = nickSave; $('nickIn').addEventListener('keydown', function(e){ if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); nickSave(); } });
+$('chatClose').onclick = function(){ $('chat').classList.remove('on'); chatDot(); };
 function statsText(){ var st = state.result && state.result.st; if (!st || !st.r || st.v !== 2) return '';
   var names = { '①':'급락 초입 → QQQ', '②':'나스닥 박스 하단 → TQQQ', '③':'유가 급등 → TQQQ', '④':'실적주 공포 여론', '⑤':'금·금리 동반 하락 → UGL', '⑥':'반도체만 급락 → TQQQ', '⑦':'1분봉 V자(관찰)', '⑧':'급락일 과하게 빠진 종목', '⑨':'반도체 급락 반등 → SOXL', '⑩':'위험 모드 추세 이탈 → SOXS', '⑪':'위기 매수(QQQ·SOXX)' };
   var t = '■ 이번 주 성적표 (' + st.at + ' 미국장 마감까지, 매주 토요일 아침 갱신)\n점수 = 승률 × 기대 이익(아무 날 대비 평균 초과수익, 20거래일 환산)\n\n';
@@ -788,7 +803,7 @@ document.addEventListener('keydown', function(e){
   else if (k === 'escape') { $('chat').classList.remove('on'); $('info').classList.remove('on'); $('rk').classList.remove('on'); }
 });
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) { refresh(); connect(); } });
-setInterval(function(){ tick(); if (state.chatWaitAt) renderChat(); }, 30000);
+setInterval(function(){ tick(); renderChat(); }, 30000);
 // 공유 링크로 들어오면 그 카드로 스크롤(결과가 늦게 와도 한 번 더 시도, 신호가 끝났으면 규칙 카드를 보여 줌)
 var ANC = (location.hash || '').replace(/^#/, ''), ancPolled = false;
 if (!/^c[0-9a-z]+(-[A-Za-z0-9]+)?$/.test(ANC)) ANC = '';
