@@ -136,12 +136,12 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 /* A·S 진주빛 펄 코팅(2026-10-15 석진 선택): 카드 전체에 파스텔 펄 막이 천천히 돌고, 문지르면 빛이 따라옴 */
 .pl{position:absolute;inset:0;z-index:3;pointer-events:none;border-radius:inherit;background:conic-gradient(from calc(var(--mx,.5) * 360deg) at 30% 20%,#ffd6e7,#fff3bf,#d3f9d8,#d0ebff,#e5dbff,#ffd6e7);mix-blend-mode:multiply;opacity:.5}
 .mc .pl{opacity:.45}
-.tc:has(.pl){transform:perspective(900px) rotateX(calc((var(--my,.3) - .5) * -8deg)) rotateY(calc((var(--mx,.5) - .5) * 10deg));will-change:transform}
-.mc:has(.pl){transform:perspective(700px) rotateX(calc((var(--my,.3) - .5) * -8deg)) rotateY(calc((var(--mx,.5) - .5) * 10deg))}
+.tc:has(.pl){transform:perspective(900px) rotateX(calc((var(--my,.3) - .5) * -4deg)) rotateY(calc((var(--mx,.5) - .5) * 5deg));will-change:transform}
+.mc:has(.pl){transform:perspective(700px) rotateX(calc((var(--my,.3) - .5) * -4deg)) rotateY(calc((var(--mx,.5) - .5) * 5deg))}
 /* 카드가 아주 살짝 3D로 좌우 회전(글씨 읽기에 방해 안 되게 ±3도, 천천히). 펄 카드(A·S)는 스크립트가 따로 기울임 */
 .tc:not(:has(.pl)){animation:tcSway 8s ease-in-out infinite;transform-origin:50% 50%}
 #list .tc:nth-of-type(2n){animation-delay:-3s}#list .tc:nth-of-type(3n){animation-delay:-5.5s}
-@keyframes tcSway{0%,100%{transform:perspective(1100px) rotateY(-3deg) rotateX(.6deg)}50%{transform:perspective(1100px) rotateY(3deg) rotateX(-.6deg)}}
+@keyframes tcSway{0%,100%{transform:perspective(1100px) rotateY(-1.5deg) rotateX(.3deg)}50%{transform:perspective(1100px) rotateY(1.5deg) rotateX(-.3deg)}}
 .dust{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;border-radius:inherit}
 .dust i{position:absolute;bottom:-4%;width:0;height:0;animation:dustUp 4.5s linear infinite}
 .dust i b{position:absolute;left:0;top:0;width:3px;height:3px;border-radius:50%;background:#fffbe6;box-shadow:0 0 4px 1px rgba(255,232,150,.7);opacity:.68;animation:dustSpin .9s linear infinite}
@@ -209,7 +209,7 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .tc .rv.warn{background:#fff4e6}.tc .rv.warn b{color:#d9480f}.tc .rv.hold{background:#fff5f5}.tc .rv.hold b{color:#c92a2a}
 .rvout{max-width:420px;margin:-8px auto 26px;padding:10px 12px;border-radius:12px;background:var(--box);font-size:11.5px;line-height:1.55;color:var(--body);word-break:keep-all}
 .rvout b{display:block;font-size:11px;font-weight:800;color:var(--ink);margin-bottom:3px}.rvout div+div{margin-top:4px}.rvout i{font-style:normal;font-weight:700;color:#c92a2a}
-.rvsum{max-width:420px;margin:0 auto 20px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:12px;line-height:1.55;color:var(--body);word-break:keep-all;white-space:pre-line}
+.rvsum{max-width:420px;margin:0 auto 20px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:12px;line-height:1.55;color:var(--body);word-break:keep-all;white-space:pre-line;text-align:center}
 .rvsum b{display:block;font-size:11px;font-weight:800;color:var(--ink);margin-bottom:2px}.rvsum i{font-style:normal;color:#adb5bd;font-weight:400;margin-left:4px}
 .freqo{max-width:420px;margin:-26px auto 34px;padding:0 6px;font-size:11px;font-weight:400;color:#adb5bd;text-align:right}
 .simpop[hidden]{display:none}
@@ -449,7 +449,7 @@ function revApply(cs){ var out = [], kept = []; cs.forEach(function(c){ var v = 
   if (v && v.v === 'warn' && !c.dn && !/한 단계 낮춤/.test(c.why || '') && GDOWN[c.g]) c = Object.assign({}, c, { g: GDOWN[c.g], revDown: c.g });
   kept.push(c); }); return { kept: kept, out: out }; }
 function revOutHTML(out){ if (!out.length) return ''; return '<div class="rvout"><b>클로드 검토로 뺀 카드</b>' + out.map(function(x){ return '<div><i>' + esc(x.c.n) + (x.c.kn ? ' ' + esc(x.c.kn) : '') + ' · ' + esc(x.c.g) + '</i> ' + esc(x.v.note) + '</div>'; }).join('') + '</div>'; }
-function revSum(){ if (!revFresh() || !REV.sum) return ''; return '<div class="rvsum"><b>클로드 검토<i>' + revWhen() + '</i></b>' + esc(REV.sum) + '</div>'; }
+function revSum(){ if (!revFresh() || !REV.sum) return ''; return '<div class="rvsum"><b>종합 매수 의견<i>' + revWhen() + '</i></b>' + esc(REV.sum) + '</div>'; }
 function card(c, sh){
   var g = c.g || 'B', kr = c.m === 'KR', no = ruleNo(c.s), ty = RTYPE[no] || ['#5c7cfa','#dbe4ff','★','규칙'];
   var nn = no < 10 ? '0' + no : '' + no, ep = c.ep != null ? c.ep : epithet(no, c.n);
