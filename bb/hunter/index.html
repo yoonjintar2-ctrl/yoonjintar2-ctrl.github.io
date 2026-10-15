@@ -204,6 +204,11 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .tc .simln{margin-top:7px;font-size:12px;font-weight:700;color:#343a40;background:rgba(255,255,255,.6);border-radius:6px;padding:5px 8px;cursor:pointer;line-height:1.45}
 .tc .simln u{font-weight:600;color:#1c7ed6;text-decoration:none;white-space:nowrap}
 .tc.dark .simln{background:rgba(255,255,255,.08);color:#e9ecef}
+.tc .rv{margin:7px 0 0;padding:6px 8px;border-radius:8px;font-size:11px;line-height:1.5;text-align:left;background:#f1f3f5;color:#343a40;white-space:pre-line;word-break:keep-all}
+.tc .rv b{font-weight:800;margin-right:3px;color:#2b8a3e}.tc .rv i{font-style:normal;color:#adb5bd;margin-left:4px}
+.tc .rv.warn{background:#fff4e6}.tc .rv.warn b{color:#d9480f}.tc .rv.hold{background:#fff5f5}.tc .rv.hold b{color:#c92a2a}
+.rvsum{max-width:420px;margin:0 auto 20px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:12px;line-height:1.55;color:var(--body);word-break:keep-all;white-space:pre-line}
+.rvsum b{display:block;font-size:11px;font-weight:800;color:var(--ink);margin-bottom:2px}.rvsum i{font-style:normal;color:#adb5bd;font-weight:400;margin-left:4px}
 .freqo{max-width:420px;margin:-26px auto 34px;padding:0 6px;font-size:11px;font-weight:400;color:#adb5bd;text-align:right}
 .simpop[hidden]{display:none}
 .simpop{position:fixed;inset:0;z-index:90;background:rgba(10,14,20,.6);display:grid;place-items:center;padding:20px}
@@ -426,6 +431,15 @@ function dustHTML(seed, gold){ var h = 7, out = '<div class="dust' + (gold ? ' g
   for (var i = 0, nP = gold ? 12 : 9; i < nP; i++) { h = (h * 73 + 41) % 9973; var side = i % 3, x = side === 0 ? 2 + h % 9 : side === 1 ? 89 + h % 9 : 20 + h % 60;
     out += '<i style="left:' + x + '%;animation-duration:' + (3.6 + (h % 25) / 10) + 's;animation-delay:-' + ((h % 50) / 10) + 's"><b style="animation-duration:' + (0.7 + (h % 6) / 10) + 's"></b></i>'; }
   return out + '</div>'; }
+// ── 클로드 검토(오후 5·8·11시 업데이트 뒤 Claude가 뉴스·실적 일정·가격·규칙 전제를 직접 훑어 review.json에 남김)
+var REV = null;
+function loadRev(){ return fetch('review.json?t=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){ if (j && j.t && (!REV || j.t !== REV.t)) { REV = j; render(); } }).catch(function(){}); }
+function revFresh(){ return REV && REV.t && Date.now() / 1000 - REV.t < 9 * 3600; }
+function revWhen(){ var kt = new Date((REV.t + 9 * 3600) * 1000), p2 = function(n){ return (n < 10 ? '0' : '') + n; }; return p2(kt.getUTCHours()) + ':' + p2(kt.getUTCMinutes()) + ' 검토'; }
+function revHTML(c){ if (!revFresh() || !REV.cards) return ''; var k = (c.s || '').trim().charAt(0) + ' ' + c.n, v = REV.cards[k]; if (!v || !v.note) return '';
+  var lab = { ok: '클로드 검토 · 이상 없음', warn: '클로드 검토 · 주의', hold: '클로드 검토 · 매수 보류 권고' }[v.v] || '클로드 검토';
+  return '<div class="rv ' + esc(v.v || '') + '"><b>' + lab + '</b><i>' + revWhen() + '</i>\n' + esc(v.note) + '</div>'; }
+function revSum(){ if (!revFresh() || !REV.sum) return ''; return '<div class="rvsum"><b>클로드 검토<i>' + revWhen() + '</i></b>' + esc(REV.sum) + '</div>'; }
 function card(c, sh){
   var g = c.g || 'B', kr = c.m === 'KR', no = ruleNo(c.s), ty = RTYPE[no] || ['#5c7cfa','#dbe4ff','★','규칙'];
   var nn = no < 10 ? '0' + no : '' + no, ep = c.ep != null ? c.ep : epithet(no, c.n);
@@ -455,7 +469,7 @@ function card(c, sh){
       '<div><div class="l">손절가</div><div class="v" style="color:#e03131">' + brk(c.stop || '-') + '</div><div class="s" style="color:#e03131">' + brk(c.sp || '') + '</div></div>' +
       '<div><div class="l">보유기간</div><div class="v" style="font-size:12px">' + brk(hold) + '</div></div></div>') +
     spark(c.ln, g) +
-    '<div class="fl">' + esc(c.why || '') + '</div>' +
+    '<div class="fl">' + esc(c.why || '') + '</div>' + revHTML(c) +
     '<div class="ft"><span>수리수리진타리 · 규칙 ' + (CIRC.charAt(no - 1) || '') + (c.rr && c.rr !== '-' ? ' · 손익비 ' + esc(c.rr) : '') + ' · <i class="url">stock.jintar.co.kr</i></span><b>' + esc(ty[3]) + ' ' + esc(g) + '</b></div>' +
   '</div>' + (T !== 'Z' && g !== 'C-' ? dustHTML(c.n + no, T === 'S') : '') + (T === 'A' || T === 'S' ? '<div class="pl"></div><div class="gl"></div>' : '') + '</div>' + (RSIM[key] ? '<div class="freqo">' + esc(freqLine(key)) + '</div>' : '');
 }
@@ -571,7 +585,7 @@ function render(){
   else {
     var cs = (r.cards || []).slice().sort(function(a, b){ return RANK.indexOf(a.g) - RANK.indexOf(b.g); });
     if (!cs.length) { var tt = String(state.title || '매수 의견 없음'), k = tt.indexOf(' · '); html += '<div class="none"><b>' + esc(k > 0 ? tt.slice(0, k) : tt) + '</b>' + (k > 0 ? '<small>' + esc(tt.slice(k + 3)) + '</small>' : '') + '</div>'; }
-    (r.z || []).forEach(function(c){ html += card(c, 1); }); // 매수 금지 카드는 맨 위
+    html += revSum(); (r.z || []).forEach(function(c){ html += card(c, 1); }); // 매수 금지 카드는 맨 위
     cs.forEach(function(c){ html += card(c, 1); });
     var CS = state.cset || {}; (r.cond || CS.cond || []).forEach(function(c){ html += card(c, 1); }); // 조건이 맞을 때만 뜨는 C카드(SGOV·QLD·IEF)
     html += '<div class="about">투자하며 떠올린 아이디어를 법칙으로 만들고, 클로드와 실제 데이터로 검증해 성공률에 따라 등급을 매겼다.<br>지금 상황에 가장 맞는 카드를 추천하며, 방법은 주기적으로 다시 검증해 등급을 새로 매긴다.<br><b>투자 선택은 각자의 몫, 참고만 하시길</b> (돈 잃어도 책임 못 짐)</div>';
@@ -706,6 +720,7 @@ function connect(){
   } catch(e) { setStatus('실시간 연결 실패', true); }
 }
 function refresh(){
+  loadRev();
   return Promise.all([poll(T.alerts, '12h')]).then(function(){ render(); setStatus('실시간 연결됨 · ' + new Date().toTimeString().slice(0,5)); })
     .catch(function(e){ setStatus('확인 실패 · 인터넷 연결을 확인해 주세요', true); });
 }
@@ -780,7 +795,7 @@ document.addEventListener('keydown', function(e){
   else if (k === 'escape') { $('info').classList.remove('on'); $('rk').classList.remove('on'); }
 });
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) { refresh(); connect(); } });
-setInterval(tick, 30000);
+setInterval(tick, 30000); setInterval(loadRev, 300000);
 // 공유 링크로 들어오면 그 카드로 스크롤(결과가 늦게 와도 한 번 더 시도, 신호가 끝났으면 규칙 카드를 보여 줌)
 var ANC = (location.hash || '').replace(/^#/, ''), ancPolled = false;
 if (!/^c[0-9a-z]+(-[A-Za-z0-9]+)?$/.test(ANC)) ANC = '';
