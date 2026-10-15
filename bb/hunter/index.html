@@ -127,7 +127,9 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 /* A·S 진주빛 펄 코팅(2026-10-15 석진 선택): 카드 전체에 파스텔 펄 막이 천천히 돌고, 문지르면 빛이 따라옴 */
 .pl{position:absolute;inset:0;z-index:3;pointer-events:none;border-radius:inherit;background:conic-gradient(from calc(var(--mx,.5) * 360deg) at 30% 20%,#ffd6e7,#fff3bf,#d3f9d8,#d0ebff,#e5dbff,#ffd6e7);mix-blend-mode:multiply;opacity:.5}
 .mc .pl{opacity:.45}
-.tc .gl{position:absolute;inset:0;z-index:5;pointer-events:none;border-radius:inherit;background:radial-gradient(circle at calc(var(--mx,.5) * 100%) calc(var(--my,.3) * 100%),rgba(255,255,255,.55),rgba(255,255,255,0) 42%);mix-blend-mode:soft-light}
+.tc:has(.pl){transform:perspective(900px) rotateX(calc((var(--my,.3) - .5) * -8deg)) rotateY(calc((var(--mx,.5) - .5) * 10deg));will-change:transform}
+.mc:has(.pl){transform:perspective(700px) rotateX(calc((var(--my,.3) - .5) * -8deg)) rotateY(calc((var(--mx,.5) - .5) * 10deg))}
+.tc .gl,.mc .gl{position:absolute;inset:0;z-index:5;pointer-events:none;border-radius:inherit;background:radial-gradient(circle at calc(var(--mx,.5) * 100%) calc(var(--my,.3) * 100%),rgba(255,255,255,.55),rgba(255,255,255,0) 42%);mix-blend-mode:soft-light}
 @keyframes hl{0%{box-shadow:0 0 0 0 rgba(255,212,59,.95)}60%{box-shadow:0 0 0 14px rgba(255,212,59,0)}100%{box-shadow:0 0 0 0 rgba(255,212,59,0)}}
 /* 테두리 색 = 등급: S~SSS 금(반짝임) · A-~A+ 은 · B+ 이하 동 */
 .tc.gS,.mc.gS{background:linear-gradient(135deg,#fff3bf,#e8a400 22%,#ffe066 40%,#b8860b 62%,#ffd43b 80%,#c99700);background-size:200% 200%;animation:goldflow 4s ease-in-out infinite alternate}
@@ -533,7 +535,7 @@ function binderHTML(){ var h = '<div class="glegend"><b>등급</b> S 강력 매�
   ord.forEach(function(i){ var r = RCARDS[i], ty = RTYPE[r[0]], nn = r[0] < 10 ? '0' + r[0] : '' + r[0], lg = (r[12] ? '' : liveGrade(r[0])) || r[3];
     var T = r[0] === 13 ? 'Z' : tier(lg.split('·')[0]); h += '<button class="mc g' + T + (r[0] === 10 || r[0] === 13 ? ' dark' : '') + '" data-i="' + i + '" style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="mci"><div class="mh"><b>' + (CIRC.charAt(r[0] - 1) || 'ⓒ') + '</b>' + badge(lg.split('·')[0], 0, T) + '</div>' +
       '<div class="ma"><div class="no">' + CIRC.charAt(r[0] - 1) + '</div><img src="a/art/' + (r[13] || 'r' + nn) + '.webp" alt="" loading="lazy" onerror="this.remove()"></div>' +
-      '<div class="mn">' + esc(ruleCardObj(r).s.slice(2)) + '</div><div class="mw">' + ty[2] + ' ' + esc(EPI[r[0]][0] + ' ' + r[1]) + '</div></div>' + (T === 'A' || T === 'S' ? '<span class="pl"></span>' : '') + '</button>'; });
+      '<div class="mn">' + esc(ruleCardObj(r).s.slice(2)) + '</div><div class="mw">' + ty[2] + ' ' + esc(EPI[r[0]][0] + ' ' + r[1]) + '</div></div>' + (T === 'A' || T === 'S' ? '<span class="pl"></span><span class="gl"></span>' : '') + '</button>'; });
   return h + '</div>'; }
 function openRuleCard(i){ $('ovIn').innerHTML = card(ruleCardObj(RCARDS[i])); $('ov').hidden = false; }
 function render(){
