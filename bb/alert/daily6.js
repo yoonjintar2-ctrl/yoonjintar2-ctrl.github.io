@@ -147,7 +147,7 @@
         const sh = (re) => cc.sh[Object.keys(RES).find(k => RES[k] === re)] || 0; const emo = sh(EMO), buy = sh(BUY), wry = sh(WRY), fear = sh(FEAR);
         let g = null; if (good) { if (emo >= 0.05 && buy < emo && wry < emo) g = 'S'; else if (emo >= 0.03 && buy < emo) g = 'A'; else if (fear >= 0.07) g = 'B'; }
         // 사업성 확인(실적·부채·최근 3일 악재 뉴스, fund.js) — 통과 못 하면 신호가 맞아도 카드 안 띄움
-        const fcOf = async () => { if (!window.__fundCheck) try { (0, eval)(await window.__berryLoad('bb/alert/fund.js')); } catch (e) {} try { return window.__fundCheck ? await window.__fundCheck(s.code) : null; } catch (e) { return null; } };
+        const fcOf = async () => { if (window.__fundVer !== 3) try { (0, eval)(await window.__berryLoad('bb/alert/fund.js')); } catch (e) {} try { return window.__fundCheck ? await window.__fundCheck(s.code) : null; } catch (e) { return null; } };
         let fc = null;
         if (g) { fc = await fcOf(); if (!fc || !fc.ok) { state.push('④ ' + s.name + ' 사업성 탈락'); g = null; } else if (fc.soft && fc.soft.length) g = window.__gradeDown(g); }
         if (g) {

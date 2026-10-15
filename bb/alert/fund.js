@@ -21,7 +21,7 @@
     if (tk[0]) res.push(tk[0].length >= 3 ? null : new RegExp('(^|[^가-힣A-Za-z])(?<!(마이클|창업자|회장|CEO|최고경영자) ?)' + tk[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^가-힣]|[은는이가을를의도와과에만])'));
     if (sym) res.push(sym.length >= 2 ? new RegExp('\\b' + sym + '\\b') : new RegExp('\\(' + sym + '\\)'));
     return (ti) => long.some(n => ti.includes(n)) || (tk[0] && tk[0].length >= 3 && ti.includes(tk[0])) || res.some(r => r && r.test(ti)); };
-  window.__fundNameHit = nameHit;
+  window.__fundNameHit = nameHit; window.__fundVer = 3; // 규칙 모듈이 이 값이 다르면 fund.js를 다시 불러옴
   window.__gradeDown = (g) => ({ SSS: 'SS', SS: 'S', S: 'A', 'A+': 'A', A: 'B+', 'A-': 'B+', 'B+': 'B', B: 'C+', 'C+': 'C', C: 'C-' })[g] || g;
   const KEY = 'fundck3:';
   window.__fundCheck = async function (code) {

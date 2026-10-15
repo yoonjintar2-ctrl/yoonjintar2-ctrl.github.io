@@ -60,7 +60,7 @@
       const qH = qAt(v.tH), qL = qAt(v.tL); if (!qH || !qL) return null; v.qV = qL[4] / qH[4] - 1; v.rel = v.depth - v.qV; if (v.rel < -0.014) return null; return { u, a, v }; })).filter(Boolean);
     const cards = [];
     // 사업성 확인(실적·부채·최근 3일 악재 뉴스, fund.js) — 통과한 종목만 카드로
-    if (!window.__fundCheck) try { (0, eval)(await window.__berryLoad('bb/alert/fund.js')); } catch (e) {}
+    if (window.__fundVer !== 3) try { (0, eval)(await window.__berryLoad('bb/alert/fund.js')); } catch (e) {}
     for (const h of hits.slice(0, 5)) {
       let fc = null; try { fc = window.__fundCheck ? await window.__fundCheck(h.u.code) : null; } catch (e) {}
       if (!fc || !fc.ok) continue;

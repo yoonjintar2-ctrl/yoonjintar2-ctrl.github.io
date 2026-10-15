@@ -23,7 +23,7 @@
   const PRE_RE = /앞두고|앞둔|예정|프리뷰|미리 ?보기|했을 ?듯|할 ?듯|실적 전망$/;
   const earnNews = async (code) => {
     const si = (await get(`${INFO}/api/v2/stock-infos/${code}`)).result; const cc = si.companyCode; if (!cc) return false;
-    if (!window.__fundNameHit) try { (0, eval)(await window.__berryLoad('bb/alert/fund.js')); } catch (e) {}
+    if (window.__fundVer !== 3) try { (0, eval)(await window.__berryLoad('bb/alert/fund.js')); } catch (e) {}
     const hit = window.__fundNameHit ? window.__fundNameHit(si) : (ti) => [String(si.companyName || si.name || '').split(/[ (]/)[0], si.symbol].filter(x => x && x.length >= 2).some(nm => ti.includes(nm)); // 다른 회사 실적 기사(시장 정리) 빼려고 제목에 회사 이름이 있어야 함(한 글자 이름 '델'도 잡게 fund.js 함수 사용)
     const j = await get(`${INFO}/api/v2/news/companies/${cc}?size=40&orderBy=latest`); const lo = Date.now() - 48 * 3600e3;
     return (j.result.body || []).some(x => { const t = Date.parse(String(x.createdAt).slice(0, 19) + '+09:00'); const ti = x.title || ''; return t >= lo && EARN_RE.test(ti) && !PRE_RE.test(ti) && hit(ti); });
@@ -60,7 +60,7 @@
       // 실적 발표 급락 제외(뉴스 제목으로 판단)
       try { if (await earnNews(h.u.code)) continue; } catch (e) {}
       // 사업성 확인(실적·부채·최근 3일 악재 뉴스, fund.js). 2022~26 재현: 통과 종목 매매 평균 +1.97%(손절 18%) vs 탈락 +1.44%(손절 21%)
-      if (!window.__fundCheck) try { (0, eval)(await window.__berryLoad('bb/alert/fund.js')); } catch (e) {}
+      if (window.__fundVer !== 3) try { (0, eval)(await window.__berryLoad('bb/alert/fund.js')); } catch (e) {}
       let fc = null; try { fc = window.__fundCheck ? await window.__fundCheck(h.u.code) : null; } catch (e) {}
       if (!fc || !fc.ok) continue;
       cards.push({ resid, card: {

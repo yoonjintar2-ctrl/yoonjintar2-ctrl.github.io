@@ -207,6 +207,8 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .tc .rv{margin:7px 0 0;padding:6px 8px;border-radius:8px;font-size:11px;line-height:1.5;text-align:left;background:#f1f3f5;color:#343a40;white-space:pre-line;word-break:keep-all}
 .tc .rv b{font-weight:800;margin-right:3px;color:#2b8a3e}.tc .rv i{font-style:normal;color:#adb5bd;margin-left:4px}
 .tc .rv.warn{background:#fff4e6}.tc .rv.warn b{color:#d9480f}.tc .rv.hold{background:#fff5f5}.tc .rv.hold b{color:#c92a2a}
+.rvout{max-width:420px;margin:-8px auto 26px;padding:10px 12px;border-radius:12px;background:var(--box);font-size:11.5px;line-height:1.55;color:var(--body);word-break:keep-all}
+.rvout b{display:block;font-size:11px;font-weight:800;color:var(--ink);margin-bottom:3px}.rvout div+div{margin-top:4px}.rvout i{font-style:normal;font-weight:700;color:#c92a2a}
 .rvsum{max-width:420px;margin:0 auto 20px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:12px;line-height:1.55;color:var(--body);word-break:keep-all;white-space:pre-line}
 .rvsum b{display:block;font-size:11px;font-weight:800;color:var(--ink);margin-bottom:2px}.rvsum i{font-style:normal;color:#adb5bd;font-weight:400;margin-left:4px}
 .freqo{max-width:420px;margin:-26px auto 34px;padding:0 6px;font-size:11px;font-weight:400;color:#adb5bd;text-align:right}
@@ -437,8 +439,16 @@ function loadRev(){ return fetch('review.json?t=' + Date.now(), { cache: 'no-sto
 function revFresh(){ return REV && REV.t && Date.now() / 1000 - REV.t < 9 * 3600; }
 function revWhen(){ var kt = new Date((REV.t + 9 * 3600) * 1000), p2 = function(n){ return (n < 10 ? '0' : '') + n; }; return p2(kt.getUTCHours()) + ':' + p2(kt.getUTCMinutes()) + ' 검토'; }
 function revHTML(c){ if (!revFresh() || !REV.cards) return ''; var k = (c.s || '').trim().charAt(0) + ' ' + c.n, v = REV.cards[k]; if (!v || !v.note) return '';
-  var lab = { ok: '클로드 검토 · 이상 없음', warn: '클로드 검토 · 주의', hold: '클로드 검토 · 매수 보류 권고' }[v.v] || '클로드 검토';
+  var lab = { ok: '클로드 검토 · 이상 없음', warn: '클로드 검토 · 주의', hold: '클로드 검토 · 매수 보류 권고' }[v.v] || '클로드 검토'; if (c.revDown) lab += ' (' + c.revDown + ' → ' + c.g + ')';
   return '<div class="rv ' + esc(v.v || '') + '"><b>' + lab + '</b><i>' + revWhen() + '</i>\n' + esc(v.note) + '</div>'; }
+function revOf(c){ if (!revFresh() || !REV.cards) return null; return REV.cards[(c.s || '').trim().charAt(0) + ' ' + c.n] || null; }
+var GDOWN = { SSS: 'SS', SS: 'S', S: 'A', 'A+': 'A', A: 'B+', 'A-': 'B+', 'B+': 'B', B: 'C+', 'C+': 'C', C: 'C-' };
+// 검토 반영: 보류(회사 자체 이유) → 목록에서 뺌, 주의(애매) → 등급 한 단계 낮춤(검색 단계에서 이미 낮춘 카드는 그대로)
+function revApply(cs){ var out = [], kept = []; cs.forEach(function(c){ var v = revOf(c);
+  if (v && v.v === 'hold') { out.push({ c: c, v: v }); return; }
+  if (v && v.v === 'warn' && !/한 단계 낮춤/.test(c.why || '') && GDOWN[c.g]) c = Object.assign({}, c, { g: GDOWN[c.g], revDown: c.g });
+  kept.push(c); }); return { kept: kept, out: out }; }
+function revOutHTML(out){ if (!out.length) return ''; return '<div class="rvout"><b>클로드 검토로 뺀 카드</b>' + out.map(function(x){ return '<div><i>' + esc(x.c.n) + (x.c.kn ? ' ' + esc(x.c.kn) : '') + ' · ' + esc(x.c.g) + '</i> ' + esc(x.v.note) + '</div>'; }).join('') + '</div>'; }
 function revSum(){ if (!revFresh() || !REV.sum) return ''; return '<div class="rvsum"><b>클로드 검토<i>' + revWhen() + '</i></b>' + esc(REV.sum) + '</div>'; }
 function card(c, sh){
   var g = c.g || 'B', kr = c.m === 'KR', no = ruleNo(c.s), ty = RTYPE[no] || ['#5c7cfa','#dbe4ff','★','규칙'];
@@ -583,10 +593,11 @@ function render(){
   var r = state.result;
   if (!r) html += '<div class="note">아직 받은 결과가 없어요. 새로고침을 눌러 맥에 검색을 요청해 보세요.<br>(평일 18~23시 정각에는 자동으로 검색해요)</div>';
   else {
-    var cs = (r.cards || []).slice().sort(function(a, b){ return RANK.indexOf(a.g) - RANK.indexOf(b.g); });
-    if (!cs.length) { var tt = String(state.title || '매수 의견 없음'), k = tt.indexOf(' · '); html += '<div class="none"><b>' + esc(k > 0 ? tt.slice(0, k) : tt) + '</b>' + (k > 0 ? '<small>' + esc(tt.slice(k + 3)) + '</small>' : '') + '</div>'; }
+    var RA = revApply((r.cards || []).slice()), cs = RA.kept.sort(function(a, b){ return RANK.indexOf(a.g) - RANK.indexOf(b.g); });
+    if (!cs.length) { var tt = RA.out.length ? '매수 의견 없음 · 클로드 검토로 모두 뺐어요' : String(state.title || '매수 의견 없음'), k = tt.indexOf(' · '); html += '<div class="none"><b>' + esc(k > 0 ? tt.slice(0, k) : tt) + '</b>' + (k > 0 ? '<small>' + esc(tt.slice(k + 3)) + '</small>' : '') + '</div>'; }
     html += revSum(); (r.z || []).forEach(function(c){ html += card(c, 1); }); // 매수 금지 카드는 맨 위
     cs.forEach(function(c){ html += card(c, 1); });
+    html += revOutHTML(RA.out);
     var CS = state.cset || {}; (r.cond || CS.cond || []).forEach(function(c){ html += card(c, 1); }); // 조건이 맞을 때만 뜨는 C카드(SGOV·QLD·IEF)
     html += '<div class="about">투자하며 떠올린 아이디어를 법칙으로 만들고, 클로드와 실제 데이터로 검증해 성공률에 따라 등급을 매겼다.<br>지금 상황에 가장 맞는 카드를 추천하며, 방법은 주기적으로 다시 검증해 등급을 새로 매긴다.<br><b>투자 선택은 각자의 몫, 참고만 하시길</b> (돈 잃어도 책임 못 짐)</div>';
     var bs = r.base || CS.base || [];
