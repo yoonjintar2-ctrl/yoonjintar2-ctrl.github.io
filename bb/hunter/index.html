@@ -39,17 +39,20 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .head h1{flex:1;min-width:0;margin:0;font-size:22px;font-weight:900;letter-spacing:-.4px;display:flex;align-items:center;gap:8px;line-height:1.1}
 .head h1 .bi{width:40px;height:40px;flex:none;object-fit:contain}
 .head h1 small{display:block;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:0;padding-top:3px}
-.right{display:flex;flex-direction:column;align-items:flex-end}
+.right{display:flex;align-items:center;align-self:center}
 .icons{display:flex;gap:8px}
-.icons button{width:34px;height:34px;border:0;padding:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.icons button{width:28px;height:28px;border:0;padding:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .icons button img{width:100%;height:100%;display:block}
 .icons button:active{transform:scale(.92)}
 .upd{font-size:11px;color:var(--muted);padding-top:3px}
-.prog{padding:0 0 10px}
-.prog .lab{font-size:12px;color:var(--info);padding-bottom:5px}
-.prog .bar{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
-.prog .quip{font-size:12px;color:var(--muted);padding-top:6px;min-height:17px;transition:opacity .35s}
-.prog .fill{height:100%;width:0;background:var(--info);border-radius:3px;transition:width .25s linear}
+.prog{min-height:64px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;text-align:center;padding:6px 4px 14px}
+.prog .bar{width:100%;display:none}.prog.run .bar{display:block}
+.prog .upd{font-size:12px;color:var(--muted);padding:0}.prog.run .upd{display:none}
+.prog .lab:empty,.prog .quip:empty{display:none}
+.prog .lab{font-size:13px;font-weight:700;color:var(--info)}
+.prog .bar{height:9px;border-radius:5px;background:var(--line);overflow:hidden}
+.prog .quip{font-size:13px;color:var(--muted);transition:opacity .35s}
+.prog .fill{height:100%;width:0;background:var(--info);border-radius:5px;transition:width .25s linear}
 .note{font-size:13px;color:var(--muted);padding:14px 4px;line-height:1.5}
 .card{position:relative;margin:4px 0 16px;padding-top:14px}
 .card .badge{position:absolute;left:14px;top:0;height:32px;z-index:2}
@@ -130,6 +133,16 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .mc .pl{opacity:.45}
 .tc:has(.pl){transform:perspective(900px) rotateX(calc((var(--my,.3) - .5) * -8deg)) rotateY(calc((var(--mx,.5) - .5) * 10deg));will-change:transform}
 .mc:has(.pl){transform:perspective(700px) rotateX(calc((var(--my,.3) - .5) * -8deg)) rotateY(calc((var(--mx,.5) - .5) * 10deg))}
+/* 카드가 아주 살짝 3D로 좌우 회전(글씨 읽기에 방해 안 되게 ±3도, 천천히). 펄 카드(A·S)는 스크립트가 따로 기울임 */
+.tc:not(:has(.pl)){animation:tcSway 8s ease-in-out infinite;transform-origin:50% 50%}
+#list .tc:nth-of-type(2n){animation-delay:-3s}#list .tc:nth-of-type(3n){animation-delay:-5.5s}
+@keyframes tcSway{0%,100%{transform:perspective(1100px) rotateY(-3deg) rotateX(.6deg)}50%{transform:perspective(1100px) rotateY(3deg) rotateX(-.6deg)}}
+.dust{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;border-radius:inherit}
+.dust i{position:absolute;bottom:-4%;width:0;height:0;animation:dustUp 4.5s linear infinite}
+.dust i b{position:absolute;left:0;top:0;width:2.5px;height:2.5px;border-radius:50%;background:#fffbe6;box-shadow:0 0 3px 1px rgba(255,232,150,.55);opacity:.5;animation:dustSpin .9s linear infinite}
+.tc.dark .dust i b,.tc.gZ .dust i b{opacity:.35}
+@keyframes dustUp{0%{bottom:-4%;opacity:0}12%{opacity:1}80%{opacity:.7}100%{bottom:104%;opacity:0}}
+@keyframes dustSpin{from{transform:rotate(0deg) translateX(6px)}to{transform:rotate(360deg) translateX(6px)}}
 .tc .gl,.mc .gl{position:absolute;inset:0;z-index:5;pointer-events:none;border-radius:inherit;background:radial-gradient(circle at calc(var(--mx,.5) * 100%) calc(var(--my,.3) * 100%),rgba(255,255,255,.55),rgba(255,255,255,0) 42%);mix-blend-mode:soft-light}
 @keyframes hl{0%{box-shadow:0 0 0 0 rgba(255,212,59,.95)}60%{box-shadow:0 0 0 14px rgba(255,212,59,0)}100%{box-shadow:0 0 0 0 rgba(255,212,59,0)}}
 /* 테두리 색 = 등급: S~SSS 금(반짝임) · A-~A+ 은 · B+ 이하 동 */
@@ -146,7 +159,7 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 @keyframes holo{from{background-position:0% 50%}to{background-position:300% 50%}}
 @keyframes sweep{0%{transform:translate(-45%,-45%)}60%,100%{transform:translate(45%,45%)}}
 @keyframes twinkle{from{opacity:.2}to{opacity:.9}}
-@media (prefers-reduced-motion:reduce){.bdg,.tc,.mc,.tc::after,.tc .in::before,.tc .in::after,.mc::after{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.dust{display:none}.bdg,.tc,.mc,.tc::after,.tc .in::before,.tc .in::after,.mc::after{animation:none!important}}
 /* C등급 상시 카드: 톤 낮게 · 눈에 덜 띄게(무광 회색 테두리, 흐린 그림, 작은 글씨) */
 .mc.gC{background:#9aa1a9}
 .tc.gC{background:#9aa1a9;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:5px}
@@ -254,10 +267,6 @@ html{background:#1d232a}
 .wait{font-size:12px;color:var(--muted);padding:4px 6px}
 .mb{display:flex;flex-direction:column;max-width:80%;min-width:0}.mb .bub{max-width:100%}
 .nk{font-size:11px;font-weight:700;color:var(--muted);margin:0 0 3px 4px}
-.nickrow{display:flex;align-items:center;gap:8px;background:#fff;border-top:1px solid #e3e6ea;padding:7px 12px 0;font-size:12px;color:var(--muted)}
-.nickrow b{color:var(--ink);font-size:13px}
-.nickrow button{border:0;background:#f1f3f5;color:#495057;font-size:12px;font-weight:700;border-radius:12px;padding:4px 10px;cursor:pointer}
-.nickrow input{flex:1;min-width:0;border:1px solid #ced4da;border-radius:10px;padding:5px 9px;font-size:16px;font:inherit}
 .mast .icons button{position:relative}
 .mast .icons .dot{position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:50%;background:#fa5252;box-shadow:0 0 0 2px #1d232a}
 .inrow{display:flex;gap:8px;align-items:flex-end;background:#fff;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0))}
@@ -297,25 +306,17 @@ html{background:#1d232a}
     <h1><img class="bi" src="a/logo.webp" alt="" onerror="this.remove()"><span>수리수리진타리<small>진탈이의 돈 버는 마법 카드</small></span></h1>
     <div class="right">
       <div class="icons">
-        <button id="bChat" aria-label="채팅방"><img src="a/icons/room.png" alt=""><i class="dot" id="chatDot" hidden></i></button>
         <button id="bScan" aria-label="새로고침"><img src="a/icons/refresh.png" alt=""></button>
         <button id="bInfo" aria-label="규칙"><img src="a/icons/info.png" alt=""></button>
       </div>
-      <div class="upd" id="upd"></div>
     </div>
   </div>
   </div>
-  <div class="prog" id="prog" hidden><div class="lab" id="progLab"></div><div class="bar"><div class="fill" id="progFill"></div></div><div class="quip" id="progQuip"></div></div>
+  <div class="prog" id="prog"><div class="bar" id="progBar"><div class="fill" id="progFill"></div></div><div class="lab" id="progLab"></div><div class="quip" id="progQuip"></div><div class="upd" id="upd"></div></div>
   <div id="list"></div>
   <div class="status" id="status">연결 준비 중</div>
 </div>
 
-<div class="sheet" id="chat">
-  <div class="sbar"><div class="t"><b>수리수리 채팅방</b><small>누구나 함께 이야기해요 · 매일 자정(한국 시간)에 대화가 초기화돼요</small></div><button id="chatClose">닫기</button></div>
-  <div class="msgs" id="msgs"></div>
-  <div class="nickrow"><span>내 이름</span><b id="nick"></b><button id="nickEdit">바꾸기</button><input id="nickIn" maxlength="12" hidden><button id="nickSave" hidden>저장</button></div>
-  <div class="inrow"><textarea id="q" rows="1" placeholder="메시지 입력"></textarea><button id="send">보내기</button></div>
-</div>
 <div class="sheet" id="info">
   <div class="sbar"><div class="t"><b>매수 규칙</b><small>백테스트를 통과한 규칙만 매수 의견을 내요</small></div><button id="infoClose">닫기</button></div>
   <div class="rules" id="rules"></div>
@@ -338,7 +339,7 @@ html{background:#1d232a}
 <script>
 (function(){
 'use strict';
-var T = { alerts: 'berry-3059012bcc6b7db9-a', req: 'berry-3059012bcc6b7db9-r', chat: 'berry-3059012bcc6b7db9-c', room: 'berry-3059012bcc6b7db9-room' };
+var T = { alerts: 'berry-3059012bcc6b7db9-a', req: 'berry-3059012bcc6b7db9-r', chat: 'berry-3059012bcc6b7db9-c' };
 var NT = 'https://ntfy.sh/';
 var $ = function(id){ return document.getElementById(id); };
 var LS = { get: function(k, d){ try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
@@ -346,7 +347,7 @@ var LS = { get: function(k, d){ try { var v = localStorage.getItem(k); return v 
 var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
 
 var state = { result: LS.get('bh_result', null), resultTime: LS.get('bh_resultTime', 0), cset: LS.get('bh_cset', null), csetTime: LS.get('bh_csetTime', 0), title: LS.get('bh_title', ''),
-  room: [], seen: {}, reqAt: 0, ackAt: 0, doneAt: 0, fail: '', roomSeen: LS.get('bh_roomSeen', 0) };
+  seen: {}, reqAt: 0, ackAt: 0, doneAt: 0, fail: '' };
 
 // ── 시계 · n분 전 업데이트
 function fmt(tz){ var p = new Intl.DateTimeFormat('ko-KR', { timeZone: tz, month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()); var g = function(t){ var x = p.find(function(y){ return y.type === t; }); return x ? x.value : ''; }; return g('month') + '/' + g('day') + '(' + g('weekday') + ') ' + g('hour') + ':' + g('minute'); }
@@ -354,7 +355,9 @@ function tick(){
   $('clock').innerHTML = '<span>🇰🇷 ' + esc(fmt('Asia/Seoul')) + '</span><span>🇺🇸 ' + esc(fmt('America/New_York')) + '</span>';
   if (state.resultTime) {
     var m = Math.max(0, Math.floor((Date.now()/1000 - state.resultTime) / 60));
-    $('upd').textContent = m < 1 ? '방금 업데이트' : m < 60 ? m + '분 전 업데이트' : m < 1440 ? Math.floor(m/60) + '시간 전 업데이트' : Math.floor(m/1440) + '일 전 업데이트';
+    var ago = m < 1 ? '방금' : m < 60 ? m + '분 전' : m < 1440 ? Math.floor(m/60) + '시간 전' : Math.floor(m/1440) + '일 전';
+    var kt = new Date((state.resultTime + 9 * 3600) * 1000), p2 = function(n){ return (n < 10 ? '0' : '') + n; };
+    $('upd').textContent = '업데이트 ' + (kt.getUTCMonth() + 1) + '/' + kt.getUTCDate() + '(' + '일월화수목금토'.charAt(kt.getUTCDay()) + ') ' + p2(kt.getUTCHours()) + ':' + p2(kt.getUTCMinutes()) + ' · ' + ago;
     $('upd').style.color = m > 240 ? 'var(--warn)' : '';
   }
 }
@@ -411,6 +414,11 @@ function copyText(t){
   if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(function(){ return true; }, function(){ return fb(); });
   return Promise.resolve(fb());
 }
+// 마법 가루: C등급 이상 카드에 아주 작은 빛가루가 빙글빙글 돌며 카드를 타고 올라감(연하게, 다른 효과보다 튀지 않게)
+function dustHTML(seed){ var h = 7, out = '<div class="dust">'; String(seed || '').split('').forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) % 9973; });
+  for (var i = 0; i < 9; i++) { h = (h * 73 + 41) % 9973; var side = i % 3, x = side === 0 ? 2 + h % 9 : side === 1 ? 89 + h % 9 : 20 + h % 60;
+    out += '<i style="left:' + x + '%;animation-duration:' + (3.6 + (h % 25) / 10) + 's;animation-delay:-' + ((h % 50) / 10) + 's"><b style="animation-duration:' + (0.7 + (h % 6) / 10) + 's"></b></i>'; }
+  return out + '</div>'; }
 function card(c, sh){
   var g = c.g || 'B', kr = c.m === 'KR', no = ruleNo(c.s), ty = RTYPE[no] || ['#5c7cfa','#dbe4ff','★','규칙'];
   var nn = no < 10 ? '0' + no : '' + no, ep = c.ep != null ? c.ep : epithet(no, c.n);
@@ -442,7 +450,7 @@ function card(c, sh){
     spark(c.ln, g) +
     '<div class="fl">' + esc(c.why || '') + '</div>' +
     '<div class="ft"><span>수리수리진타리 · 규칙 ' + (CIRC.charAt(no - 1) || '') + (c.rr && c.rr !== '-' ? ' · 손익비 ' + esc(c.rr) : '') + '</span><b>' + esc(ty[3]) + ' ' + esc(g) + '</b></div>' +
-  '</div>' + (T === 'A' || T === 'S' ? '<div class="pl"></div><div class="gl"></div>' : '') + '</div>' + (RSIM[key] ? '<div class="freqo">' + esc(freqLine(key)) + '</div>' : '');
+  '</div>' + (T !== 'Z' && g !== 'C-' ? dustHTML(c.n + no) : '') + (T === 'A' || T === 'S' ? '<div class="pl"></div><div class="gl"></div>' : '') + '</div>' + (RSIM[key] ? '<div class="freqo">' + esc(freqLine(key)) + '</div>' : '');
 }
 // ── 규칙 카드 도감(매수 규칙 화면)
 var RCARDS = [
@@ -661,7 +669,6 @@ function handle(m, live){
   if (!m || m.event !== 'message' || state.seen[m.id]) return;
   state.seen[m.id] = 1;
   var tags = m.tags || [], body = String(m.message || '');
-  if (m.topic === T.room) { addRoom(m); return; }
   if (tags.indexOf('chat') >= 0) return; // 맥 Claude 상담 답장(블랙베리 앱용)은 웹에선 안 보임
   if (tags.indexOf('ack') >= 0) { if (m.time * 1000 >= state.reqAt - 5000) state.ackAt = m.time * 1000; return; }
   if (body.charAt(0) === '{') {
@@ -685,14 +692,14 @@ var es = null;
 function connect(){
   if (es) try { es.close(); } catch(e){}
   try {
-    es = new EventSource(NT + T.alerts + ',' + T.room + '/sse');
+    es = new EventSource(NT + T.alerts + '/sse');
     es.onopen = function(){ setStatus('실시간 연결됨 · ' + new Date().toTimeString().slice(0,5)); };
     es.onmessage = function(ev){ try { handle(JSON.parse(ev.data), true); } catch(e){} };
     es.onerror = function(){ setStatus('연결 다시 시도 중…', true); };
   } catch(e) { setStatus('실시간 연결 실패', true); }
 }
 function refresh(){
-  return Promise.all([poll(T.alerts, '12h'), poll(T.room, '24h')]).then(function(){ render(); renderChat(); setStatus('실시간 연결됨 · ' + new Date().toTimeString().slice(0,5)); })
+  return Promise.all([poll(T.alerts, '12h')]).then(function(){ render(); setStatus('실시간 연결됨 · ' + new Date().toTimeString().slice(0,5)); })
     .catch(function(e){ setStatus('확인 실패 · 인터넷 연결을 확인해 주세요', true); });
 }
 
@@ -710,7 +717,7 @@ function requestScan(){
     .then(function(r){ if (!r.ok) throw new Error(r.status); state.sending = false; })
     .catch(function(e){ state.sending = false; finishProg(false, '요청 실패 · ' + e.message); });
 }
-function showProg(){ $('prog').hidden = false; clearInterval(progTimer); progTimer = setInterval(updProg, 250); updProg(); }
+function showProg(){ $('prog').classList.add('run'); $('progLab').textContent = ''; clearInterval(progTimer); progTimer = setInterval(updProg, 250); updProg(); }
 // 로딩 농담(게임 로딩 문구처럼, 3.5초마다 바뀜)
 var QUIPS = ["차트에 마법 가루 뿌리는 중…", "진탈이가 마법봉을 닦고 있어요", "캔들을 하나씩 세는 중… 양봉이 좀 더 많았으면", "나스닥에게 오늘 기분을 묻는 중", "반도체 칩을 귀에 대고 소리 듣는 중", "주가가 도망가지 못하게 울타리 치는 중", "손절선 위치를 다시 한번 확인하는 중", "익절가에 리본 다는 중", "겁먹은 개미들을 토닥이는 중", "세력의 발자국을 줍는 중(아직 못 찾음)", "금괴를 저울에 올려 보는 중", "유가 냄새를 킁킁 맡는 중", "분화구 깊이를 재는 중", "용수철 탄성 점검 중", "상자 바닥이 튼튼한지 두드려 보는 중", "S등급 카드는 아껴 두는 중", "카드 덱 섞는 중… 반칙은 안 해요", "10년 치 차트를 빨리 감기 하는 중", "연준 의장 표정 읽는 중", "CPI 발표 전에 숨 고르는 중", "물타기 할 물을 끓이는 중(아직 안 부어요)", "몰빵 금지 스티커 붙이는 중", "백테스트 기계에 동전 넣는 중", "과거의 나에게 사과하는 중", "‘이번엔 다르다’를 걸러 내는 중", "공포 지수 체온 재는 중", "진탈이가 커피를 내리는 중 ☕", "데이마켓 문 두드리는 중", "급등주 유혹을 꾹 참는 중", "손가락이 매수 버튼 누르지 않게 묶는 중", "카드 테두리에 펄 코팅 바르는 중", "확률을 확률적으로 계산하는 중", "행운의 양봉을 부르는 주문 외우는 중", "시장의 소음을 음소거하는 중"];
 var quipAt = 0, quipI = Math.floor(Math.random() * QUIPS.length);
@@ -730,46 +737,9 @@ function finishProg(ok, msg){
   $('progQuip').textContent = ''; quipAt = 0; $('progLab').hidden = false;
   if (ok) { $('progFill').style.width = '100%'; $('progLab').textContent = '검색 완료'; $('progLab').style.color = 'var(--good)'; }
   else { $('progLab').textContent = msg || '검색 실패'; $('progLab').style.color = 'var(--warn)'; }
-  setTimeout(function(){ $('prog').hidden = true; $('progFill').style.width = '0'; }, ok ? 1500 : 5000);
+  setTimeout(function(){ $('prog').classList.remove('run'); $('progFill').style.width = '0'; $('progLab').textContent = ''; tick(); }, ok ? 1500 : 5000);
 }
 
-// ── 채팅방(누구나 대화, ntfy 공개 토픽). 매일 자정(KST) 초기화 · 닉네임은 처음에 랜덤, 바꿀 수 있음
-var NICK_A = ['용감한','느긋한','반짝이는','배고픈','졸린','신난','조용한','날쌘','든든한','엉뚱한','침착한','수상한','행복한','꼼꼼한','씩씩한'];
-var NICK_B = ['황소','곰','다람쥐','고양이','부엉이','수달','펭귄','여우','거북이','토끼','고래','참새','판다','너구리','햄스터'];
-var ME = LS.get('bh_uid', '') || (function(){ var u = Math.random().toString(36).slice(2, 10); LS.set('bh_uid', u); return u; })();
-function myNick(){ var n = LS.get('bh_nick', ''); if (!n) { n = NICK_A[Math.floor(Math.random() * NICK_A.length)] + NICK_B[Math.floor(Math.random() * NICK_B.length)] + Math.floor(10 + Math.random() * 90); LS.set('bh_nick', n); } return n; }
-function kstDay(sec){ return new Date(sec * 1000 + 9 * 3600e3).toISOString().slice(0, 10); }
-function addRoom(m){ var j; try { j = JSON.parse(m.message || ''); } catch(e) { return; } if (!j || typeof j.x !== 'string') return;
-  if (state.room.some(function(x){ return x.id === m.id; })) return;
-  state.room.push({ id: m.id, t: m.time, n: String(j.n || '익명').slice(0, 12), u: String(j.u || ''), x: j.x.slice(0, 300) });
-  state.room.sort(function(a, b){ return a.t - b.t; }); if (state.room.length > 300) state.room = state.room.slice(-300);
-  renderChat(); chatDot(); }
-function todayRoom(){ var d = kstDay(Date.now() / 1000); return state.room.filter(function(x){ return kstDay(x.t) === d; }); }
-function chatDot(){ var open = $('chat').classList.contains('on'); var list = todayRoom(); var last = list.length ? list[list.length - 1].t : 0;
-  if (open) { state.roomSeen = last; LS.set('bh_roomSeen', last); } $('chatDot').hidden = open || !(last > (state.roomSeen || 0)) || (list.length && list[list.length - 1].u === ME); }
-function renderChat(){
-  $('nick').textContent = myNick();
-  if (!$('chat').classList.contains('on')) return;
-  var list = todayRoom(), h = '', prevN = '';
-  if (!list.length) h = '<div class="wait">오늘 대화가 아직 없어요. 첫 마디를 남겨 보세요. (욕설·광고·개인정보는 올리지 말아 주세요)</div>';
-  list.forEach(function(c){ var me = c.u === ME, t = new Date(c.t * 1000).toTimeString().slice(0, 5);
-    h += '<div class="msg ' + (me ? 'me' : 'bot') + '">' + (me ? '<span class="tm">' + t + '</span>' : '') + '<div class="mb">' + (!me && c.n !== prevN ? '<div class="nk">' + esc(c.n) + '</div>' : '') + '<div class="bub">' + esc(c.x) + '</div></div>' + (!me ? '<span class="tm">' + t + '</span>' : '') + '</div>';
-    prevN = me ? '' : c.n; });
-  var box = $('msgs'), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 80; box.innerHTML = h; if (atEnd || !renderChat.once) box.scrollTop = box.scrollHeight; renderChat.once = 1;
-  chatDot(); }
-var lastSend = 0;
-function sendChat(){
-  var q = $('q').value.trim(); if (!q) return;
-  if (Date.now() - lastSend < 3000) { toast('천천히 보내 주세요(3초에 한 번)'); return; }
-  if (q.length > 300) { toast('300자까지 쓸 수 있어요'); return; }
-  lastSend = Date.now(); $('q').value = ''; autoGrow();
-  fetch(NT, { method: 'POST', body: JSON.stringify({ topic: T.room, title: 'room', message: JSON.stringify({ n: myNick(), u: ME, x: q }) }) })
-    .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); }).then(function(m){ if (m && m.id) addRoom({ id: m.id, time: m.time, message: m.message }); })
-    .catch(function(){ $('q').value = q; toast('보내지 못했어요. 다시 보내 주세요'); });
-}
-function nickEdit(on){ $('nick').hidden = on; $('nickEdit').hidden = on; $('nickIn').hidden = !on; $('nickSave').hidden = !on; if (on) { $('nickIn').value = myNick(); $('nickIn').focus(); } }
-function nickSave(){ var v = $('nickIn').value.replace(/[<>&"'\s]+/g, '').slice(0, 12); if (v.length < 2) { toast('두 글자 이상 써 주세요'); return; } LS.set('bh_nick', v); nickEdit(false); renderChat(); toast('이름을 바꿨어요'); }
-function autoGrow(){ var t = $('q'); t.style.height = 'auto'; t.style.height = Math.min(120, t.scrollHeight) + 'px'; }
 
 // ── 규칙
 var RULES = "■ 원칙\n백테스트를 통과한 규칙만 매수 의견을 내요. 신호가 없는 날이 대부분이고 \"매수 의견 없음\"이 정상이에요. 무기는 QQQ·TQQQ·UGL·SOXL·SOXS(④⑧만 개별 종목).\n\n■ 등급\n· S 강력 매수: 과거 승률 약 90%, 비중 크게\n· A 매수: 승률 약 73%, 비중 보통\n· B 참고: 기준보다 못해서 매수 안 함(제목에만 표시)\n· C+ 관찰: 아직 효과 검증이 안 끝난 방법. 조건이 되면 카드로 보여 주고 실전 기록이 쌓여 효과가 확인되면 등급을 올려요\n· C 상시: 언제 사도 되는 장기 보유 전략(수익이 느림)\n(알림은 B+ 이상만 울려요)\n(2011~2026 신호 236건 검증: S·A는 같은 종목 아무 날보다 +5~6%p, B는 −1.4%p)\n\n■ ① 급락 초입 → QQQ 40일\nS&P가 60일 고점 대비 −7% 이상, 단 직전 25일 안에 고점 근처였던 '초입'만. 23회 40일 +7.1% 승 74%. 며칠 늦게 사도 됨.\n\n■ ② 나스닥 박스 하단 → TQQQ (최대 15일)\nQQQ가 60일간 +12% 오른 뒤 폭 4~12% 박스, 15일 이상, 바닥 2번 확인, 하단 20% 안, 200일선 위. QQQ가 50일선 −3% 이내면 S. 목표 박스 75%, QQQ 박스 바닥 −4% 닿으면 바로 자동매도. 2일 안에 사야 함.\n\n■ ③ 유가 급등 + S&P 하락 → TQQQ 20~30일\n유가(USO) 하루 +5% 이상인데 S&P는 하락, QQQ 200일선 위. TQQQ 20일 +13.5% 승 78%.\n\n■ ④ 실적주 급락 + 공포 여론 → 개별주 20~60일\n3일 −8% 이상 급락, 매출 증가·흑자·부채비율 200% 미만. 토스 댓글에 '무섭·말이 되냐·한강·눈물·끝났·패닉' 같은 감정형 공포가 많고, '줍줍·물타기'나 '어디까지·살려' 같은 말보다 많을 때. 20일 +12~19% 승 79~87%(표본 작음).\n\n■ ⑤ 금리·금·은 동반 하락 → UGL 20일\n하루에 금리(IEF로 판단)·금·은이 모두 평소보다 크게 빠진 '다 팔아치우는 날'. 그날 S&P도 하락이면 A, 금이 50일선 위면 S. UGL 20일 +7.0% 승 77%.\n\n■ ⑥ 반도체만 급락 → TQQQ 20일(−15% 손절)\nQQQ는 200일선 위인데 반도체(SOXX)가 5일 −7% 이상. 34건 +8.7% 승 74%. 다음 날 시가까지 사야 함.\n\n■ ⑦ 1분봉 V자 반등 후 횡보(관찰, C+) → 당일 종가 매도\n미국장 개장 후 1시간 반 동안 5분마다 확인. 나스닥과 같이 빠졌다 회복한 V자만. 알림 없이 화면·기록만(B+).\n\n■ ⑧ 시장 급락일 과하게 빠진 종목 → 5~20일\n나스닥 −1.5% 이상 빠진 날, 평소 움직임(베타)보다 −5%p 이상 더 빠진 종목을 급락 직후 데이마켓에서 매수. 반도체 A(20일 +5.9%p 승 63%), 그 외 B+(+2.8%p 승 55%). 돌아서길 기다리면 수익 절반. 아침 8시 50분 검색. 실적 발표 때문에 빠진 종목은 자동으로 빼요(뉴스 제목으로 판단, 실적 급락은 20일 뒤에도 −1~−5%p로 약했음).\n\n■ ⑨ 반도체 급락 반등 → SOXL (최대 15거래일)\nSOXX 종가가 직전 20거래일 최고 종가보다 −12% 이상 빠지면 다음 날 SOXL 매수. 산 값 기준 +40% 익절, −20% 손절(SOXX로 약 −7%), 15거래일째 종가 매도. 2012~26 아무 날 산 것보다 건당 +9.2 / +1.5 / +7.7%p(기간별), 승률 57~67%. 5일 급락 속도로 재면 효과 없음(깊이가 중요). 반도체만 단체로 급락한 날(SOXX −3% 이하, S&P는 덜)엔 2거래일 기다렸다 사요. 위험 모드면 절반만.\n\n■ ⑩ 위험 모드 추세 이탈 → SOXS (최대 10거래일, 인버스)\n반반도체지수 90 이상인데 SOXX 종가가 20일선을 처음 밑돌면 다음 날 SOXS 매수. +15% 익절, −10% 손절 자동 주문 필수, 10거래일째 종가 매도. 30건 건당 +2.2 / +3.0 / +2.8%(아무 날 SOXS는 −1.2~−2.2%). 이기는 건 절반뿐이라 손절이 생명, 소액(B+).\n\n■ ⑪ 위기 매수 → QQQ·SOXX (1~3년, 몇 년에 한 번)\nQQQ나 SOXX가 최고가 대비 −30% · −40% · −50%에 처음 닿을 때마다 나눠서 사요. 총 매수 계획의 1차 30% · 2차 30% · 3차 40% — 카드에 이번에 넣을 비율이 적혀 있어요. 과거 위기 매수는 대부분 크게 벌었지만(2020 코로나 1년 +135%, 2022-09 3년 +154%), 2008·닷컴처럼 −30%에서 사도 −40~−75%가 더 남은 적이 있어서 한 번에 다 넣지 않아요. 최고가 대비 −15% 안으로 회복하면 다시 처음부터.\n\n■ 화면 아래 반반도체지수\n클석진 반반도체 지수와 지금 반도체 주식 의견 한 줄이 늘 떠 있고, 높을수록 진한 빨강이에요. 누르면 일봉 그래프(SOXX와 함께)가 열려요. 90 이상(위험 모드)이면 TQQQ와 ⑧ 반도체주 매수 의견은 평소의 절반만 사세요.\n\n■ ⓒ 상시 카드(C등급) — 언제 사도 되는 교과서적 장기 전략\n규칙 신호가 아니라 늘 떠 있는 카드예요. 수익은 낮거나 느리지만 등락을 견디는 용도이고, 알림·성적표에는 넣지 않아요.\n· 현금 대기(SGOV): 3개월 국채 금리 3% 이상일 때. 다른 카드를 기다리는 돈을 여기에.\n· 매달 적립(QQQ): 매달 같은 날 같은 금액, 팔지 않기. 2007년부터 7.5배·2011년부터 5.3배(넣은 돈 대비 최대 −39~−49%).\n· 매달 적립(QLD 2배): QQQ가 200일선 위일 때만 새로 넣기. 2011년부터 18.7배지만 최대 −67~−77%까지 빠졌던 돈이라 일부만.\n· 중기 국채(IEF): 10년 금리 4.5% 이상일 때 나눠 사서 높은 금리 고정. 주식 급락 때 버팀목.\n\n■ 이 웹 화면\n블랙베리 앱과 같은 결과를 보여 줘요. 새로고침(↻)은 집 맥에 지금 시세로 다시 찾아 달라고 요청해요(1~2분). 알림은 블랙베리 앱으로만 와요.\n아이폰 사파리에서 공유 → '홈 화면에 추가'하면 앱처럼 쓸 수 있어요.\n\n※ 참고용 신호예요. 주문은 직접 판단하세요.";
@@ -777,9 +747,6 @@ var RULES = "■ 원칙\n백테스트를 통과한 규칙만 매수 의견을 �
 var RISK = "■ 클석진 반반도체 지수(반반도체지수) v5\n반도체(SOXX)가 앞으로 크게 빠질 위험을 0~100으로 보여 줘요. 매일 미국장 마감 기준으로 다시 계산하고, 두 축 중 낮은 값을 써요(둘 다 높아야 높음).\n\n· 급락 위험 축(주황): 미국 10년 금리 수준, 금융여건(NFCI) 13주 변화, 순유동성 감소, 원달러 수준(3년 대비), 기대인플레·유가 하락, 반도체 가이던스 감속, 장단기 금리차 축소, 2년 금리 120일 상승. 급락 확률은 잘 맞히지만 2023~26엔 높을 때 오히려 크게 오르기도 했어요(양방향 출렁임).\n· 사이클 축(파랑): 순유동성 감소, 반도체 매출 성장 감속, 10년 금리, 미국 반도체 가동률(생산/능력), 반도체 19개사 매출 성장(사이클 고점일수록 높음), 장단기차 축소, 2년 금리 상승. 높을 때 60일 뒤 수익이 세 기간 모두 낮았어요(4.1 vs 7.6% · −6.1 vs 10.9% · −4.2 vs 11.6%).\n\n· 90 이상 = 위험 모드(두 축 모두 90 이상): 그동안 현금으로 바꿨다면 SOXL 연 49.8→58.6%(2013~18) · 13.2→53.5%(2019~22) · 97.8→155.6%(2023~26), SOXX 19.5→21.7 · 21.5→32.1 · 50.4→60.0%. 위험 모드는 전체의 6~14%의 날\n· 한계: 요인을 같은 기간에서 골라 실전은 이보다 못할 수 있어요. 코로나·딥시크 같은 갑작스러운 충격은 못 잡아요. 매출 자료는 실적 시즌마다 갱신해요.\n\n■ 추가 하락 가능성(반도체가 20일 고점 대비 −8% 이상 빠졌을 때만)\n이미 빠진 뒤 '더 빠질까, 멈출까'를 봐요. 급락 위험 축, 금융여건 악화, 원화·달러 강세, 기대인플레 하락, 시장 전체 하락, VIX 단기 공포, 천천히 빠지는지를 합쳐요. 점수 상위 1/3이면 20일 안 −7% 더 빠질 확률 약 50%, 하위 1/3이면 15% 안팎.\n\n■ 알림: 위험 모드에 처음 들어갈 때(80 밑으로 내려갔다 다시 90을 넘으면 또), 반도체 급락(−8%)이 새로 시작될 때\n\n";
 // ── 연결
 $('bScan').onclick = requestScan;
-$('bChat').onclick = function(){ $('chat').classList.add('on'); renderChat.once = 0; renderChat(); poll(T.room, '24h').then(renderChat).catch(function(){}); };
-$('nickEdit').onclick = function(){ nickEdit(true); }; $('nickSave').onclick = nickSave; $('nickIn').addEventListener('keydown', function(e){ if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); nickSave(); } });
-$('chatClose').onclick = function(){ $('chat').classList.remove('on'); chatDot(); };
 function statsText(){ var st = state.result && state.result.st; if (!st || !st.r || st.v !== 2) return '';
   var names = { '①':'급락 초입 → QQQ', '②':'나스닥 박스 하단 → TQQQ', '③':'유가 급등 → TQQQ', '④':'실적주 공포 여론', '⑤':'금·금리 동반 하락 → UGL', '⑥':'반도체만 급락 → TQQQ', '⑦':'1분봉 V자(관찰)', '⑧':'급락일 과하게 빠진 종목', '⑨':'반도체 급락 반등 → SOXL', '⑩':'위험 모드 추세 이탈 → SOXS', '⑪':'위기 매수(QQQ·SOXX)' };
   var t = '■ 이번 주 성적표 (' + st.at + ' 미국장 마감까지, 매주 토요일 아침 갱신)\n점수 = 승률 × 기대 이익(아무 날 대비 평균 초과수익, 20거래일 환산)\n\n';
@@ -799,17 +766,14 @@ $('simPop').onclick = function(){ $('simPop').hidden = true; };
 $('ov').onclick = function(e){ if (e.target.id === 'ov' || e.target.id === 'ovX') $('ov').hidden = true; };
 $('rbar').onclick = rkOpen;
 $('infoClose').onclick = function(){ $('info').classList.remove('on'); };
-$('send').onclick = sendChat;
-$('q').addEventListener('input', autoGrow);
-$('q').addEventListener('keydown', function(e){ if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); } });
 document.addEventListener('keydown', function(e){
   if (e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) return;
   var k = e.key.toLowerCase();
-  if (k === 'l' || k === 's') requestScan(); else if (k === 'c') $('bChat').onclick(); else if (k === 'i') $('bInfo').onclick(); else if (k === 'r') refresh();
-  else if (k === 'escape') { $('chat').classList.remove('on'); $('info').classList.remove('on'); $('rk').classList.remove('on'); }
+  if (k === 'l' || k === 's') requestScan(); else if (k === 'i') $('bInfo').onclick(); else if (k === 'r') refresh();
+  else if (k === 'escape') { $('info').classList.remove('on'); $('rk').classList.remove('on'); }
 });
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) { refresh(); connect(); } });
-setInterval(function(){ tick(); renderChat(); }, 30000);
+setInterval(tick, 30000);
 // 공유 링크로 들어오면 그 카드로 스크롤(결과가 늦게 와도 한 번 더 시도, 신호가 끝났으면 규칙 카드를 보여 줌)
 var ANC = (location.hash || '').replace(/^#/, ''), ancPolled = false;
 if (!/^c[0-9a-z]+(-[A-Za-z0-9]+)?$/.test(ANC)) ANC = '';
