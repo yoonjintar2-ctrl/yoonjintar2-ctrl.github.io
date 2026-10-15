@@ -446,7 +446,7 @@ var GDOWN = { SSS: 'SS', SS: 'S', S: 'A', 'A+': 'A', A: 'B+', 'A-': 'B+', 'B+': 
 // 검토 반영: 보류(회사 자체 이유) → 목록에서 뺌, 주의(애매) → 등급 한 단계 낮춤(검색 단계에서 이미 낮춘 카드는 그대로)
 function revApply(cs){ var out = [], kept = []; cs.forEach(function(c){ var v = revOf(c);
   if (v && v.v === 'hold') { out.push({ c: c, v: v }); return; }
-  if (v && v.v === 'warn' && !/한 단계 낮춤/.test(c.why || '') && GDOWN[c.g]) c = Object.assign({}, c, { g: GDOWN[c.g], revDown: c.g });
+  if (v && v.v === 'warn' && !c.dn && !/한 단계 낮춤/.test(c.why || '') && GDOWN[c.g]) c = Object.assign({}, c, { g: GDOWN[c.g], revDown: c.g });
   kept.push(c); }); return { kept: kept, out: out }; }
 function revOutHTML(out){ if (!out.length) return ''; return '<div class="rvout"><b>클로드 검토로 뺀 카드</b>' + out.map(function(x){ return '<div><i>' + esc(x.c.n) + (x.c.kn ? ' ' + esc(x.c.kn) : '') + ' · ' + esc(x.c.g) + '</i> ' + esc(x.v.note) + '</div>'; }).join('') + '</div>'; }
 function revSum(){ if (!revFresh() || !REV.sum) return ''; return '<div class="rvsum"><b>클로드 검토<i>' + revWhen() + '</i></b>' + esc(REV.sum) + '</div>'; }

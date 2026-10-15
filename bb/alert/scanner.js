@@ -228,6 +228,10 @@
     let body = mk();
     while (enc.encode(body).length > 3800 && cd.length) { cd.pop(); body = mk(); }
     while (enc.encode(body).length > 3800 && bs.length) { bs.pop(); body = mk(); }
+    // 카드를 통째로 빼기 전에 줄일 수 있는 것부터(2026-10-15 CLS B+ 카드가 글자 수 때문에 빠져 웹에 안 보였음)
+    if (enc.encode(body).length > 3800) { cs.forEach((c, i) => { if (c.ln) cs[i] = Object.assign({}, c, { ln: c.ln.slice(-30).map(x => +(+x).toPrecision(4)) }); }); body = mk(); }
+    for (let lim = 260; enc.encode(body).length > 3800 && lim >= 100; lim -= 40) { cs.forEach((c, i) => { if ((c.why || '').length > lim) cs[i] = Object.assign({}, c, { why: c.why.slice(0, lim) + '…' }); }); body = mk(); }
+    for (let i = cs.length - 1; enc.encode(body).length > 3800 && i >= 0; i--) { if (cs[i].ln) { cs[i] = Object.assign({}, cs[i], { ln: undefined }); body = mk(); } }
     while (enc.encode(body).length > 3800 && cs.length > 1) { cs.pop(); body = mk(); }
     const tags = [alert.level || 'info'].concat(extraTags || []);
     // 알림 중복 막기(정시·요청 모두): 이미 추천해 계속 남아 있는 카드(같은 종목·같은 규칙)는 다시 울리지 않는다.

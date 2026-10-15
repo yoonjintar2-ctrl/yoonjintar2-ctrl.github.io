@@ -151,7 +151,7 @@
         let fc = null;
         if (g) { fc = await fcOf(); if (!fc || !fc.ok) { state.push('④ ' + s.name + ' 사업성 탈락'); g = null; } else if (fc.soft && fc.soft.length) g = window.__gradeDown(g); }
         if (g) {
-          const tk = await symOf(s.code, s.name); LN[tk] = s.ln; const c = card(g, '④ 실적주 공포 여론', tk, s.name, s.px, { code: s.code, tgt: s.px ? fu(s.px * 1.20) : '+20%', stop: s.px ? fu(s.px * 0.85) : '−15%', hold: '20~60일 · 실제 산 값 기준 +20% 익절 / −15% 손절(일반 가이드, 개별주 검증 전) · 60일째 종가 매도', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%\n${fc.why}` });
+          const tk = await symOf(s.code, s.name); LN[tk] = s.ln; const c = card(g, '④ 실적주 공포 여론', tk, s.name, s.px, { dn: fc && fc.soft && fc.soft.length ? 1 : undefined, code: s.code, tgt: s.px ? fu(s.px * 1.20) : '+20%', stop: s.px ? fu(s.px * 0.85) : '−15%', hold: '20~60일 · 실제 산 값 기준 +20% 익절 / −15% 손절(일반 가이드, 개별주 검증 전) · 60일째 종가 매도', why: `3일 ${pct(s.r3)} · 매출↑·흑자·부채비율 ${Math.round(stb.liabilityRatio)}% · 댓글 ${all.length}개 중 감정형 공포 ${(emo * 100).toFixed(0)}% · 줍줍 ${(buy * 100).toFixed(0)}% · 걱정 ${(wry * 100).toFixed(0)}%\n${fc.why}` });
           (g === 'B' ? near : cards).push(c); continue;
         }
         // ④ 억까 여론(C+ 관찰, 2026-10-14): 댓글 많은 급락주에서 '억까·세력·작전·털기'(억울하다·누가 일부러 누른다) 말이 3% 이상
