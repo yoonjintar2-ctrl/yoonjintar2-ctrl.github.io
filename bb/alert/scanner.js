@@ -230,7 +230,9 @@
     while (enc.encode(body).length > 3800 && bs.length) { bs.pop(); body = mk(); }
     // 카드를 통째로 빼기 전에 줄일 수 있는 것부터(2026-10-15 CLS B+ 카드가 글자 수 때문에 빠져 웹에 안 보였음)
     if (enc.encode(body).length > 3800) { cs.forEach((c, i) => { if (c.ln) cs[i] = Object.assign({}, c, { ln: c.ln.slice(-30).map(x => +(+x).toPrecision(4)) }); }); body = mk(); }
-    for (let lim = 260; enc.encode(body).length > 3800 && lim >= 100; lim -= 40) { cs.forEach((c, i) => { if ((c.why || '').length > lim) cs[i] = Object.assign({}, c, { why: c.why.slice(0, lim) + '…' }); }); body = mk(); }
+    // 설명은 앞부분(규칙 근거)만 줄이고 마지막 줄(사업성 확인·등급 낮춘 이유)은 남김
+    const shw = (w, lim) => { const k = w.indexOf('\n'); const head = k < 0 ? w : w.slice(0, k), tail = k < 0 ? '' : w.slice(k).slice(0, 170); return (head.length > lim ? head.slice(0, lim) + '…' : head) + tail; };
+    for (let lim = 200; enc.encode(body).length > 3800 && lim >= 60; lim -= 35) { cs.forEach((c, i) => { if (c.why) cs[i] = Object.assign({}, c, { why: shw(c.why, lim) }); }); body = mk(); }
     for (let i = cs.length - 1; enc.encode(body).length > 3800 && i >= 0; i--) { if (cs[i].ln) { cs[i] = Object.assign({}, cs[i], { ln: undefined }); body = mk(); } }
     while (enc.encode(body).length > 3800 && cs.length > 1) { cs.pop(); body = mk(); }
     const tags = [alert.level || 'info'].concat(extraTags || []);
