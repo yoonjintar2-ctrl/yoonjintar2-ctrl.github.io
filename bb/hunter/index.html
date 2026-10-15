@@ -839,10 +839,21 @@ function cardBlob(tc){
     var cl = tc.cloneNode(true); cl.removeAttribute('id'); cl.classList.remove('hl');
     cl.querySelectorAll('.shr, .dust').forEach(function(x){ x.remove(); });
     cl.style.animation = 'none'; cl.style.transform = 'none'; cl.style.margin = '0'; cl.style.width = w + 'px';
+    // 2026-10-16 아이폰에서 그림이 빈칸으로 찍힘: 복사본 그림은 '나중에 불러오기'라 화면 밖에선 안 불러와지고, 사파리는 그림을 늦게 그림
+    //   → 그림을 데이터로 바꿔 넣고 디코드까지 기다린 뒤, 사파리는 한 번 버리고 두 번째 결과를 씀
+    var imgs = Array.prototype.slice.call(cl.querySelectorAll('img'));
+    var inline = Promise.all(imgs.map(function(im){ im.removeAttribute('loading'); im.removeAttribute('onerror');
+      return fetch(im.src, { mode: 'cors' }).then(function(r){ return r.blob(); }).then(function(b){ return new Promise(function(res){ var fr = new FileReader(); fr.onload = function(){ im.src = fr.result; res(); }; fr.onerror = function(){ res(); }; fr.readAsDataURL(b); }); })
+        .then(function(){ return im.decode ? im.decode().catch(function(){}) : null; }).catch(function(){}); }));
     wrap.appendChild(cl); document.body.appendChild(wrap);
-    return htmlToImage.toBlob(wrap, { pixelRatio: 2, backgroundColor: '#ffffff', width: wrap.offsetWidth, height: wrap.offsetHeight, style: { position: 'static', left: '0', top: '0' } }).then(function(blob){ wrap.remove(); return blob; }, function(e){ wrap.remove(); throw e; });
+    var opt = { pixelRatio: 2, backgroundColor: '#ffffff', width: wrap.offsetWidth, height: wrap.offsetHeight, style: { position: 'static', left: '0', top: '0' } };
+    var safari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+    return inline.then(function(){ opt.height = wrap.offsetHeight; return safari ? htmlToImage.toBlob(wrap, opt).catch(function(){}) : null; })
+      .then(function(){ return htmlToImage.toBlob(wrap, opt); })
+      .then(function(blob){ wrap.remove(); return blob; }, function(e){ wrap.remove(); throw e; });
   });
 }
+window.__cardBlob = cardBlob; // 테스트용
 // 이미지로 복사(클립보드). 복사를 지원하지 않는 브라우저면 공유창/파일 저장으로 대신
 function copyCardImage(tc){
   toast('이미지를 만드는 중…');
