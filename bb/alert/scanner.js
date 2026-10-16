@@ -219,7 +219,38 @@
   // ── ntfy 발행 / 요청 대기
   window.__BERRY = { alerts: 'berry-3059012bcc6b7db9-a', requests: 'berry-3059012bcc6b7db9-r' };
   // tags: 'req' = 요청 응답, 'quiet' = 앱 화면만 갱신하고 알림은 안 울림
+  // 지금 가격 확인(2026-10-16 석진: 데이마켓에서 크게 움직였는데 전날 종가 기준 안내만 뜰까 봐)
+  // 신호는 백테스트대로 정규장 종가로 판단하고, 보낼 때마다 데이마켓·프리장·애프터 포함 최신 30분봉 가격을 붙인다.
+  // 매수 상한을 넘었으면 한 단계 낮추고 "따라 사지 말기", 종가보다 −5% 넘게 더 빠졌으면 뉴스 확인 안내.
+  const SESS = { day: '데이마켓', pre: '프리장', main: '정규장', after: '애프터마켓' };
+  const liveCheck = async (cards) => {
+    let down = false;
+    for (const c of cards) {
+      try {
+        if (c.m !== 'US' || c.z || !/^[A-Z][A-Z.]{0,5}$/.test(c.n || '') || !/^\$[\d.]+$/.test(c.buy || '')) continue;
+        const j0 = await get(`${INFO}/api/v2/stock-infos/code-or-symbol/${c.n}`), cd = j0.result.code || j0.result.stockCode;
+        const k = ((await get(`${INFO}/api/v1/c-chart/us-s/${cd}/min:30?count=1&useAdjustedRate=true`)).result.candles || [])[0];
+        const ds = ((await get(`${INFO}/api/v1/c-chart/us-s/${cd}/day:1?count=3&useAdjustedRate=true`)).result.candles || []);
+        if (!k || ds.length < 2) continue;
+        // 정규장 마지막 종가: 데이마켓·프리장 중이면 오늘 날짜 봉은 아직 미완성이라 그 전 봉
+        const base = k.sessionType === 'after' ? ds[0].close : k.sessionType === 'main' ? ds[1].close : (ds[0].dt.slice(0, 10) >= k.dt.slice(0, 10) ? ds[1].close : ds[0].close);
+        const p = k.close, r = p / base - 1, cap = +c.buy.slice(1), nm = SESS[k.sessionType] || '최근';
+        let line = `지금 ${nm} ${fu(p)} · 정규장 종가 대비 ${pct(100 * r)}`;
+        if (p > cap) { line += ` → 매수 상한 ${c.buy}를 넘어 등급 한 단계 낮춤. 따라 사지 말고 상한 아래로 내려올 때만`; if (window.__gradeDown && !c.lvDn) { c.gPre = c.g; c.dnPre = c.dn; c.g = window.__gradeDown(c.g); c.dn = 1; c.lvDn = 1; down = true; } }
+        else if (c.lvDn) { c.g = c.gPre; c.dn = c.dnPre; delete c.lvDn; down = true; } // 상한 아래로 돌아오면 원래 등급
+        if (p <= cap) {
+          if (r <= -0.05) line += ' → 신호 뒤 더 빠지는 중. 회사 뉴스 확인 후 나눠서';
+          else line += ` · 매수 상한 ${c.buy} 안쪽`;
+        }
+        c.why = (c.why || '').replace(/\n?지금 (데이마켓|프리장|정규장|애프터마켓|최근) \$[^\n]*/g, '') + '\n' + line;
+        c.now = fu(p); c.nowS = nm;
+      } catch (e) {}
+    }
+    return down;
+  };
+  window.__liveCheck = liveCheck;
   window.__berryPublish = async function (alert, extraTags) {
+    try { if (await liveCheck(alert.cards || [])) alert.title = '매수 의견: ' + alert.cards.map(c => c.g + '등급 ' + c.n).join(' · '); } catch (e) {}
     const enc = new TextEncoder(), cs = (alert.cards || []).slice();
     // ⓒ 상시 카드(C등급)는 꺾은선 빼고 짧게 실어 화면 맨 아래에만. 글자 수가 넘치면 상시 카드부터 뺀다
     const bs = (alert.base || []).map(c => Object.assign({}, c, { ln: undefined, why: (c.why || '').slice(0, 150) }));
@@ -231,7 +262,7 @@
     // 카드를 통째로 빼기 전에 줄일 수 있는 것부터(2026-10-15 CLS B+ 카드가 글자 수 때문에 빠져 웹에 안 보였음)
     if (enc.encode(body).length > 3800) { cs.forEach((c, i) => { if (c.ln) cs[i] = Object.assign({}, c, { ln: c.ln.slice(-30).map(x => +(+x).toPrecision(4)) }); }); body = mk(); }
     // 설명은 앞부분(규칙 근거)만 줄이고 마지막 줄(사업성 확인·등급 낮춘 이유)은 남김
-    const shw = (w, lim) => { const k = w.indexOf('\n'); const head = k < 0 ? w : w.slice(0, k), tail = k < 0 ? '' : w.slice(k).slice(0, 170); return (head.length > lim ? head.slice(0, lim) + '…' : head) + tail; };
+    const shw = (w, lim) => { const k = w.indexOf('\n'); const head = k < 0 ? w : w.slice(0, k), tail0 = k < 0 ? '' : w.slice(k), tail = tail0.length > 240 ? '\n…' + tail0.slice(-238) : tail0; return (head.length > lim ? head.slice(0, lim) + '…' : head) + tail; };
     for (let lim = 200; enc.encode(body).length > 3800 && lim >= 60; lim -= 35) { cs.forEach((c, i) => { if (c.why) cs[i] = Object.assign({}, c, { why: shw(c.why, lim) }); }); body = mk(); }
     for (let i = cs.length - 1; enc.encode(body).length > 3800 && i >= 0; i--) { if (cs[i].ln) { cs[i] = Object.assign({}, cs[i], { ln: undefined }); body = mk(); } }
     while (enc.encode(body).length > 3800 && cs.length > 1) { cs.pop(); body = mk(); }
