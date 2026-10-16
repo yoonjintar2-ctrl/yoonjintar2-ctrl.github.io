@@ -365,16 +365,16 @@
     const me = Math.random().toString(36).slice(2), KEY = 'berryWatcher';
     const live = () => { try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); return o.id && o.id !== me && Date.now() - o.ts < 25000; } catch (e) { return false; } };
     if (window.__berryWatchState && window.__berryWatchState.alive) {
-      if (window.__berryWatchState.v === 4) return 'already running here';
+      if (window.__berryWatchState.v === 5) return 'already running here';
       try { window.__berryWatchState.es.close(); } catch (e) {} window.__berryWatchState.alive = false; try { localStorage.removeItem(KEY); } catch (e) {} // 옛 버전 감시를 새 버전으로 교체
     }
     if (live()) return 'running in another tab';
-    const st = window.__berryWatchState = { v: 4, alive: true, me, started: new Date().toISOString(), handled: 0, last: '' };
+    const st = window.__berryWatchState = { v: 5, alive: true, me, started: new Date().toISOString(), handled: 0, last: '' };
     const beat = setInterval(() => { try { localStorage.setItem(KEY, JSON.stringify({ id: me, ts: Date.now() })); } catch (e) {} }, 10000);
     try { localStorage.setItem(KEY, JSON.stringify({ id: me, ts: Date.now() })); } catch (e) {}
     let busy = false, lastRun = 0; const seen = new Set();
-    const es = new EventSource('https://ntfy.sh/' + window.__BERRY.requests + '/sse'); st.es = es;
-    es.onmessage = async (ev) => {
+    // 연결이 끊기면(readyState 2 = 닫힘) 다시 연결(2026-10-16 23:28 끊긴 뒤 새로고침·정시 검색이 멈췄던 문제)
+    const onMsg = async (ev) => {
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
       if (m.event !== 'message' || seen.has(m.id) || !/^scan/.test(m.message || '')) return;
       seen.add(m.id);
@@ -394,7 +394,11 @@
         try { await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 실패', message: '맥에서 검색하다 오류가 났어요: ' + String(e).slice(0, 200), tags: ['warn', 'req'] }) }); } catch (e2) {}
       } finally { busy = false; }
     };
-    es.onerror = () => { st.err = new Date().toISOString(); };
+    const connect = () => { if (!st.alive) return; const es = new EventSource('https://ntfy.sh/' + window.__BERRY.requests + '/sse'); st.es = es; es.onmessage = onMsg;
+      es.onerror = () => { st.err = new Date().toISOString(); if (es.readyState === 2) { st.reconn = (st.reconn || 0) + 1; setTimeout(connect, 5000); } }; };
+    connect();
+    // 혹시 onerror 없이 닫혀 있으면 1분마다 확인해 다시 연결
+    st.guard = setInterval(() => { if (!st.alive) return clearInterval(st.guard); if (!st.es || st.es.readyState === 2) { st.reconn = (st.reconn || 0) + 1; connect(); } }, 60000);
     window.addEventListener('beforeunload', () => { clearInterval(beat); try { localStorage.removeItem(KEY); } catch (e) {} });
     return 'watching';
   };
