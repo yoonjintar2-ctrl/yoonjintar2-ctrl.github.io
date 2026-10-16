@@ -768,6 +768,8 @@ function updProg(){
   if (state.sending) { p = .06; lab = '맥에 검색 요청 보내는 중…'; }
   else if (!state.ackAt) { var e1 = (now - state.reqAt) / 1000; p = .12 + .13 * Math.min(1, e1 / 30); lab = '맥이 요청을 받는 중… ' + Math.floor(e1) + '초'; }
   else { var e2 = (now - state.ackAt) / 1000; p = .3 + .65 * (1 - Math.exp(-e2 / 40)); lab = '맥에서 지금 시세로 검색 중… ' + Math.floor(e2) + '초'; }
+  // 실시간 연결(아이폰 사파리는 자주 끊김)을 믿지 않고 검색 중엔 3초마다 직접 확인(2026-10-17 결과가 왔는데 화면은 '실패'로 끝나던 문제)
+  if (!state.sending && now - (state.pollAt || 0) > 3000) { state.pollAt = now; poll(T.alerts, Math.floor(state.reqAt / 1000) - 10).catch(function(){}); }
   $('progFill').style.width = (p * 100).toFixed(1) + '%'; $('progLab').hidden = true; quip(); // 진행 중엔 파란 상태 글씨 대신 농담만
 }
 function finishProg(ok, msg){
@@ -812,6 +814,8 @@ document.addEventListener('keydown', function(e){
   else if (k === 'escape') { $('info').classList.remove('on'); $('rk').classList.remove('on'); }
 });
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) { refresh(); connect(); } });
+window.addEventListener('pageshow', function(){ refresh(); connect(); });
+setInterval(function(){ if (!es || es.readyState === 2) connect(); }, 30000); // 끊긴 채 멈춰 있으면 다시 연결
 setInterval(tick, 30000); setInterval(loadRev, 300000);
 // 공유 링크로 들어오면 그 카드로 스크롤(결과가 늦게 와도 한 번 더 시도, 신호가 끝났으면 규칙 카드를 보여 줌)
 var ANC = (location.hash || '').replace(/^#/, ''), ancPolled = false;
