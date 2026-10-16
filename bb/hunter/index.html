@@ -444,7 +444,7 @@ function loadRev(){ return fetch('review.json?t=' + Date.now(), { cache: 'no-sto
 function revFresh(){ return REV && REV.t && Date.now() / 1000 - REV.t < 12 * 3600; }
 function revWhen(){ var kt = new Date((REV.t + 9 * 3600) * 1000), p2 = function(n){ return (n < 10 ? '0' : '') + n; }; return p2(kt.getUTCHours()) + ':' + p2(kt.getUTCMinutes()) + ' 검토'; }
 function revHTML(c){ if (!revFresh() || !REV.cards) return ''; var k = (c.s || '').trim().charAt(0) + ' ' + c.n, v = REV.cards[k]; if (!v || !v.note) return '';
-  var lab = { ok: '클로드 검토 · 이상 없음', warn: '클로드 검토 · 주의', hold: '클로드 검토 · 매수 보류 권고' }[v.v] || '클로드 검토'; if (c.revDown) lab += ' (' + c.revDown + ' → ' + c.g + ')';
+  var lab = { ok: '검토 의견 · 이상 없음', warn: '검토 의견 · 주의', hold: '검토 의견 · 매수 보류 권고' }[v.v] || '검토 의견'; if (c.revDown) lab += ' (' + c.revDown + ' → ' + c.g + ')';
   return '<div class="rv ' + esc(v.v || '') + '"><b>' + lab + '</b><i>' + revWhen() + '</i>\n' + esc(v.note) + '</div>'; }
 function revOf(c){ if (!revFresh() || !REV.cards) return null; return REV.cards[(c.s || '').trim().charAt(0) + ' ' + c.n] || null; }
 var GDOWN = { SSS: 'SS', SS: 'S', S: 'A', 'A+': 'A', A: 'B+', 'A-': 'B+', 'B+': 'B', B: 'C+', 'C+': 'C', C: 'C-' };
@@ -453,7 +453,7 @@ function revApply(cs){ var out = [], kept = []; cs.forEach(function(c){ var v = 
   if (v && v.v === 'hold') { out.push({ c: c, v: v }); return; }
   if (v && v.v === 'warn' && !c.dn && !/한 단계 낮춤/.test(c.why || '') && GDOWN[c.g]) c = Object.assign({}, c, { g: GDOWN[c.g], revDown: c.g });
   kept.push(c); }); return { kept: kept, out: out }; }
-function revOutHTML(out){ if (!out.length) return ''; return '<div class="rvout"><b>클로드 검토로 뺀 카드</b>' + out.map(function(x){ return '<div><i>' + esc(x.c.n) + (x.c.kn ? ' ' + esc(x.c.kn) : '') + ' · ' + esc(x.c.g) + '</i> ' + esc(x.v.note) + '</div>'; }).join('') + '</div>'; }
+function revOutHTML(out){ if (!out.length) return ''; return '<div class="rvout"><b>검토 의견으로 뺀 카드</b>' + out.map(function(x){ return '<div><i>' + esc(x.c.n) + (x.c.kn ? ' ' + esc(x.c.kn) : '') + ' · ' + esc(x.c.g) + '</i> ' + esc(x.v.note) + '</div>'; }).join('') + '</div>'; }
 function revSum(){ if (!revFresh() || !REV.sum) return ''; return '<div class="rvsum"><b>종합 매수 의견<i>' + revWhen() + '</i></b>' + esc(REV.sum) + '</div>'; }
 function card(c, sh){
   var g = c.g || 'B', kr = c.m === 'KR', no = ruleNo(c.s), ty = RTYPE[no] || ['#5c7cfa','#dbe4ff','★','규칙'];
@@ -599,7 +599,7 @@ function render(){
   if (!r) html += '<div class="note">아직 받은 결과가 없어요. 새로고침을 눌러 맥에 검색을 요청해 보세요.<br>(평일 18~23시 정각에는 자동으로 검색해요)</div>';
   else {
     var RA = revApply((r.cards || []).slice()), cs = RA.kept.sort(function(a, b){ return RANK.indexOf(a.g) - RANK.indexOf(b.g); });
-    if (!cs.length) { var tt = RA.out.length ? '매수 의견 없음 · 클로드 검토로 모두 뺐어요' : String(state.title || '매수 의견 없음'), k = tt.indexOf(' · '); html += '<div class="none"><b>' + esc(k > 0 ? tt.slice(0, k) : tt) + '</b>' + (k > 0 ? '<small>' + esc(tt.slice(k + 3)) + '</small>' : '') + '</div>'; }
+    if (!cs.length) { var tt = RA.out.length ? '매수 의견 없음 · 검토 의견으로 모두 뺐어요' : String(state.title || '매수 의견 없음'), k = tt.indexOf(' · '); html += '<div class="none"><b>' + esc(k > 0 ? tt.slice(0, k) : tt) + '</b>' + (k > 0 ? '<small>' + esc(tt.slice(k + 3)) + '</small>' : '') + '</div>'; }
     html += revSum(); (r.z || []).forEach(function(c){ html += card(c, 1); }); // 매수 금지 카드는 맨 위
     cs.forEach(function(c){ html += card(c, 1); });
     html += revOutHTML(RA.out);
