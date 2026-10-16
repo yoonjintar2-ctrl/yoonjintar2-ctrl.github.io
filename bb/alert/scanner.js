@@ -240,6 +240,8 @@
         if (p > cap) { gone.push({ g: c.g, n: c.n, kn: c.kn, s: c.s, note: `${line} → 매수 상한 ${c.buy}를 넘어 기대수익이 줄었어요. 상한 아래로 내려오면 다시 떠요` }); continue; }
         line += r <= -0.05 ? ' → 신호 뒤 더 빠지는 중. 회사 뉴스 확인 후 나눠서' : ` · 매수 상한 ${c.buy} 안쪽`;
         c.why = (c.why || '').replace(/\n?지금 (데이마켓|프리장|정규장|애프터마켓|최근) \$[^\n]*/g, '') + '\n' + line;
+        // 카드 맨 위 가격·등락도 지금 가격으로(2026-10-17 석진: 지금 $100인데 카드엔 신호 종가 $107이라 헷갈림). 매수 상한·익절·손절은 신호 종가 기준 그대로
+        if (c.pxSig == null) c.pxSig = c.px; c.px = fu(p); c.ch = pct(100 * r) + ' ' + nm;
         c.now = fu(p); c.nowS = nm; kept.push(c);
       } catch (e) { kept.push(c); }
     }
