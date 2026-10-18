@@ -764,6 +764,7 @@ function quip(){ var e = $('progQuip'); if (Date.now() - quipAt < 3500) return; 
 function updProg(){
   var now = Date.now(), p, lab;
   if (state.doneAt) return;
+  if (!state.ackAt && !state.sending && now - state.reqAt > 45000) { finishProg(false, '맥이 요청을 못 받았어요 · 맥 크롬이 다시 켜지며 감시 탭이 꺼졌을 수 있어요. 클로드에게 "감시 다시 켜 줘"라고 해 주세요'); return; }
   if (now - state.reqAt > 180000) { finishProg(false, '3분째 응답 없음 · 맥이나 크롬이 꺼져 있을 수 있어요'); return; }
   if (state.sending) { p = .06; lab = '맥에 검색 요청 보내는 중…'; }
   else if (!state.ackAt) { var e1 = (now - state.reqAt) / 1000; p = .12 + .13 * Math.min(1, e1 / 30); lab = '맥이 요청을 받는 중… ' + Math.floor(e1) + '초'; }
