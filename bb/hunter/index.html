@@ -874,14 +874,24 @@ function copyCardImage(tc){
   }
   return fallback().catch(function(){ toast('이미지를 만들지 못했어요'); });
 }
+// 이미지 저장(2026-10-20 석진): 아이폰은 공유창의 '이미지 저장'으로 사진첩에, 컴퓨터는 png 파일로 내려받기
+function saveCardImage(tc){
+  toast('이미지를 만드는 중…');
+  return cardBlob(tc).then(function(blob){ var M = cardMeta(), name = 'surisuri_' + (tc.id || 'card').replace(/^c[0-9a-z]+-/, '') + '_' + M.kt.getUTCFullYear() + M.p2(M.kt.getUTCMonth() + 1) + M.p2(M.kt.getUTCDate()) + '.png';
+    var file = null; try { file = new File([blob], name, { type: 'image/png' }); } catch(e) {}
+    var mobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+    if (mobile && file && navigator.canShare && navigator.canShare({ files: [file] })) { toast('공유창에서 \'이미지 저장\'을 눌러 주세요'); return navigator.share({ files: [file] }).catch(function(){}); }
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 2000); toast('이미지를 저장했어요');
+  }).catch(function(){ toast('이미지를 만들지 못했어요'); });
+}
 $('list').addEventListener('click', function(e){
   var b = e.target.closest && e.target.closest('.shr'); if (!b) return; e.stopPropagation();
   if ($('shm') && $('shm')._b === b) { shMenuClose(); return; } shMenuClose();
   var r = b.getBoundingClientRect(), m = document.createElement('div'); m.id = 'shm'; m._b = b;
-  m.innerHTML = '<button data-a="img">이미지로 복사</button><button data-a="link">링크 복사</button>';
+  m.innerHTML = '<button data-a="img">이미지로 복사</button><button data-a="save">이미지 저장</button><button data-a="link">링크 복사</button>';
   m.style.top = (r.bottom + window.scrollY + 6) + 'px'; m.style.right = Math.max(8, document.documentElement.clientWidth - r.right) + 'px';
   document.body.appendChild(m);
-  m.onclick = function(ev){ var a = ev.target.getAttribute('data-a'); if (!a) return; ev.stopPropagation(); shMenuClose(); if (a === 'link') copyLink(b); else copyCardImage(b.closest('.tc')); };
+  m.onclick = function(ev){ var a = ev.target.getAttribute('data-a'); if (!a) return; ev.stopPropagation(); shMenuClose(); if (a === 'link') copyLink(b); else if (a === 'save') saveCardImage(b.closest('.tc')); else copyCardImage(b.closest('.tc')); };
 });
 document.addEventListener('click', function(e){ if ($('shm') && !e.target.closest('#shm')) shMenuClose(); });
 // 펄 코팅 빛 움직임: 저절로 천천히 돌고(초당 30번), 카드를 문지르면 1.5초 동안 손가락 위치를 따라감
