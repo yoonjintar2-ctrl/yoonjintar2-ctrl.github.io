@@ -383,8 +383,14 @@
       if (Date.now() / 1000 - (m.time || 0) > 600 || busy || Date.now() - lastRun < 45000) return;
       if (!/^scan sched/.test(m.message || '')) { st.reqHist = (st.reqHist || []).filter(x => Date.now() - x < 600000); if (st.reqHist.length >= 5) return; st.reqHist.push(Date.now()); } // 새로고침 남용 막기: 10분에 5번
       busy = true; lastRun = Date.now();
+      // 감시가 두 곳(맥·회사 PC)에서 돌 때 한 곳만 검색(2026-10-19): 맥이 먼저, 다른 곳은 5초 기다렸다가 맥이 이미 맡았으면 건너뜀
+      try { if (!/Mac/i.test(navigator.platform || '')) { await new Promise(r => setTimeout(r, 5000));
+          const tx = await (await fetch('https://ntfy.sh/' + window.__BERRY.requests + '/json?poll=1&since=' + Math.max(0, (m.time || 0) - 2))).text();
+          if (tx.split('\n').some(l => { try { const q = JSON.parse(l); return (q.message || '').startsWith('claim ' + m.id + ' ') && !(q.message || '').endsWith(' ' + me); } catch (e) { return false; } })) { busy = false; st.skipped = (st.skipped || 0) + 1; return; } }
+        await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.requests, message: 'claim ' + m.id + ' ' + me }) });
+      } catch (e) {}
       try {
-        if (!/^scan sched/.test(m.message || '')) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: '맥에서 지금 시세로 검색 중이에요 (1~2분)', tags: ['ack'] }) });
+        if (!/^scan sched/.test(m.message || '')) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: (/Mac/i.test(navigator.platform || '') ? '맥' : '회사 PC') + '에서 지금 시세로 검색 중이에요 (1~2분)', tags: ['ack'] }) });
         try { (0, eval)(await window.__berryLoad('bb/alert/scanner.js')); } catch (e) {} // 항상 최신 규칙으로
         const sched = /^scan sched/.test(m.message || '');
         await window.__berryScan({ slot: sched ? new Date(Date.now() + 9 * 3600e3).getUTCHours() + '시' : '요청' });
