@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>다 이득 날지니 (디자인 예시)</title>
 <meta name="robots" content="noindex">
 <meta name="description" content="실제 데이터로 검증하고 등급을 매긴 미국 주식 매매 카드. 지금 상황에 가장 맞는 카드를 추천해요.">
@@ -669,6 +669,12 @@ button,input,select,textarea{font-family:inherit}
 .aura .tg{background:radial-gradient(50% 50% at 50% 50%,rgba(255,240,195,.62) 0%,rgba(255,200,105,.36) 26%,rgba(255,150,50,.13) 50%,rgba(255,120,30,0) 70%);mix-blend-mode:screen}
 @keyframes tongue{0%{transform:rotate(var(--a)) translateY(-4%) scale(.9,.7);opacity:.5}50%{opacity:.9}100%{transform:rotate(var(--a)) translateY(-16%) scale(1.05,1.2);opacity:.75}}
 .slot.gS .aura .tg{background:radial-gradient(50% 50% at 50% 50%,rgba(255,248,220,.72) 0%,rgba(255,210,120,.42) 26%,rgba(255,150,60,.16) 50%,rgba(255,120,30,0) 70%)}
+/* v10: 빛 상자와 카드 사이 틈 제거 + 파티클 불꽃 캔버스 */
+.aura .spill{inset:0!important;border-radius:16px;box-shadow:0 0 30px 8px rgba(255,180,70,.34),0 0 90px 30px rgba(220,130,40,.15)}
+.aura canvas.fc{pointer-events:none}
+.aura .tg{display:none}
+/* 가로 스크롤·확대 막기 */
+html,body{overflow-x:clip;max-width:100%;touch-action:pan-y;overscroll-behavior-x:none}
 </style>
 </head>
 <body>
@@ -1393,6 +1399,26 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
       var w = 62 + Math.random() * 40, hh = 60 + Math.random() * 70, d = (3.2 + Math.random() * 3).toFixed(1), dl = (-Math.random() * 6).toFixed(1);
       h += '<b class="tg" style="left:' + x.toFixed(1) + '%;top:' + y.toFixed(1) + '%;width:' + w.toFixed(0) + 'px;height:' + hh.toFixed(0) + 'px;margin:' + (-hh / 2).toFixed(0) + 'px 0 0 ' + (-w / 2).toFixed(0) + 'px;--a:' + a + 'deg;animation-duration:' + d + 's;animation-delay:' + dl + 's"></b>'; }
     return '<b class="spill"></b>' + h; }
+
+  // ── 카드 둘레 불꽃(파티클): 테두리를 따라 빛 알갱이가 생겨 바깥·위로 번지며 사라짐 → 모양 있는 불꽃이 끊김 없이 일렁임. 화면에 보이는 카드만 그림
+  var FSPR = document.createElement('canvas'); FSPR.width = FSPR.height = 64; (function(){ var c = FSPR.getContext('2d'), g = c.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,236,180,.9)'); g.addColorStop(.3, 'rgba(255,196,96,.55)'); g.addColorStop(.65, 'rgba(255,140,40,.16)'); g.addColorStop(1, 'rgba(255,120,30,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); })();
+  var FDPR = Math.min(2, window.devicePixelRatio || 1), FL = [], flVis = new Set();
+  function flameSize(cv, w, h, m){ cv.style.cssText = 'position:absolute;left:' + (-m) + 'px;top:' + (-m) + 'px;width:' + (w + 2 * m) + 'px;height:' + (h + 2 * m) + 'px'; cv.width = Math.round((w + 2 * m) * FDPR); cv.height = Math.round((h + 2 * m) * FDPR); cv._w = w; cv._h = h; cv._m = m; cv._p = cv._p || []; cv._ph = cv._ph || Math.random() * 6;
+    if (!cv._io && window.IntersectionObserver) { cv._io = 1; flIO.observe(cv); } }
+  var flIO = window.IntersectionObserver ? new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting) flVis.add(e.target); else flVis.delete(e.target); }); if (flVis.size) flGo(); }, { rootMargin: '80px' }) : null;
+  var flOn = false; function flGo(){ if (!flOn && !RM) { flOn = true; requestAnimationFrame(flLoop); } }
+  function edgePt(w, h){ var per = 2 * (w + h), s = Math.random() * per, x, y, nx, ny;
+    if (s < w) { x = s; y = 0; nx = 0; ny = -1; } else if (s < w + h) { x = w; y = s - w; nx = 1; ny = 0; } else if (s < 2 * w + h) { x = w - (s - w - h); y = h; nx = 0; ny = 1; } else { x = 0; y = h - (s - 2 * w - h); nx = -1; ny = 0; }
+    return [x, y, nx, ny]; }
+  function flLoop(t){ if (!flVis.size || document.hidden) { flOn = false; return; }
+    flVis.forEach(function(cv){ if (!cv.isConnected) { flVis.delete(cv); return; } var c = cv.getContext('2d'), P = cv._p, w = cv._w, h = cv._h, m = cv._m, n = +cv.dataset.n || 4, br = .75 + .25 * Math.sin(t / 2600 + cv._ph);
+      for (var k = 0; k < n * br; k++) { var e = edgePt(w, h), sp = .25 + Math.random() * .7; P.push({ x: e[0] + m, y: e[1] + m, vx: e[2] * sp + (Math.random() - .5) * .3, vy: e[3] * sp - .22 - Math.random() * .25, s: 14 + Math.random() * 20, g: .7 + Math.random() * .9, l: 40 + Math.random() * 40, a: 0 }); }
+      if (P.length > 1300) P.splice(0, P.length - 1300);
+      c.setTransform(FDPR, 0, 0, FDPR, 0, 0); c.clearRect(0, 0, w + 2 * m, h + 2 * m); c.globalCompositeOperation = 'lighter';
+      for (var i = P.length - 1; i >= 0; i--) { var q = P[i]; q.a++; if (q.a > q.l) { P.splice(i, 1); continue; } var f = q.a / q.l; q.x += q.vx; q.y += q.vy; q.vx *= .985; var s = q.s * (1 + f * q.g); var dx = Math.max(m - q.x, q.x - m - w, 0), dy = Math.max(m - q.y, q.y - m - h, 0), dd = Math.sqrt(dx * dx + dy * dy); c.globalAlpha = Math.sin(Math.PI * f) * .24 * br * Math.max(0, 1 - dd / (m * .8)); c.drawImage(FSPR, q.x - s, q.y - s, s * 2, s * 2); }
+      c.globalAlpha = 1; });
+    requestAnimationFrame(flLoop); }
+  document.addEventListener('gesturestart', function(e){ e.preventDefault(); }); document.addEventListener('dblclick', function(e){ e.preventDefault(); }, { passive: false });
   var slots = [], SMIN = .32, HDR = 58;
   // v4 카드 장면: 카드 상자(.stk)는 CSS sticky로 화면에 붙음(스크롤 보정 계산이 없어 흔들림 없음). 붙어 있는 짧은 구간에서만 작게→크게 확대
   function lockScroll(on){ document.documentElement.classList.toggle('lockscr', on); }
@@ -1457,9 +1483,9 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
       var key = (tc.id || tc.textContent.slice(0, 40)); sl._key = key;
       sl._rev = !RM && T !== 'C' && !(SEEN[key] && Date.now() - SEEN[key] < 3 * 864e5); if (sl._rev) sl.classList.add('hid');
       var nm = (tc.querySelector('.mvn') || {}).textContent || '', tk = ((tc.querySelector('.nm') || {}).childNodes || []), tick = ''; [].forEach.call(tk, function(x){ if (x.nodeType === 3) tick += x.textContent; }); tick = tick.trim();
-      var rich = T === 'S' || T === 'A', au = '<div class="aura">' + (T === 'C' ? '' : tongues(rich ? 30 : 14)) + (rich ? '<b class="tw t1"></b><b class="tw t2"></b><b class="tw t3"></b><b class="tw t4"></b>' : ''); for (var k = 0; k < (rich ? 22 : T === 'C' ? 4 : 10); k++) au += '<i style="left:' + (Math.random() < .5 ? -3 + Math.random() * 5 : 98 + Math.random() * 5).toFixed(1) + '%;animation-duration:' + (5 + Math.random() * 5).toFixed(1) + 's;animation-delay:-' + (Math.random() * 8).toFixed(1) + 's;--dx:' + ((Math.random() - .5) * 40).toFixed(0) + 'px"></i>'; au += '</div>';
+      var rich = T === 'S' || T === 'A', au = '<div class="aura">' + (T === 'C' ? '' : '<b class="spill"></b><canvas class="fc" data-n="' + (T === 'S' ? 9 : rich ? 7 : 3) + '"></canvas>') + (rich ? '<b class="tw t1"></b><b class="tw t2"></b><b class="tw t3"></b><b class="tw t4"></b>' : ''); for (var k = 0; k < (rich ? 22 : T === 'C' ? 4 : 10); k++) au += '<i style="left:' + (Math.random() < .5 ? -3 + Math.random() * 5 : 98 + Math.random() * 5).toFixed(1) + '%;animation-duration:' + (5 + Math.random() * 5).toFixed(1) + 's;animation-delay:-' + (Math.random() * 8).toFixed(1) + 's;--dx:' + ((Math.random() - .5) * 40).toFixed(0) + 'px"></i>'; au += '</div>';
       var st = SUBK[tick] || SUBT[no] || ''; sl.innerHTML = '<div class="mini"><span class="mt2">' + esc(nm).split(/(\s+|·)/).filter(function(x){ return x && !/^\s+$/.test(x); }).map(function(w, wi){ return '<span class="w" style="--i:' + wi + '">' + w + '</span>'; }).join(' ') + '</span>' + (st ? '<span class="mst">' + esc(st) + '</span>' : '') + '<small>' + esc(tick).split('').map(function(ch, ci){ return '<span class="lt" style="--i:' + ci + '">' + ch + '</span>'; }).join('') + '</small></div>'; tc.parentNode.insertBefore(sl, tc); fl.appendChild(tc); if (sl._rev) fl.insertAdjacentHTML('beforeend', '<div class="cback">' + CM + '</div>'); var en = document.createElement('div'); en.className = 'ent'; fl.insertAdjacentHTML('afterbegin', au); en.appendChild(fl); w.appendChild(en); var stk = document.createElement('div'); stk.className = 'stk'; var mn = sl.querySelector('.mini'); stk.appendChild(mn); stk.appendChild(w); var skw = document.createElement('div'); skw.className = 'stkw'; skw.appendChild(stk); skw.insertAdjacentHTML('beforeend', '<div class="pinsp" style="height:' + sl._pin + 'px"></div>'); sl.appendChild(skw); sl._w = w; sl._t = w; sl._en = en; sl._mn = mn; if (nx && nx.classList.contains('freqo')) sl.appendChild(nx);
-      var aue = fl.querySelector('.aura'); if (window.ResizeObserver) new ResizeObserver(function(){ var G = 4, AW = tc.offsetWidth - 2 * G, AH = tc.offsetHeight - 2 * G, M = 60; if (AW <= 0 || AH <= 0) return; aue.style.cssText = 'left:' + (tc.offsetLeft + G) + 'px;top:' + (tc.offsetTop + G) + 'px;width:' + AW + 'px;height:' + AH + 'px;bottom:auto;transform:none'; }).observe(tc);
+      var aue = fl.querySelector('.aura'); if (window.ResizeObserver) new ResizeObserver(function(){ var G = 4, AW = tc.offsetWidth - 2 * G, AH = tc.offsetHeight - 2 * G, M = 90; if (AW <= 0 || AH <= 0) return; var fcv = aue.querySelector('canvas.fc'); if (fcv) flameSize(fcv, AW, AH, M); aue.style.cssText = 'left:' + (tc.offsetLeft + G) + 'px;top:' + (tc.offsetTop + G) + 'px;width:' + AW + 'px;height:' + AH + 'px;bottom:auto;transform:none'; }).observe(tc);
       if (sl._rev && window.ResizeObserver) { var cb = fl.querySelector('.cback'); new ResizeObserver(function(){ cb.style.cssText = 'inset:auto;left:' + tc.offsetLeft + 'px;top:' + tc.offsetTop + 'px;width:' + tc.offsetWidth + 'px;height:' + tc.offsetHeight + 'px;max-width:none;margin:0'; }).observe(tc); }
       if (first && !L.querySelector('.orn')) { sl.insertAdjacentHTML('beforebegin', '<div class="orn">오늘의 카드</div>'); first = false; } });
     slots = [].slice.call(L.querySelectorAll('.slot'));
