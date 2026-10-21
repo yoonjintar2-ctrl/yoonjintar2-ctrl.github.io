@@ -334,6 +334,8 @@
     try { (0, eval)(await window.__berryLoad('bb/alert/crisis.js')); const c11 = await window.__crisis(); const A = window.__D6; if (c11.cards.length) { A.cards = A.cards.concat(c11.cards); A.sPlus = (A.sPlus || []).concat(c11.cards.map(c => c.g + ' ' + c.n)); } if (c11.near.length) A.near = (A.near || []).concat(c11.near); } catch (e11) { window.__D6.crisisErr = String(e11); }
     // ⑨ 반도체 급락 반등(SOXL) · ⑩ 위험 모드 추세 이탈(SOXS)
     try { (0, eval)(await window.__berryLoad('bb/alert/semi9.js')); const c9 = await window.__semi9(window.__D6.rk); if (c9.length) { const A = window.__D6; A.cards = A.cards.concat(c9); A.sPlus = (A.sPlus || []).concat(c9.map(c => c.g + ' ' + c.n)); } const fz = window.__semi9froth; if (fz) window.__D6.cards.forEach(c => { if (/^[⑥⑨⑫]/.test(c.s || '') && c.g !== 'C+') { c.g = 'B'; c.why = `⚠ 반도체 과열 뒤 꺾임(${fz.d.slice(5)}, ${fz.left}거래일 남음): 이 기간엔 줍지 않는 게 나았어요 → 참고(B)로 낮춤\n` + (c.why || ''); } }); } catch (e9) { window.__D6.semi9Err = String(e9); }
+    // ⑬ 집 나간 돈이 돌아온다!(유동성 높을 때 방어주 쏠림 → TQQQ) — stock 저장소 c/money.json
+    try { (0, eval)(await window.__berryLoad('bb/alert/money13.js')); const c13 = await window.__money13(); if (c13.length) { const A = window.__D6; A.cards = A.cards.concat(c13); A.sPlus = (A.sPlus || []).concat(c13.map(c => c.g + ' ' + c.n)); } } catch (e13) { window.__D6.money13Err = String(e13); }
     // 주간 규칙 점검(토요일 아침 6:30~9:00, 주 1회) → 등급 상한 적용 → 띄운 카드 기록 → 성적표 첨부
     try {
       (0, eval)(await window.__berryLoad('bb/alert/weekly.js'));
