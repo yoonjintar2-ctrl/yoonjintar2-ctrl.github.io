@@ -251,7 +251,7 @@
   window.__berryPublish = async function (alert, extraTags) {
     try { const L = await liveCheck(alert.cards || []); alert.gone = L.gone.length ? L.gone : undefined;
       if (L.gone.length) { alert.cards = L.kept; alert.sPlus = (alert.sPlus || []).filter(x => !L.gone.some(g => x === g.g + ' ' + g.n));
-        alert.title = L.kept.length ? '매수 의견: ' + L.kept.map(c => c.g + '등급 ' + c.n).join(' · ') : '매수 의견 없음 · 지금 가격이 매수 상한을 넘어 뺐어요'; } } catch (e) {}
+        alert.title = L.kept.length ? '매수 의견: ' + L.kept.map(c => c.g + '등급 ' + c.n).join(' · ') : '매수 의견 없음'; } } catch (e) {}
     const enc = new TextEncoder(), cs = (alert.cards || []).slice();
     // ⓒ 상시 카드(C등급)는 꺾은선 빼고 짧게 실어 화면 맨 아래에만. 글자 수가 넘치면 상시 카드부터 뺀다
     const bs = (alert.base || []).map(c => Object.assign({}, c, { ln: undefined, why: (c.why || '').slice(0, 150) }));
@@ -365,6 +365,11 @@
     try { const r = await fetch('https://api.github.com/repos/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/contents/' + path + '?ref=main', { headers: { Accept: 'application/vnd.github.raw' }, cache: 'no-store' }); if (r.ok) return await r.text(); } catch (e) {}
     return await (await fetch('https://raw.githubusercontent.com/yoonjintar2-ctrl/yoonjintar2-ctrl.github.io/main/' + path + '?v=' + Date.now(), { cache: 'no-store' })).text();
   };
+
+  // 감시 연결 램프(2026-10-21): 감시가 살아 있으면 10분마다 berry-…-h 토픽에 짧은 신호. 사이트 오른쪽 위 램프가 15분 안 신호면 녹색, 아니면 주황
+  if (!window.__berryBeat) { const who = /Mac/i.test(navigator.platform || '') ? '맥' : /Win/i.test(navigator.platform || '') ? '회사 PC' : '클라우드';
+    const send = () => { const w = window.__berryWatchState; if (!w || !w.alive) return; const ok = w.es && w.es.readyState !== 2; fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: 'berry-3059012bcc6b7db9-h', message: 'beat ' + who + (ok ? '' : ' 끊김'), tags: ['quiet'], priority: 1 }) }).catch(() => {}); };
+    window.__berryBeat = setInterval(send, 600000); setTimeout(send, 3000); }
   window.__berryWatch = function () {
     const me = Math.random().toString(36).slice(2), KEY = 'berryWatcher';
     const live = () => { try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); return o.id && o.id !== me && Date.now() - o.ts < 25000; } catch (e) { return false; } };
