@@ -28,7 +28,8 @@
 <link rel="icon" href="a/icon180.png?v=2">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="a/fonts/bhs.css">
-<link rel="stylesheet" href="a/fonts/song-myung.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Song+Myung&display=swap">
 <style>
 :root{--bg:#fff;--ink:#1d232a;--muted:#6b7580;--warn:#d9480f;--info:#1c6fc9;--good:#2b8a3e;--bad:#d6336c;--box:#f3f4f6;--line:#e6e9ec;--body:#495057}
 *{box-sizing:border-box}
@@ -87,7 +88,9 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .tc .nm .ep{display:block;font-size:13px;font-weight:800;color:#343a40;line-height:1.3}
 .tc .nm small{font-size:11px;font-weight:700;color:#495057;margin-left:4px}
 .tc .gimg{height:28px;width:auto;flex:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
-.tc .orb{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:radial-gradient(circle at 35% 30%,#fff,var(--ty) 75%);box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.35)}
+.tc .orb{flex:none;width:21px;height:21px;margin:0 4px;border-radius:6px;transform:rotate(45deg);display:grid;place-items:center;background:linear-gradient(135deg,var(--ty2) -20%,var(--ty) 55%,color-mix(in srgb,var(--ty) 70%,#000));box-shadow:0 0 0 1.5px #f1d48a,0 0 0 3px rgba(90,60,10,.35),0 2px 4px rgba(0,0,0,.35)}
+.mico{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:4px;vertical-align:-3px;box-shadow:0 0 0 1px #f1d48a}.mico svg{width:11px;height:11px}
+.tc .orb svg{width:15px;height:15px;transform:rotate(-45deg);filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
 .tc .art{position:relative;margin:4px 2px 0;aspect-ratio:4/3;border:3px solid transparent;background:linear-gradient(135deg,var(--ty2),var(--ty)) padding-box,linear-gradient(135deg,#fff,#adb5bd 40%,#f1f3f5 60%,#868e96) border-box;box-shadow:0 2px 4px rgba(0,0,0,.25);overflow:hidden;max-width:100%}
 .tc .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .tc .art .no{position:absolute;inset:0;display:grid;place-items:center;font-size:64px;color:rgba(255,255,255,.85);font-weight:900}
@@ -95,7 +98,7 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .tc .mv{padding:10px 2px 2px}
 .tc .mvh{display:flex;align-items:center;gap:8px}
 .tc .cost{display:flex;gap:2px;flex:none;min-width:52px}
-.tc .cost i{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,var(--ty) 72%);box-shadow:0 0 0 1.5px #fff,0 1px 2px rgba(0,0,0,.35)}
+.tc .cost i{width:15px;height:15px;background:linear-gradient(135deg,#fff 10%,var(--ty) 70%);clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)}
 .tc .mvn{flex:1;min-width:0;font-size:18px;font-weight:900;letter-spacing:-.3px;color:#1d232a}
 .tc .dmg{font-size:22px;font-weight:900;color:#1d232a;white-space:nowrap;font-variant-numeric:tabular-nums}
 .tc .mvd{font-size:12.5px;line-height:1.5;color:#212529;padding:4px 0 0;white-space:pre-line}
@@ -399,7 +402,7 @@ body{color:var(--txt)}
 .orn{display:flex;align-items:center;gap:10px;justify-content:center;margin:6px 0 14px;font-family:'Song Myung',serif;font-size:17px;color:#f3d38a;letter-spacing:.25em}
 .orn::before,.orn::after{content:"";flex:1;max-width:90px;height:1px;background:linear-gradient(90deg,transparent,#b8822e)}.orn::after{transform:scaleX(-1)}
 .rvsum{position:relative;max-width:360px;border:1px solid var(--glassb);background:var(--glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#f0e4c8;box-shadow:0 10px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,230,170,.06);font-size:13.5px;line-height:2.05;padding:22px 20px 20px;white-space:normal;overflow:hidden;word-break:keep-all}
-.rvsum b{color:var(--gold2);font-family:'Song Myung',serif;font-weight:400;font-size:15px;letter-spacing:.25em;margin-bottom:8px}.rvsum i{color:#8a7856;font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:0}
+.rvsum b{color:var(--gold2);font-family:'Song Myung',serif;font-weight:400;font-size:15px;letter-spacing:.25em;margin-bottom:8px}.rvsum i{color:#8a7856;font-family:inherit;font-size:11px;letter-spacing:0}
 .rvsum .ln.gap{margin-top:12px}
 .rvsum .ln{display:block;margin-bottom:2px;opacity:0;transform:translateY(10px);filter:blur(4px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1),filter .8s ease;transition-delay:calc(var(--i) * .3s + .15s)}
 .rvsum.in .ln{opacity:1;transform:none;filter:none}
@@ -465,7 +468,7 @@ body{color:var(--txt)}
 .aura{top:0;bottom:0}
 .slot>.aura{display:none}
 .slot .mini{position:absolute;left:0;right:0;top:-46px;text-align:center;font-family:'Song Myung',serif;font-size:30px;color:#f7dc94;text-shadow:0 0 14px rgba(255,180,70,.7),0 2px 0 #3a2405;opacity:var(--mo,0);pointer-events:none;white-space:nowrap}
-.slot .mini small{display:block;font-family:-apple-system,sans-serif;font-size:15px;color:#d9c39a;letter-spacing:.2em;text-shadow:none;margin-top:4px}
+.slot .mini small{display:block;font-family:inherit;font-size:15px;color:#d9c39a;letter-spacing:.2em;text-shadow:none;margin-top:4px}
 .slot.legend .aura::before{box-shadow:0 0 40px 12px rgba(255,170,60,.65),0 0 110px 40px rgba(255,120,20,.3);animation:legendP .9s ease-in-out 4}
 @keyframes legendP{50%{box-shadow:0 0 60px 20px rgba(255,210,120,.85),0 0 150px 60px rgba(255,140,40,.4)}}
 .flip::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:16px;background:linear-gradient(110deg,transparent 35%,rgba(255,250,220,.75) 50%,transparent 65%);background-size:300% 100%;background-position:150% 0;opacity:0;z-index:9}
@@ -525,6 +528,38 @@ body{color:var(--txt)}
 .slot.legend .flip::before{background:radial-gradient(70% 50% at 50% 40%,rgba(255,244,210,.6),rgba(255,210,140,.18) 60%,transparent 80%);animation:onCard 2.6s ease-out forwards}
 .slot.legend .flip::after{animation:sheen 1.6s cubic-bezier(.4,0,.2,1) .2s 1}
 @media (prefers-reduced-motion:reduce){.cine{display:none}.tcw .aura::before{animation:none}}
+
+/* 새로고침 진행: 화면 전체를 덮는 지니 화면(탭하면 작게) + 헤더 아래 금빛 진행선 */
+.prog.run:not(.mini){position:fixed;inset:0;z-index:120;min-height:0;padding:24px;gap:16px;background:radial-gradient(60% 45% at 50% 45%,rgba(40,26,8,.9),rgba(5,3,1,.95));-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);animation:pIn .4s ease}
+@keyframes pIn{from{opacity:0}}
+.prog .pmed,.prog .ptl{display:none}
+.prog.run:not(.mini) .pmed{display:block;position:relative;width:120px;height:120px}
+.prog .pmed i{position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(227,183,90,.35);border-top-color:#f7dc94;box-shadow:0 0 30px rgba(227,183,90,.25);animation:pspin 1.6s linear infinite}
+.prog .pmed b{position:absolute;inset:26px;border-radius:50%;background:radial-gradient(circle,rgba(255,226,150,.9),rgba(227,170,70,.35) 45%,transparent 70%);animation:breathe 1.8s ease-in-out infinite alternate}
+@keyframes pspin{to{transform:rotate(360deg)}}
+.prog.run:not(.mini) .ptl{display:block;font-family:'Song Myung',serif;font-size:22px;color:#f7dc94;text-shadow:0 0 14px rgba(255,180,70,.5)}
+.prog.run:not(.mini) .bar{width:min(78%,320px)}
+.prog.run:not(.mini)::after{content:"화면을 누르면 작게 볼 수 있어요";position:absolute;bottom:calc(28px + env(safe-area-inset-bottom,0px));left:0;right:0;font-size:12px;color:rgba(217,195,154,.6)}
+.prog.run.mini{min-height:0;padding:0;height:0;overflow:hidden}
+.mbar{position:absolute;left:0;right:0;bottom:0;height:2px;opacity:0;transition:opacity .3s;pointer-events:none}
+.mbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7a4e12,#f7dc94,#b8822e);box-shadow:0 0 10px rgba(255,200,100,.9);transition:width .25s linear}
+body.scanning .mbar{opacity:1}
+
+/* v4 sticky 카드 장면 */
+.slot{padding-top:24px!important}
+.slot>.stk{position:sticky;top:58px;z-index:2}
+.stk>.tcw{position:relative;transform-origin:50% 0;will-change:transform}
+.stk>.mini{will-change:transform;top:-40px}
+.ent{position:relative;transform-origin:50% 50%}
+.pinsp{pointer-events:none}
+html.lockscr,html.lockscr body{overflow:hidden;overscroll-behavior:none;touch-action:none}
+.slot .cback .cm{position:absolute;top:50%;left:50%;margin:-75px 0 0 -75px}
+.fly .pic{display:block;height:auto;filter:brightness(.88) saturate(.9) drop-shadow(0 0 10px rgba(255,190,90,.25))}
+
+/* 글꼴: 카드 바깥은 모두 명조(한글·영어·숫자), 카드 안만 고딕 */
+html,body{font-family:'Nanum Myeongjo','Song Myung','AppleMyungjo','Noto Serif KR',serif}
+button,input,select,textarea{font-family:inherit}
+.tc,.tc *,.mc,.mc *{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
 </style>
 </head>
 <body>
@@ -551,7 +586,7 @@ body{color:var(--txt)}
   <div class="head">
     <h1><img class="bi" src="a/logo.webp" alt="" onerror="this.remove()"><span class="mt">다 이득 날지니<small>진탈이의 돈 버는 마법 카드</small></span></h1>
     <div class="right">
-      <span class="lamp" id="lamp" title="감시 연결 확인 중"></span>
+      <i class="mbar" id="mbar"><i id="mfill"></i></i><span class="lamp" id="lamp" title="감시 연결 확인 중"></span>
       <div class="icons">
         <button id="bScan" aria-label="새로고침"><img src="a/icons/refresh.png" alt=""></button>
         <button id="bInfo" aria-label="규칙"><img src="a/icons/info.png" alt=""></button>
@@ -586,7 +621,7 @@ body{color:var(--txt)}
     </div>
     <div class="hint" aria-hidden="true"><i></i></div>
   </div></header>
-  <div class="prog" id="prog"><div class="bar" id="progBar"><div class="fill" id="progFill"></div></div><div class="lab" id="progLab"></div><div class="quip" id="progQuip"></div><div class="upd" id="upd"></div></div>
+  <div class="prog" id="prog"><div class="pmed" aria-hidden="true"><i></i><b></b></div><div class="ptl">지니가 오늘의 카드를 찾는 중</div><div class="bar" id="progBar"><div class="fill" id="progFill"></div></div><div class="lab" id="progLab"></div><div class="quip" id="progQuip"></div><div class="upd" id="upd"></div></div>
   <div id="list"></div>
   <div class="status" id="status">연결 준비 중</div>
 </div>
@@ -654,6 +689,15 @@ function spark(v, g){
 function cell(l, v, s, col){ return '<div class="cell"><div class="l">' + esc(l) + '</div><div class="v" style="color:' + col + '">' + esc(v || '-') + '</div>' + (s ? '<div class="s" style="color:' + col + '">' + esc(s) + '</div>' : '') + '</div>'; }
 // 규칙별 타입(색) — 그림은 a/art/rNN.webp (맥 바탕화면 '박스권헌터 카드' 폴더와 같은 그림)
 // 규칙 타입 색(카드 게임에서 흔한 색만) — 지수 ①②③⑬ 파랑 · 개별주 ④⑦⑧ 초록 · 금 ⑤ 갈색 · 반도체 ⑥⑨ 노랑 · 인버스 ⑩ 회색 · 위기 ⑪ 빨강
+var TICO = (function(){ var s = function(d){ return '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
+  return { '지수': s('<path d="M3.5 18 9 12.5l4 2.5 6.5-8.5" stroke-opacity=".85"/><circle cx="3.5" cy="18" r="1.6" fill="#fff"/><circle cx="9" cy="12.5" r="1.6" fill="#fff"/><circle cx="13" cy="15" r="1.6" fill="#fff"/><path d="M19.5 3.2l1 2.3 2.3 1-2.3 1-1 2.3-1-2.3-2.3-1 2.3-1z" fill="#fff" stroke-width="1"/>'),
+    '개별주': s('<path d="M7 4h10l4 5-9 11L3 9z"/><path d="M3 9h18M9.5 4 8 9l4 11 4-11-1.5-5"/>'),
+    '금': s('<path d="M2.5 19h19l-2.5-5h-14zM7 14l2-4.5h6l2 4.5"/><path d="M12 3v2.5M8 4.5l1 1.5M16 4.5l-1 1.5"/>'),
+    '반도체': s('<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="#fff"/><path d="M9 2.5V6M15 2.5V6M9 18v3.5M15 18v3.5M2.5 9H6M2.5 15H6M18 9h3.5M18 15h3.5"/>'),
+    '인버스': s('<path d="M3 5l6 6 4-3.5 8 9"/><path d="M21 11v5.5h-5.5"/>'),
+    '위기': s('<path d="M12 2.8c1 3.4 5.5 5.6 5.5 10.6a5.5 5.5 0 0 1-11 0c0-2.6 1.4-4 2.6-5.2.3 1.7 1 2.7 2 3.2-.4-3.2.3-5.9.9-8.6z"/>'),
+    '상시': s('<path d="M6.5 3h11M6.5 21h11M7.5 3c0 5 9 6 9 9s-9 4-9 9M16.5 3c0 5-9 6-9 9s9 4 9 9"/>'),
+    '매수 금지': s('<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3" fill="#fff"/>') }; })();
 var RTYPE = {1:['#1c7ed6','#d0ebff','💧','지수'],2:['#339af0','#d0ebff','💧','지수'],3:['#1971c2','#d0ebff','💧','지수'],
   4:['#2b8a3e','#d3f9d8','🍃','개별주'],7:['#37b24d','#ebfbee','🍃','개별주'],8:['#40c057','#d3f9d8','🍃','개별주'],
   5:['#d9822b','#ffe8cc','✨','금'],6:['#f59f00','#fff3bf','⚡','반도체'],9:['#fab005','#fff9db','⚡','반도체'],
@@ -728,7 +772,7 @@ function card(c, sh){
   var sl = shareSlug(c), aid = sh ? cardAnchor(c) : '';
   return '<div class="tc g' + T + (no === 10 || no === 13 ? ' dark' : '') + '"' + (sh ? ' id="' + aid + '" data-sl="' + sl + '"' : '') + ' style="--ty:' + ty[0] + ';--ty2:' + ty[1] + '"><div class="in">' +
     '<div class="hd"><span class="stage">' + esc(ty[3]) + '</span><div class="nm">' + (ep ? '<span class="ep">' + esc(ep) + '</span> ' : '') + esc(c.n) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' +
-      badge(g, 1, T) + '<div class="orb">' + ty[2] + '</div>' + (sh ? '<button class="shr" data-u="' + esc(shareUrl(c)) + '" aria-label="카드 공유" title="공유">' + SHR_ICON + '</button>' : '') + '</div>' +
+      badge(g, 1, T) + '<div class="orb" title="' + esc(ty[3]) + '">' + (TICO[ty[3]] || TICO['개별주']) + '</div>' + (sh ? '<button class="shr" data-u="' + esc(shareUrl(c)) + '" aria-label="카드 공유" title="공유">' + SHR_ICON + '</button>' : '') + '</div>' +
     '<div class="art"><div class="no">' + (CIRC.charAt(no - 1) || '★') + '</div>' + (no ? '<img src="a/art/' + (c.art || 'r' + nn) + '.webp" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
     '<div class="dex">' + (c.dex ? esc(c.dex) : (kr ? '🇰🇷' : '🇺🇸') + ' 현재가 ' + esc(c.px || '-') + ' · 오늘 ' + esc(c.ch || '-')) + '</div>' +
     '<div class="mv"><div class="mvh"><div class="cost">' + ci + '</div><div class="mvn">' + esc(mvName || '매수 의견') + '</div></div>' +
@@ -1017,7 +1061,8 @@ function requestScan(){
     .then(function(r){ if (!r.ok) throw new Error(r.status); state.sending = false; })
     .catch(function(e){ state.sending = false; finishProg(false, '요청 실패 · ' + e.message); });
 }
-function showProg(){ $('prog').classList.add('run'); $('progLab').textContent = ''; clearInterval(progTimer); progTimer = setInterval(updProg, 250); updProg(); }
+$('prog').addEventListener('click', function(){ if (this.classList.contains('run')) this.classList.toggle('mini'); });
+function showProg(){ $('prog').classList.add('run'); $('prog').classList.remove('mini'); document.body.classList.add('scanning'); $('progLab').textContent = ''; clearInterval(progTimer); progTimer = setInterval(updProg, 250); updProg(); }
 // 로딩 농담(게임 로딩 문구처럼, 3.5초마다 바뀜)
 var QUIPS = ["차트에 마법 가루 뿌리는 중…", "진탈이가 마법봉을 닦고 있어요", "캔들을 하나씩 세는 중… 양봉이 좀 더 많았으면", "나스닥에게 오늘 기분을 묻는 중", "반도체 칩을 귀에 대고 소리 듣는 중", "주가가 도망가지 못하게 울타리 치는 중", "손절선 위치를 다시 한번 확인하는 중", "익절가에 리본 다는 중", "겁먹은 개미들을 토닥이는 중", "세력의 발자국을 줍는 중(아직 못 찾음)", "금괴를 저울에 올려 보는 중", "유가 냄새를 킁킁 맡는 중", "분화구 깊이를 재는 중", "용수철 탄성 점검 중", "상자 바닥이 튼튼한지 두드려 보는 중", "S등급 카드는 아껴 두는 중", "카드 덱 섞는 중… 반칙은 안 해요", "10년 치 차트를 빨리 감기 하는 중", "연준 의장 표정 읽는 중", "CPI 발표 전에 숨 고르는 중", "물타기 할 물을 끓이는 중(아직 안 부어요)", "몰빵 금지 스티커 붙이는 중", "백테스트 기계에 동전 넣는 중", "과거의 나에게 사과하는 중", "‘이번엔 다르다’를 걸러 내는 중", "공포 지수 체온 재는 중", "진탈이가 커피를 내리는 중 ☕", "데이마켓 문 두드리는 중", "급등주 유혹을 꾹 참는 중", "손가락이 매수 버튼 누르지 않게 묶는 중", "카드 테두리에 펄 코팅 바르는 중", "확률을 확률적으로 계산하는 중", "행운의 양봉을 부르는 주문 외우는 중", "시장의 소음을 음소거하는 중"];
 var quipAt = 0, quipI = Math.floor(Math.random() * QUIPS.length);
@@ -1032,15 +1077,15 @@ function updProg(){
   else { var e2 = (now - state.ackAt) / 1000; p = .3 + .65 * (1 - Math.exp(-e2 / 40)); lab = '맥에서 지금 시세로 검색 중… ' + Math.floor(e2) + '초'; }
   // 실시간 연결(아이폰 사파리는 자주 끊김)을 믿지 않고 검색 중엔 3초마다 직접 확인(2026-10-17 결과가 왔는데 화면은 '실패'로 끝나던 문제)
   if (!state.sending && now - (state.pollAt || 0) > 3000) { state.pollAt = now; poll(T.alerts, Math.floor(state.reqAt / 1000) - 10).catch(function(){}); }
-  $('progFill').style.width = (p * 100).toFixed(1) + '%'; $('progLab').hidden = true; quip(); // 진행 중엔 파란 상태 글씨 대신 농담만
+  $('progFill').style.width = $('mfill').style.width = (p * 100).toFixed(1) + '%'; $('progLab').hidden = true; quip(); // 진행 중엔 파란 상태 글씨 대신 농담만
 }
 function finishProg(ok, msg){
   if (!state.reqAt || state.doneAt) return;
   state.doneAt = Date.now(); clearInterval(progTimer);
   $('progQuip').textContent = ''; quipAt = 0; $('progLab').hidden = false;
-  if (ok) { $('progFill').style.width = '100%'; $('progLab').textContent = '검색 완료'; $('progLab').style.color = 'var(--good)'; }
+  if (ok) { $('progFill').style.width = $('mfill').style.width = '100%'; $('progLab').textContent = '검색 완료'; $('progLab').style.color = 'var(--good)'; }
   else { $('progLab').textContent = msg || '검색 실패'; $('progLab').style.color = 'var(--warn)'; }
-  setTimeout(function(){ $('prog').classList.remove('run'); $('progFill').style.width = '0'; $('progLab').textContent = ''; tick(); }, ok ? 1500 : 5000);
+  setTimeout(function(){ $('prog').classList.remove('run'); document.body.classList.remove('scanning'); $('progFill').style.width = $('mfill').style.width = '0'; $('progLab').textContent = ''; tick(); }, ok ? 1500 : 5000);
 }
 
 
@@ -1200,7 +1245,7 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
     chart: '<svg width="86" height="54" viewBox="0 0 86 54"><path d="M2 50 L82 50 M2 4 L2 50" stroke="#6e5420" stroke-width="1"/><polyline points="4,44 16,38 24,42 36,28 46,32 58,18 68,22 80,6" fill="none" stroke="#e3b75a" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M80 6 L72 7 M80 6 L78 14" stroke="#e3b75a" stroke-width="2.6" stroke-linecap="round"/><circle cx="80" cy="6" r="3" fill="#fff1c4"/></svg>',
     coin: '<svg width="22" height="22" viewBox="0 0 26 26"><circle cx="13" cy="13" r="12" fill="#8a5a14" stroke="#e3b75a" stroke-width="1.2"/><circle cx="13" cy="13" r="8" fill="none" stroke="#e3b75a" stroke-width=".8"/></svg>'
   };
-  ['brief', 'gavel', 'chip', 'bag', 'genie'].forEach(function(k){ SV['carpet_' + k] = carpetSVG(k); });
+  SV.carpet_genie = carpetSVG('genie'); ['tycoon', 'banker', 'engineer'].forEach(function(k){ SV['carpet_' + k] = '<img class="pic" src="a/fly/' + k + '.webp" width="170" alt="" decoding="async">'; }); SV.rocket = '<img class="pic" src="a/fly/rocket.webp" width="150" alt="" decoding="async" style="transform:scaleX(-1)">';
   var flyz = $('flyz');
   function spawn(kind){ if (!flyz || document.hidden) return; var d = document.createElement('div'); d.className = 'fly ' + kind.split('_')[0]; d.innerHTML = SV[kind]; flyz.appendChild(d);
     var w = innerWidth, h = innerHeight, kf, dur, op = .8, ltr = Math.random() < .5;
@@ -1210,8 +1255,8 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
     else if (kind === 'candle' || kind === 'chart') { var x2 = w * (.05 + Math.random() * .85); kf = [0, .5, 1].map(function(k){ return { transform: 'translate(' + (x2 + Math.sin(k * 5) * 24) + 'px,' + (h * .92 - k * h * .82) + 'px) rotate(' + (kind === 'chart' ? Math.sin(k * 4) * 8 : 0) + 'deg)', opacity: k === 0 || k === 1 ? 0 : .6 }; }); dur = 13000 + Math.random() * 6000; }
     else { var x3 = w * Math.random(), dx = (Math.random() - .5) * w * .6; kf = [0, .5, 1].map(function(k){ return { transform: 'translate(' + (x3 + dx * k) + 'px,' + (-40 + k * h * .8) + 'px) rotate(' + (k * (kind === 'bill' ? 160 : 360)) + 'deg)', opacity: k === 0 || k === 1 ? 0 : .7 }; }); dur = 13000 + Math.random() * 6000; }
     var a = d.animate(kf, { duration: dur, easing: 'linear' }); a.onfinish = function(){ d.remove(); }; }
-  if (!RM) { var KINDS = ['carpet_brief', 'carpet_gavel', 'carpet_chip', 'carpet_bag', 'carpet_genie', 'rocket', 'parrot', 'candle', 'candle', 'chart', 'chart', 'bill', 'bill', 'coin'];
-    setTimeout(function(){ spawn('carpet_genie'); }, 3500); setTimeout(function(){ spawn('bill'); }, 5000); setTimeout(function(){ spawn('rocket'); }, 9000);
+  if (!RM) { var KINDS = ['carpet_tycoon', 'carpet_banker', 'carpet_engineer', 'carpet_tycoon', 'carpet_banker', 'carpet_engineer', 'carpet_genie', 'rocket', 'parrot', 'candle', 'candle', 'chart', 'chart', 'bill', 'bill', 'coin'];
+    setTimeout(function(){ spawn('carpet_tycoon'); }, 3500); setTimeout(function(){ spawn('bill'); }, 5000); setTimeout(function(){ spawn('rocket'); }, 9000);
     setInterval(function(){ if (flyz.children.length < 5) spawn(KINDS[Math.floor(Math.random() * KINDS.length)]); }, 3600); }
   // ── v3 카드 장면: 아래에서 작게 떠올라 화면 가운데 머묾(빛·이름만) → 스크롤하면 화면 쪽으로 확대 → 읽기
   var ease = function(x){ return 1 - Math.pow(1 - x, 3); }, eio = function(x){ return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
@@ -1230,20 +1275,21 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
   var BYRULE = { 1: 'slip', 2: 'box', 3: 'rocket', 4: 'spring', 5: 'coin', 6: 'quake', 7: 'flip', 8: 'spring', 9: 'quake', 10: 'storm', 11: 'storm', 12: 'fade', 13: 'smoke', 14: 'quake', 15: 'home' };
   var SEEN = {}; try { SEEN = JSON.parse(localStorage.getItem('genieSeen') || '{}'); } catch(e){}
   function saveSeen(){ try { var now = Date.now(); for (var k in SEEN) if (now - SEEN[k] > 30 * 864e5) delete SEEN[k]; localStorage.setItem('genieSeen', JSON.stringify(SEEN)); } catch(e){} }
-  var slots = [], SMIN = .3;
+  var slots = [], SMIN = .32, HDR = 58;
+  // v4 카드 장면: 카드 상자(.stk)는 CSS sticky로 화면에 붙음(스크롤 보정 계산이 없어 흔들림 없음). 붙어 있는 짧은 구간에서만 작게→크게 확대
+  function lockScroll(on){ document.documentElement.classList.toggle('lockscr', on); }
+  var stopEv = function(e){ if (document.documentElement.classList.contains('lockscr')) e.preventDefault(); };
+  addEventListener('wheel', stopEv, { passive: false }); addEventListener('touchmove', stopEv, { passive: false });
   function onScroll(){ sy = scrollY; var hb = hero ? hero.getBoundingClientRect().bottom : 0; root.style.setProperty('--hp', Math.max(0, Math.min(1, 1 - hb / (innerHeight * .4))).toFixed(3)); root.style.setProperty('--sy', sy.toFixed(0));
-    if (RM) return; var vh = innerHeight, HDR = 60;
-    for (var i = 0; i < slots.length; i++) { var sl = slots[i], w = sl._w, r = sl.getBoundingClientRect(); if (r.bottom < -400 || r.top > vh + 400) continue;
-      var pin = sl._pin, ch = w.offsetHeight, nat = r.top + pin, A = r.top - HDR, p = A <= 0 && !sl._hold ? Math.min(1, -A / pin) : 0, e = eio(p);
-      var s = SMIN + (1 - SMIN) * e, vis = Math.min(ch * SMIN, vh * .5), c0 = vh * .5 - vis * .5 + 20, top, tf = '';
-      if (A > 0) { top = Math.max(c0, A + HDR + 50); var u = Math.max(0, Math.min(1, A / (vh * .7))); tf = sl._hold ? '' : MOVE[sl._mv](ease(u)); sl._t = sl._hold ? 1 : 1 - u; }
-      else { top = A < -pin && !sl._hold ? HDR + A + pin : c0 + (HDR - c0) * e; sl._t = 1; }
-      w.style.transform = 'translate3d(0,' + (top - nat).toFixed(1) + 'px,0) ' + tf + ' scale(' + s.toFixed(3) + ')';
-      w.style.opacity = A > vh * .9 ? '0' : Math.min(1, 1.6 - A / vh * 1.3).toFixed(3);
-      sl.style.setProperty('--mo', (p > 0 ? Math.max(0, 1 - p * 3) : Math.max(0, Math.min(1, 1 - A / (vh * .5)))).toFixed(3));
-      sl.querySelector('.mini').style.transform = 'translate3d(0,' + (top - nat + pin - 10).toFixed(1) + 'px,0)';
-      if ((A + HDR + 50 <= c0 + 6 || A < 0) && sl._rev && !sl._done) { sl._done = 1; sl._hold = 1; (function(sl, w){ w.classList.add('ease'); setTimeout(function(){ w.classList.remove('ease'); }, 800); setTimeout(function(){ reveal(sl); }, 820); })(sl, w); } } }
-  // ── 발견 효과(처음 보는 카드만): 어두워지며 소용돌이 빛이 빨려 들어감 → 뒷면이 떠올라 떨림 → 하얀 섬광과 함께 휙 뒤집힘 → 불덩이·충격파·불꽃 파편·금화 분수·별 → 카드 둘레 불꽃 테두리 + 빛 훑기
+    if (RM) return; var vh = innerHeight;
+    for (var i = 0; i < slots.length; i++) { var sl = slots[i], r = sl.getBoundingClientRect(); if (r.bottom < -200 || r.top > vh + 200) continue;
+      var ch = sl._t.offsetHeight, A = r.top - HDR, p = A <= 0 && !sl._hold ? Math.min(1, -A / sl._pin) : 0, e = eio(p);
+      var s = SMIN + (1 - SMIN) * e, vis = Math.min(ch * SMIN, vh * .55), off = Math.max(0, vh * .5 - vis * .5 + 16 - HDR) * (1 - e);
+      if (sl._ps !== s.toFixed(4)) { sl._ps = s.toFixed(4); sl._t.style.transform = 'translate3d(0,' + off.toFixed(1) + 'px,0) scale(' + s.toFixed(4) + ')'; sl._mn.style.transform = 'translate3d(0,' + off.toFixed(1) + 'px,0)'; }
+      sl.style.setProperty('--mo', (p > 0 ? Math.max(0, 1 - p * 3) : Math.max(0, Math.min(1, 1.3 - A / (vh * .55)))).toFixed(3));
+      if (A <= 2 && sl._rev && !sl._done) { sl._done = 1; sl._hold = 1; scrollTo(0, scrollY + A); lockScroll(true); (function(sl){ setTimeout(function(){ reveal(sl); }, 120); })(sl); } } }
+  function enter(sl){ if (sl._rev || sl._in) return; sl._in = 1; var f = MOVE[sl._mv], kf = []; for (var k = 0; k <= 10; k++) { var u = 1 - k / 10; kf.push({ transform: f(ease(u)) || 'none', opacity: Math.min(1, .25 + k / 6) }); } sl._en.animate(kf, { duration: 900, easing: 'cubic-bezier(.2,.7,.3,1)' }); }
+  var eio2 = null;
   // ── 발견 연출(처음 보는 카드만, 시네마틱): 위아래 검은 띠가 닫히고 → 하늘에서 빛기둥이 카드로 내려오며 먼지가 떠오름 → 카드가 부드럽게 뒤집히며 번지는 빛(블룸)과 가로 렌즈 플레어 → 빛이 걷히고 카드 둘레 금빛만 남음
   var fxc = document.createElement('canvas'); fxc.id = 'fxc'; document.body.appendChild(fxc); var fx = fxc.getContext('2d'), FP = [], fxOn = false;
   var dim = document.createElement('div'); dim.className = 'dim'; document.body.appendChild(dim);
@@ -1278,7 +1324,7 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
       setTimeout(function(){ sl.classList.remove('hid'); }, 380);
       setTimeout(function(){ sl.classList.remove('flipping'); sl.classList.add('legend'); dim.classList.remove('on'); }, 900);
       setTimeout(function(){ cine.classList.remove('on'); }, 1700);
-      setTimeout(function(){ sl._hold = 0; w.classList.add('ease'); onScroll(); setTimeout(function(){ w.classList.remove('ease'); }, 900); }, 2200);
+      setTimeout(function(){ sl._hold = 0; lockScroll(false); onScroll(); }, 2000);
       setTimeout(function(){ sl.classList.remove('legend'); }, 5200);
       SEEN[sl._key] = Date.now(); saveSeen(); }, 1350); }
   var ticking = false; addEventListener('scroll', function(){ if (!ticking) { ticking = true; requestAnimationFrame(function(){ ticking = false; onScroll(); }); } }, { passive: true });
@@ -1288,14 +1334,16 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
     var first = true;
     [].slice.call(L.querySelectorAll(':scope > .tc')).forEach(function(tc){ var nx = tc.nextElementSibling, sl = document.createElement('div'), w = document.createElement('div'), fl = document.createElement('div'); sl.className = 'slot'; w.className = 'tcw'; fl.className = 'flip';
       var fs = tc.querySelector('.ft span'), no = ruleNo(fs ? (fs.textContent.split('규칙 ')[1] || '').charAt(0) : ''), T = (tc.className.match(/\bg(S|A|Bp|B|Cp|C|Z)\b/) || [])[1] || 'B';
-      sl._mv = T === 'C' ? 'fade' : (BYRULE[no] || 'flip'); sl._z = T === 'Z'; sl.classList.add('g' + T); sl._pin = Math.round(innerHeight * (T === 'C' ? .45 : .8)); sl.style.setProperty('--pin', sl._pin + 'px');
+      sl._mv = T === 'C' ? 'fade' : (BYRULE[no] || 'flip'); sl._z = T === 'Z'; sl.classList.add('g' + T); sl._pin = Math.round(innerHeight * (T === 'C' ? .18 : .3));
       var key = (tc.id || tc.textContent.slice(0, 40)); sl._key = key;
       sl._rev = !RM && T !== 'C' && !(SEEN[key] && Date.now() - SEEN[key] < 3 * 864e5); if (sl._rev) sl.classList.add('hid');
       var nm = (tc.querySelector('.mvn') || {}).textContent || '', tk = ((tc.querySelector('.nm') || {}).childNodes || []), tick = ''; [].forEach.call(tk, function(x){ if (x.nodeType === 3) tick += x.textContent; }); tick = tick.trim();
       var au = '<div class="aura">'; for (var k = 0; k < 14; k++) au += '<i style="left:' + (Math.random() < .5 ? -3 + Math.random() * 5 : 98 + Math.random() * 5).toFixed(1) + '%;animation-duration:' + (5 + Math.random() * 5).toFixed(1) + 's;animation-delay:-' + (Math.random() * 8).toFixed(1) + 's;--dx:' + ((Math.random() - .5) * 40).toFixed(0) + 'px"></i>'; au += '</div>';
-      sl.innerHTML = '<div class="mini">' + esc(nm) + '<small>' + esc(tick) + '</small></div>'; tc.parentNode.insertBefore(sl, tc); fl.appendChild(tc); if (sl._rev) fl.insertAdjacentHTML('beforeend', '<div class="cback">' + CM + '</div>'); w.innerHTML = au; w.appendChild(fl); sl.appendChild(w); sl._w = w; if (nx && nx.classList.contains('freqo')) sl.appendChild(nx);
+      sl.innerHTML = '<div class="mini">' + esc(nm) + '<small>' + esc(tick) + '</small></div>'; tc.parentNode.insertBefore(sl, tc); fl.appendChild(tc); if (sl._rev) fl.insertAdjacentHTML('beforeend', '<div class="cback">' + CM + '</div>'); var en = document.createElement('div'); en.className = 'ent'; en.innerHTML = au; en.appendChild(fl); w.appendChild(en); var stk = document.createElement('div'); stk.className = 'stk'; var mn = sl.querySelector('.mini'); stk.appendChild(mn); stk.appendChild(w); sl.appendChild(stk); sl.insertAdjacentHTML('beforeend', '<div class="pinsp" style="height:' + sl._pin + 'px"></div>'); sl._w = w; sl._t = w; sl._en = en; sl._mn = mn; if (nx && nx.classList.contains('freqo')) sl.appendChild(nx);
+      if (sl._rev && window.ResizeObserver) { var cb = fl.querySelector('.cback'); new ResizeObserver(function(){ cb.style.cssText = 'inset:auto;left:' + tc.offsetLeft + 'px;top:' + tc.offsetTop + 'px;width:' + tc.offsetWidth + 'px;height:' + tc.offsetHeight + 'px;max-width:none;margin:0'; }).observe(tc); }
       if (first && !L.querySelector('.orn')) { sl.insertAdjacentHTML('beforebegin', '<div class="orn">오늘의 카드</div>'); first = false; } });
     slots = [].slice.call(L.querySelectorAll('.slot'));
+    if (!RM && window.IntersectionObserver) { var io = new IntersectionObserver(function(es){ es.forEach(function(x){ if (x.isIntersecting) { var s2 = x.target; enter(s2); io.unobserve(s2); } }); }, { threshold: .02, rootMargin: '0px 0px -12% 0px' }); slots.forEach(function(s2){ io.observe(s2); }); }
     // 종합 의견: 쉼표·문장 끝에서 줄을 나눠 짧게
     var rs = L.querySelector('.rvsum'); if (rs) { var b = rs.querySelector('b'), txt = rs.textContent.slice(b ? b.textContent.length : 0), out = [], gi = 0;
       txt.split('\n').forEach(function(par, pi){ par.split(/(?<=[,.!?])\s+/).forEach(function(seg, si){ out.push('<span class="ln' + (pi && !si ? ' gap' : '') + '" style="--i:' + (gi++) + '">' + esc(seg) + '</span>'); }); });
