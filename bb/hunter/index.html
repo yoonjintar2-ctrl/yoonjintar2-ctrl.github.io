@@ -98,7 +98,7 @@ body{padding:0 0 env(safe-area-inset-bottom,0)}
 .tc .mv{padding:10px 2px 2px}
 .tc .mvh{display:flex;align-items:center;gap:8px}
 .tc .cost{display:flex;gap:2px;flex:none;min-width:52px}
-.tc .cost i{width:15px;height:15px;background:linear-gradient(135deg,#fff 10%,var(--ty) 70%);clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)}
+.tc .cost i{position:relative;width:17px;height:17px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,var(--ty2) 30%,var(--ty) 75%);box-shadow:0 0 0 1.5px #fff,0 1px 2px rgba(0,0,0,.35)}.tc .cost i::after{content:"";position:absolute;inset:3px;background:#fff;clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%);filter:drop-shadow(0 0 1px rgba(0,0,0,.3))}
 .tc .mvn{flex:1;min-width:0;font-size:18px;font-weight:900;letter-spacing:-.3px;color:#1d232a}
 .tc .dmg{font-size:22px;font-weight:900;color:#1d232a;white-space:nowrap;font-variant-numeric:tabular-nums}
 .tc .mvd{font-size:12.5px;line-height:1.5;color:#212529;padding:4px 0 0;white-space:pre-line}
@@ -405,7 +405,7 @@ body{color:var(--txt)}
 .rvsum b{color:var(--gold2);font-family:'Song Myung',serif;font-weight:400;font-size:15px;letter-spacing:.25em;margin-bottom:8px}.rvsum i{color:#8a7856;font-family:inherit;font-size:11px;letter-spacing:0}
 .rvsum .ln.gap{margin-top:12px}
 .rvsum .ln{display:block;margin-bottom:2px;opacity:0;transform:translateY(10px);filter:blur(4px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1),filter .8s ease;transition-delay:calc(var(--i) * .3s + .15s)}
-.rvsum.in .ln{opacity:1;transform:none;filter:none}
+.rvsum.in .ln{opacity:1;transform:none;filter:none}.rvsum.now .ln{transition:none}
 .note,.none,.status,.about,.baseh,.baseh small,.freqo{color:var(--txt2)}.none b{color:#f3e7cc}.about b{color:#d9c39a}.baseh{border-top-color:rgba(227,183,90,.15)}
 .rvout{background:var(--glass);color:#f0e4c8;border:1px solid var(--glassb)}
 .tc,.mc{color:var(--ink)}.sheet,.ov{color:var(--ink)}
@@ -534,8 +534,6 @@ body{color:var(--txt)}
 @keyframes pIn{from{opacity:0}}
 .prog .pmed,.prog .ptl{display:none}
 .prog.run:not(.mini) .pmed{display:block;position:relative;width:120px;height:120px}
-.prog .pmed i{position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(227,183,90,.35);border-top-color:#f7dc94;box-shadow:0 0 30px rgba(227,183,90,.25);animation:pspin 1.6s linear infinite}
-.prog .pmed b{position:absolute;inset:26px;border-radius:50%;background:radial-gradient(circle,rgba(255,226,150,.9),rgba(227,170,70,.35) 45%,transparent 70%);animation:breathe 1.8s ease-in-out infinite alternate}
 @keyframes pspin{to{transform:rotate(360deg)}}
 .prog.run:not(.mini) .ptl{display:block;font-family:'Song Myung',serif;font-size:22px;color:#f7dc94;text-shadow:0 0 14px rgba(255,180,70,.5)}
 .prog.run:not(.mini) .bar{width:min(78%,320px)}
@@ -560,6 +558,35 @@ html.lockscr,html.lockscr body{overflow:hidden;overscroll-behavior:none;touch-ac
 html,body{font-family:'Nanum Myeongjo','Song Myung','AppleMyungjo','Noto Serif KR',serif}
 button,input,select,textarea{font-family:inherit}
 .tc,.tc *,.mc,.mc *{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+.prog:not(.run) .lab,.prog:not(.run) .quip,.prog:not(.run) .ptl{display:none}
+
+/* 작은 카드 위 이름·한 줄 설명: 카드와 넉넉히 떨어뜨림 */
+.stk>.mini{top:auto!important;bottom:calc(100% + 34px);padding:0 22px;white-space:normal;line-height:1.25}
+.stk>.mini .mt2{display:block;font-size:30px}
+.stk>.mini .mst{display:block;margin:12px auto 0;max-width:300px;font-family:'Nanum Myeongjo',serif;font-size:14.5px;line-height:1.6;color:#e6d3a6;text-shadow:0 1px 8px rgba(0,0,0,.8);word-break:keep-all}
+.stk>.mini small{margin-top:10px;letter-spacing:.3em;font-size:13px;color:#b89c62}
+
+/* 새로고침: 램프를 천으로 문지르면 반짝이며 연기가 피어오름 */
+.prog.run:not(.mini) .pmed{width:200px;height:150px}
+.pmed .plamp{position:absolute;left:20px;bottom:10px;width:160px;filter:drop-shadow(0 0 14px rgba(255,190,80,.45))}
+.pmed .pglow{position:absolute;inset:auto 0 0;height:120px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,210,120,.45),transparent);animation:breathe 1.2s ease-in-out infinite alternate}
+.pmed .psh{animation:psh .9s ease-in-out infinite}
+@keyframes psh{0%{transform:skewX(-20deg) translateX(0)}100%{transform:skewX(-20deg) translateX(190px)}}
+.pmed .cloth{position:absolute;left:62px;bottom:52px;width:58px;height:34px;border-radius:40% 60% 45% 55%/55% 45% 60% 40%;background:linear-gradient(135deg,#a8324a,#6d1f37 60%,#4a1428);box-shadow:inset 0 -4px 8px rgba(0,0,0,.35),0 4px 10px rgba(0,0,0,.5);animation:rub .45s ease-in-out infinite alternate}
+.pmed .cloth::before{content:"";position:absolute;left:8px;right:8px;top:6px;height:2px;background:repeating-linear-gradient(90deg,#f1d48a 0 4px,transparent 4px 8px);opacity:.7}
+@keyframes rub{0%{transform:translateX(-26px) rotate(-12deg)}100%{transform:translateX(26px) rotate(10deg)}}
+.pmed .psm{position:absolute;left:150px;bottom:92px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,rgba(255,236,190,.55),rgba(227,183,90,.15) 60%,transparent 70%);filter:blur(2px);opacity:0;animation:psm 2.4s ease-out infinite}
+.pmed .psm.b{animation-delay:.8s}.pmed .psm.c{animation-delay:1.6s}
+@keyframes psm{0%{opacity:0;transform:translate(0,0) scale(.4)}20%{opacity:.9}100%{opacity:0;transform:translate(-30px,-90px) scale(2.6)}}
+.pmed .psp{position:absolute;width:10px;height:10px;background:#fff6d6;clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%);opacity:0;animation:psp 1.3s ease-in-out infinite}
+.pmed .psp.a{left:58px;bottom:84px}.pmed .psp.b{left:118px;bottom:66px;animation-delay:.45s}.pmed .psp.c{left:40px;bottom:50px;animation-delay:.9s}
+@keyframes psp{0%,100%{opacity:0;transform:scale(.3) rotate(0)}50%{opacity:1;transform:scale(1.2) rotate(45deg)}}
+.prog.run:not(.mini) .pmed{width:240px;height:150px}
+.pmed .plamp{left:10px;bottom:6px;width:220px}
+.pmed .cloth{left:96px;bottom:66px;width:46px;height:24px;opacity:.95}
+@keyframes rub{0%{transform:translateX(-34px) translateY(4px) rotate(-14deg)}100%{transform:translateX(30px) translateY(-2px) rotate(12deg)}}
+.pmed .psm{left:196px;bottom:104px}
+.prog .ptl small{display:block;margin-top:8px;font-family:'Nanum Myeongjo',serif;font-size:13px;color:#cdb786;text-shadow:none}
 </style>
 </head>
 <body>
@@ -621,7 +648,7 @@ button,input,select,textarea{font-family:inherit}
     </div>
     <div class="hint" aria-hidden="true"><i></i></div>
   </div></header>
-  <div class="prog" id="prog"><div class="pmed" aria-hidden="true"><i></i><b></b></div><div class="ptl">지니가 오늘의 카드를 찾는 중</div><div class="bar" id="progBar"><div class="fill" id="progFill"></div></div><div class="lab" id="progLab"></div><div class="quip" id="progQuip"></div><div class="upd" id="upd"></div></div>
+  <div class="prog" id="prog"><div class="pmed" aria-hidden="true"><b class="pglow"></b><svg class="plamp" viewBox="0 0 140 80"><defs><linearGradient id="plg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff1c4"/><stop offset=".45" stop-color="#e3b75a"/><stop offset="1" stop-color="#7a4e12"/></linearGradient><linearGradient id="pls" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><clipPath id="plc"><path d="M20 48 C20 34 40 28 60 28 C76 28 88 34 92 40 L114 26 C116 25 118 27 116 29 L98 48 C94 56 80 60 60 60 C38 60 20 58 20 48Z"/></clipPath></defs><path d="M22 42 C8 38 4 52 16 54" fill="none" stroke="url(#plg)" stroke-width="5" stroke-linecap="round"/><path d="M50 28 C50 18 70 18 70 28Z" fill="url(#plg)"/><circle cx="60" cy="16" r="3" fill="#f7dc94"/><path d="M20 48 C20 34 40 28 60 28 C76 28 88 34 92 40 L114 26 C116 25 118 27 116 29 L98 48 C94 56 80 60 60 60 C38 60 20 58 20 48Z" fill="url(#plg)"/><path d="M44 60 L76 60 L82 70 L38 70Z" fill="url(#plg)"/><g clip-path="url(#plc)"><rect class="psh" x="-40" y="20" width="30" height="50" fill="url(#pls)" transform="skewX(-20)"/></g></svg><i class="cloth"></i><i class="psm a"></i><i class="psm b"></i><i class="psm c"></i><i class="psp a"></i><i class="psp b"></i><i class="psp c"></i></div><div class="ptl">램프를 문지르는 중…<small>지니가 오늘의 카드를 찾고 있어요</small></div><div class="bar" id="progBar"><div class="fill" id="progFill"></div></div><div class="lab" id="progLab"></div><div class="quip" id="progQuip"></div><div class="upd" id="upd"></div></div>
   <div id="list"></div>
   <div class="status" id="status">연결 준비 중</div>
 </div>
@@ -1240,24 +1267,25 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
   var SV = {
     parrot: '<svg width="58" height="40" viewBox="0 0 64 44"><g fill="' + INK + '"><path d="M8 26 C14 18 26 16 36 18 C42 12 50 10 56 14 C60 16 62 20 58 22 C54 22 52 24 50 26 C46 32 36 34 26 32 C18 36 8 40 0 42 C4 36 8 32 8 26Z"/><path d="M58 14 C62 14 64 17 62 20 L58 19Z"/></g><g class="wg"><path d="M24 20 C26 8 36 0 46 2 C40 8 38 14 34 20Z" fill="' + INK2 + '"/></g><circle cx="54" cy="15" r="1.3" fill="' + GLD + '"/></svg>',
     rocket: '<svg width="130" height="64" viewBox="0 0 130 64"><g class="fl"><path d="M8 34 C0 30 0 38 8 34 L26 28 L26 40Z" fill="#ff9f1c" opacity=".85"/><path d="M14 34 L26 31 L26 37Z" fill="#fff1c4"/></g><path d="M26 26 L92 24 C108 24 122 30 126 34 C122 38 108 44 92 44 L26 42Z" fill="' + INK2 + '" stroke="' + GLD + '" stroke-width="1.2"/><path d="M34 26 L22 12 L48 25Z M34 42 L22 56 L48 43Z" fill="' + INK + '" stroke="' + GLD + '" stroke-width="1"/><circle cx="96" cy="34" r="5" fill="#ffd27a" opacity=".7"/><path d="M58 24 C58 14 64 8 70 8 C76 8 82 14 82 24Z" fill="#6b5a3a" stroke="#ffd27a" stroke-width="1"/><path d="M62 24 L64 18 L76 18 L78 24" fill="none" stroke="#ffd27a" stroke-width=".8"/><circle cx="70" cy="14" r="7" fill="none" stroke="' + GLD + '" stroke-width="1.4"/><path d="M66 13 C68 11 72 11 74 13" stroke="#ffd27a" stroke-width="1" fill="none"/></svg>',
-    candle: '<svg width="14" height="52" viewBox="0 0 16 58"><rect x="7" y="0" width="2" height="58" fill="#8a6a20"/><rect x="2" y="12" width="12" height="34" rx="2" fill="#a0782a"/></svg>',
+    candle: '<svg width="64" height="76" viewBox="0 0 64 76"><g filter="drop-shadow(0 0 6px rgba(255,90,70,.75))"><rect x="9" y="30" width="2" height="40" fill="#ff8a7a"/><rect x="4" y="40" width="12" height="22" rx="1.5" fill="#f03e3e"/><rect x="31" y="14" width="2" height="46" fill="#ff8a7a"/><rect x="26" y="22" width="12" height="30" rx="1.5" fill="#fa5252"/><rect x="53" y="2" width="2" height="44" fill="#ff8a7a"/><rect x="48" y="8" width="12" height="30" rx="1.5" fill="#ff6b6b"/></g><path d="M2 72 L62 72" stroke="#e3b75a" stroke-width="1" opacity=".5"/></svg>',
+    chipf: '<svg width="58" height="58" viewBox="0 0 58 58"><g filter="drop-shadow(0 0 7px rgba(255,200,90,.8))"><path d="M17 6v8M25 6v8M33 6v8M41 6v8M17 44v8M25 44v8M33 44v8M41 44v8M6 17h8M6 25h8M6 33h8M6 41h8M44 17h8M44 25h8M44 33h8M44 41h8" stroke="#e3b75a" stroke-width="2.2" stroke-linecap="round"/><rect x="12" y="12" width="34" height="34" rx="4" fill="#2b2006" stroke="#f7dc94" stroke-width="2"/><rect x="20" y="20" width="18" height="18" rx="2" fill="#f3c96a"/><path d="M23 29h12M29 23v12" stroke="#7a4e12" stroke-width="1.4"/></g></svg>',
     bill: '<svg width="62" height="30" viewBox="0 0 64 30"><rect x="1" y="1" width="62" height="28" rx="2" fill="#5d8a45" stroke="#2f4f22" stroke-width="1.2"/><rect x="4" y="4" width="56" height="22" rx="1" fill="none" stroke="#b9d99a" stroke-width=".9"/><ellipse cx="32" cy="15" rx="9" ry="10" fill="#8fbd6e" stroke="#2f4f22" stroke-width="1"/><circle cx="32" cy="12" r="3.4" fill="#2f4f22"/><path d="M25 22 C26 17 38 17 39 22Z" fill="#2f4f22"/><text x="11" y="13" text-anchor="middle" font-size="7.5" font-weight="900" fill="#e9f5dc" font-family="sans-serif">100</text><text x="53" y="25" text-anchor="middle" font-size="7.5" font-weight="900" fill="#e9f5dc" font-family="sans-serif">100</text><text x="53" y="12" text-anchor="middle" font-size="9" font-weight="900" fill="#e9f5dc" font-family="sans-serif">$</text><text x="11" y="25" text-anchor="middle" font-size="9" font-weight="900" fill="#e9f5dc" font-family="sans-serif">$</text></svg>',
     chart: '<svg width="86" height="54" viewBox="0 0 86 54"><path d="M2 50 L82 50 M2 4 L2 50" stroke="#6e5420" stroke-width="1"/><polyline points="4,44 16,38 24,42 36,28 46,32 58,18 68,22 80,6" fill="none" stroke="#e3b75a" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M80 6 L72 7 M80 6 L78 14" stroke="#e3b75a" stroke-width="2.6" stroke-linecap="round"/><circle cx="80" cy="6" r="3" fill="#fff1c4"/></svg>',
     coin: '<svg width="22" height="22" viewBox="0 0 26 26"><circle cx="13" cy="13" r="12" fill="#8a5a14" stroke="#e3b75a" stroke-width="1.2"/><circle cx="13" cy="13" r="8" fill="none" stroke="#e3b75a" stroke-width=".8"/></svg>'
   };
-  SV.carpet_genie = carpetSVG('genie'); ['tycoon', 'banker', 'engineer'].forEach(function(k){ SV['carpet_' + k] = '<img class="pic" src="a/fly/' + k + '.webp" width="170" alt="" decoding="async">'; }); SV.rocket = '<img class="pic" src="a/fly/rocket.webp" width="150" alt="" decoding="async" style="transform:scaleX(-1)">';
+  SV.carpet_genie = carpetSVG('genie'); ['tycoon', 'banker', 'engineer', 'redtie', 'founder', 'leather'].forEach(function(k){ SV['carpet_' + k] = '<img class="pic" src="a/fly/' + k + '.webp" width="170" alt="" decoding="async">'; }); SV.rocket = '<img class="pic" src="a/fly/rocket.webp" width="150" alt="" decoding="async" style="transform:scaleX(-1)">';
   var flyz = $('flyz');
   function spawn(kind){ if (!flyz || document.hidden) return; var d = document.createElement('div'); d.className = 'fly ' + kind.split('_')[0]; d.innerHTML = SV[kind]; flyz.appendChild(d);
     var w = innerWidth, h = innerHeight, kf, dur, op = .8, ltr = Math.random() < .5;
     if (kind === 'parrot') { var y0 = h * (.1 + Math.random() * .3); kf = [0, .25, .5, .75, 1].map(function(k){ return { transform: 'translate(' + (-80 + k * (w + 160)) + 'px,' + (y0 + Math.sin(k * 9) * 18) + 'px)', opacity: k === 0 || k === 1 ? 0 : op }; }); dur = 10000 + Math.random() * 4000; }
     else if (kind.indexOf('carpet') === 0) { var y1 = h * (.1 + Math.random() * .4); kf = [0, .2, .4, .6, .8, 1].map(function(k){ var x = ltr ? -170 + k * (w + 340) : w + 20 - k * (w + 340); return { transform: 'translate(' + x + 'px,' + (y1 + Math.sin(k * 7) * 24) + 'px) rotate(' + (Math.sin(k * 7) * -4) + 'deg)' + (ltr ? '' : ' scaleX(-1)'), opacity: k === 0 || k === 1 ? 0 : op }; }); dur = 16000 + Math.random() * 6000; }
     else if (kind === 'rocket') { var y2 = h * (.55 + Math.random() * .2); kf = [0, .5, 1].map(function(k){ return { transform: 'translate(' + (-140 + k * (w + 280)) + 'px,' + (y2 - k * h * .5) + 'px) rotate(-24deg)', opacity: k === 0 || k === 1 ? 0 : op }; }); dur = 7000 + Math.random() * 2500; }
-    else if (kind === 'candle' || kind === 'chart') { var x2 = w * (.05 + Math.random() * .85); kf = [0, .5, 1].map(function(k){ return { transform: 'translate(' + (x2 + Math.sin(k * 5) * 24) + 'px,' + (h * .92 - k * h * .82) + 'px) rotate(' + (kind === 'chart' ? Math.sin(k * 4) * 8 : 0) + 'deg)', opacity: k === 0 || k === 1 ? 0 : .6 }; }); dur = 13000 + Math.random() * 6000; }
+    else if (kind === 'candle' || kind === 'chart' || kind === 'chipf') { var x2 = w * (.05 + Math.random() * .85); kf = [0, .5, 1].map(function(k){ return { transform: 'translate(' + (x2 + Math.sin(k * 5) * 24) + 'px,' + (h * .92 - k * h * .82) + 'px) rotate(' + (kind === 'chart' ? Math.sin(k * 4) * 8 : 0) + 'deg)', opacity: k === 0 || k === 1 ? 0 : .85 }; }); dur = 13000 + Math.random() * 6000; }
     else { var x3 = w * Math.random(), dx = (Math.random() - .5) * w * .6; kf = [0, .5, 1].map(function(k){ return { transform: 'translate(' + (x3 + dx * k) + 'px,' + (-40 + k * h * .8) + 'px) rotate(' + (k * (kind === 'bill' ? 160 : 360)) + 'deg)', opacity: k === 0 || k === 1 ? 0 : .7 }; }); dur = 13000 + Math.random() * 6000; }
     var a = d.animate(kf, { duration: dur, easing: 'linear' }); a.onfinish = function(){ d.remove(); }; }
-  if (!RM) { var KINDS = ['carpet_tycoon', 'carpet_banker', 'carpet_engineer', 'carpet_tycoon', 'carpet_banker', 'carpet_engineer', 'carpet_genie', 'rocket', 'parrot', 'candle', 'candle', 'chart', 'chart', 'bill', 'bill', 'coin'];
+  if (!RM) { var KINDS = ['carpet_tycoon', 'carpet_banker', 'carpet_engineer', 'carpet_redtie', 'carpet_founder', 'carpet_leather', 'carpet_redtie', 'carpet_leather', 'carpet_founder', 'rocket', 'parrot', 'candle', 'candle', 'candle', 'chipf', 'chipf', 'chart', 'chart', 'bill', 'bill', 'coin'];
     setTimeout(function(){ spawn('carpet_tycoon'); }, 3500); setTimeout(function(){ spawn('bill'); }, 5000); setTimeout(function(){ spawn('rocket'); }, 9000);
-    setInterval(function(){ if (flyz.children.length < 5) spawn(KINDS[Math.floor(Math.random() * KINDS.length)]); }, 3600); }
+    setInterval(function(){ if (flyz.children.length < 6) spawn(KINDS[Math.floor(Math.random() * KINDS.length)]); }, 3600); }
   // ── v3 카드 장면: 아래에서 작게 떠올라 화면 가운데 머묾(빛·이름만) → 스크롤하면 화면 쪽으로 확대 → 읽기
   var ease = function(x){ return 1 - Math.pow(1 - x, 3); }, eio = function(x){ return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
   var MOVE = {
@@ -1275,6 +1303,8 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
   var BYRULE = { 1: 'slip', 2: 'box', 3: 'rocket', 4: 'spring', 5: 'coin', 6: 'quake', 7: 'flip', 8: 'spring', 9: 'quake', 10: 'storm', 11: 'storm', 12: 'fade', 13: 'smoke', 14: 'quake', 15: 'home' };
   var SEEN = {}; try { SEEN = JSON.parse(localStorage.getItem('genieSeen') || '{}'); } catch(e){}
   function saveSeen(){ try { var now = Date.now(); for (var k in SEEN) if (now - SEEN[k] > 30 * 864e5) delete SEEN[k]; localStorage.setItem('genieSeen', JSON.stringify(SEEN)); } catch(e){} }
+  var SUBT = { 1: '시장이 막 미끄러지기 시작할 때, 나스닥의 반등을 노려요', 2: '크게 오른 나스닥이 상자 안에서 쉬며 바닥을 다질 때예요', 3: '유가 충격에 함께 빠진 날, 체력 좋은 나스닥을 담아요', 4: '실적 멀쩡한 회사가 공포에 던져질 때 싸게 줍는 법칙', 5: '큰손이 급해서 금까지 던진 날, 금의 회복을 노려요', 6: '나스닥은 멀쩡한데 반도체만 넘어졌을 때 반등을 노려요', 7: '장 초반 같이 빠졌다가 V자로 살아나는 종목을 따라가요', 8: '나스닥 급락일, 유난히 더 빠진 종목의 튕김을 노려요', 9: '반도체가 한 달 새 크게 빠졌을 때 3배로 반등을 노려요', 10: '위험 신호와 하락 추세가 겹치면 반도체 하락에 걸어요', 11: '몇 년에 한 번 오는 큰 위기, 가장 싸게 살 기회예요', 13: '엔비디아 실적 직전엔 반도체가 꺾이기 쉬워 사지 않아요', 14: '과열 없이 오른 반도체가 잠깐 쉬어 갈 때 담아요', 15: '방어주로 잠깐 피신한 돈이 나스닥으로 돌아오는 때예요' };
+  var SUBK = { SGOV: '다른 카드를 기다리는 동안 현금에 이자를 붙여 두는 자리', QQQM: '시세는 보지 않고 매달 같은 날 같은 금액을 사 모아요', BIL: '다른 카드를 기다리는 동안 현금에 이자를 붙여 두는 자리' };
   var slots = [], SMIN = .32, HDR = 58;
   // v4 카드 장면: 카드 상자(.stk)는 CSS sticky로 화면에 붙음(스크롤 보정 계산이 없어 흔들림 없음). 붙어 있는 짧은 구간에서만 작게→크게 확대
   function lockScroll(on){ document.documentElement.classList.toggle('lockscr', on); }
@@ -1284,7 +1314,7 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
     if (RM) return; var vh = innerHeight;
     for (var i = 0; i < slots.length; i++) { var sl = slots[i], r = sl.getBoundingClientRect(); if (r.bottom < -200 || r.top > vh + 200) continue;
       var ch = sl._t.offsetHeight, A = r.top - HDR, p = A <= 0 && !sl._hold ? Math.min(1, -A / sl._pin) : 0, e = eio(p);
-      var s = SMIN + (1 - SMIN) * e, vis = Math.min(ch * SMIN, vh * .55), off = Math.max(0, vh * .5 - vis * .5 + 16 - HDR) * (1 - e);
+      var s = SMIN + (1 - SMIN) * e, vis = Math.min(ch * SMIN, vh * .55), off = Math.max(0, vh * .5 - vis * .5 + 70 - HDR) * (1 - e);
       if (sl._ps !== s.toFixed(4)) { sl._ps = s.toFixed(4); sl._t.style.transform = 'translate3d(0,' + off.toFixed(1) + 'px,0) scale(' + s.toFixed(4) + ')'; sl._mn.style.transform = 'translate3d(0,' + off.toFixed(1) + 'px,0)'; }
       sl.style.setProperty('--mo', (p > 0 ? Math.max(0, 1 - p * 3) : Math.max(0, Math.min(1, 1.3 - A / (vh * .55)))).toFixed(3));
       if (A <= 2 && sl._rev && !sl._done) { sl._done = 1; sl._hold = 1; scrollTo(0, scrollY + A); lockScroll(true); (function(sl){ setTimeout(function(){ reveal(sl); }, 120); })(sl); } } }
@@ -1339,7 +1369,7 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
       sl._rev = !RM && T !== 'C' && !(SEEN[key] && Date.now() - SEEN[key] < 3 * 864e5); if (sl._rev) sl.classList.add('hid');
       var nm = (tc.querySelector('.mvn') || {}).textContent || '', tk = ((tc.querySelector('.nm') || {}).childNodes || []), tick = ''; [].forEach.call(tk, function(x){ if (x.nodeType === 3) tick += x.textContent; }); tick = tick.trim();
       var au = '<div class="aura">'; for (var k = 0; k < 14; k++) au += '<i style="left:' + (Math.random() < .5 ? -3 + Math.random() * 5 : 98 + Math.random() * 5).toFixed(1) + '%;animation-duration:' + (5 + Math.random() * 5).toFixed(1) + 's;animation-delay:-' + (Math.random() * 8).toFixed(1) + 's;--dx:' + ((Math.random() - .5) * 40).toFixed(0) + 'px"></i>'; au += '</div>';
-      sl.innerHTML = '<div class="mini">' + esc(nm) + '<small>' + esc(tick) + '</small></div>'; tc.parentNode.insertBefore(sl, tc); fl.appendChild(tc); if (sl._rev) fl.insertAdjacentHTML('beforeend', '<div class="cback">' + CM + '</div>'); var en = document.createElement('div'); en.className = 'ent'; en.innerHTML = au; en.appendChild(fl); w.appendChild(en); var stk = document.createElement('div'); stk.className = 'stk'; var mn = sl.querySelector('.mini'); stk.appendChild(mn); stk.appendChild(w); sl.appendChild(stk); sl.insertAdjacentHTML('beforeend', '<div class="pinsp" style="height:' + sl._pin + 'px"></div>'); sl._w = w; sl._t = w; sl._en = en; sl._mn = mn; if (nx && nx.classList.contains('freqo')) sl.appendChild(nx);
+      var st = SUBK[tick] || SUBT[no] || ''; sl.innerHTML = '<div class="mini"><span class="mt2">' + esc(nm) + '</span>' + (st ? '<span class="mst">' + esc(st) + '</span>' : '') + '<small>' + esc(tick) + '</small></div>'; tc.parentNode.insertBefore(sl, tc); fl.appendChild(tc); if (sl._rev) fl.insertAdjacentHTML('beforeend', '<div class="cback">' + CM + '</div>'); var en = document.createElement('div'); en.className = 'ent'; en.innerHTML = au; en.appendChild(fl); w.appendChild(en); var stk = document.createElement('div'); stk.className = 'stk'; var mn = sl.querySelector('.mini'); stk.appendChild(mn); stk.appendChild(w); sl.appendChild(stk); sl.insertAdjacentHTML('beforeend', '<div class="pinsp" style="height:' + sl._pin + 'px"></div>'); sl._w = w; sl._t = w; sl._en = en; sl._mn = mn; if (nx && nx.classList.contains('freqo')) sl.appendChild(nx);
       if (sl._rev && window.ResizeObserver) { var cb = fl.querySelector('.cback'); new ResizeObserver(function(){ cb.style.cssText = 'inset:auto;left:' + tc.offsetLeft + 'px;top:' + tc.offsetTop + 'px;width:' + tc.offsetWidth + 'px;height:' + tc.offsetHeight + 'px;max-width:none;margin:0'; }).observe(tc); }
       if (first && !L.querySelector('.orn')) { sl.insertAdjacentHTML('beforebegin', '<div class="orn">오늘의 카드</div>'); first = false; } });
     slots = [].slice.call(L.querySelectorAll('.slot'));
@@ -1348,7 +1378,7 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
     var rs = L.querySelector('.rvsum'); if (rs) { var b = rs.querySelector('b'), txt = rs.textContent.slice(b ? b.textContent.length : 0), out = [], gi = 0;
       txt.split('\n').forEach(function(par, pi){ par.split(/(?<=[,.!?])\s+/).forEach(function(seg, si){ out.push('<span class="ln' + (pi && !si ? ' gap' : '') + '" style="--i:' + (gi++) + '">' + esc(seg) + '</span>'); }); });
       rs.innerHTML = (b ? b.outerHTML : '') + out.join('');
-      if (RM) rs.classList.add('in'); else { var o2 = new IntersectionObserver(function(es){ if (es[0].isIntersecting) { rs.classList.add('in'); o2.disconnect(); } }, { threshold: .2 }); o2.observe(rs); } }
+      if (RM || window.__rvSeen === txt) rs.classList.add('in', 'now'); else { window.__rvSeen = txt; var o2 = new IntersectionObserver(function(es){ if (es[0].isIntersecting) { rs.classList.add('in'); o2.disconnect(); } }, { threshold: .2 }); o2.observe(rs); } }
     onScroll(); } };
   if (!RM) document.addEventListener('pointerdown', function(e){ var L = $('fxl'); if (!L || e.target.closest('.sheet,.ov,.simpop,#shm')) return;
     for (var i = 0; i < 10; i++) { var d = document.createElement('i'), a = Math.random() * 6.283, r = 30 + Math.random() * 60; d.style.left = e.clientX + 'px'; d.style.top = e.clientY + 'px'; d.style.setProperty('--dx', (Math.cos(a) * r).toFixed(0) + 'px'); d.style.setProperty('--dy', (Math.sin(a) * r - 20).toFixed(0) + 'px'); L.appendChild(d); setTimeout(function(x){ return function(){ x.remove(); }; }(d), 950); } }, { passive: true });
