@@ -628,6 +628,30 @@ button,input,select,textarea{font-family:inherit}
 .orn.in{clip-path:inset(0 0 0 0);letter-spacing:.25em;opacity:1}
 @media (prefers-reduced-motion:reduce){.stk>.mini .w,.stk>.mini .mst,.stk>.mini small .lt{animation:none!important;opacity:1;transform:none;filter:none;clip-path:none}.orn{clip-path:none;opacity:1}}
 .slot.now .mini *{animation-duration:.01s!important;animation-delay:0s!important}.orn.now{transition:none}
+
+/* v8 카드 뒤 빛: 모양을 가진 불꽃 테두리(일렁이는 노이즈로 가장자리가 너울거림) + 넓게 번지는 빛 + 전체가 천천히 숨 쉼(한 점만 깜빡이지 않음) */
+.aura .sw,.aura .rim,.aura .heat{display:none}
+.aura svg.fire{position:absolute;left:-60px;top:-60px;overflow:visible;pointer-events:none}
+.aura svg.fire rect{fill:none}
+.aura svg.fire .r0{fill:rgba(255,190,90,.22);stroke:rgba(255,200,110,.35);stroke-width:18}
+.aura svg.fire .r1{stroke:url(#gfG);stroke-width:9;opacity:.75}
+.aura svg.fire .r2{stroke:#fff3cf;stroke-width:3;opacity:.55}
+.aura svg.fire:not(.rich) .r1{stroke-width:6;opacity:.55}
+.aura svg.fire .fg{animation:fbreathe 6.5s ease-in-out infinite alternate}
+@keyframes fbreathe{0%{opacity:.5}100%{opacity:1}}
+.slot.gS .aura svg.fire .r1{stroke-width:12;opacity:.9}
+.slot.gS .aura svg.fire .r0{fill:rgba(255,200,120,.3)}
+.tcw .aura::before{animation:breathe 6.5s ease-in-out infinite alternate}
+@media (prefers-reduced-motion:reduce){.aura svg.fire .fg{animation:none}}
+/* 흔들림은 카드와 빛을 한 몸으로 */
+.slot .tc{animation:none!important}
+.slot:not(.hid):not(.charge):not(.flipping) .flip{animation:tcSway 8s ease-in-out infinite}
+.slot .freqo{margin-top:18px}
+.orn{margin-top:56px!important}
+.aura svg.fire .r0{fill:rgba(255,180,80,.32);stroke:rgba(255,190,100,.45);stroke-width:30}
+.aura svg.fire .r1{stroke-width:14;opacity:.85}
+.aura svg.fire .r3{stroke:#ff9d3a;stroke-width:12;opacity:.6}
+.aura svg.fire .r2{stroke-width:2.5;opacity:.7}
 </style>
 </head>
 <body>
@@ -650,7 +674,15 @@ button,input,select,textarea{font-family:inherit}
 
 <div class="fxl" id="fxl" aria-hidden="true"></div>
 <div class="wrap">
-  <div class="mast" id="mast">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="gfG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0c2"/><stop offset=".45" stop-color="#f3c45e"/><stop offset="1" stop-color="#ff9a2e"/></linearGradient>
+  <filter id="gfSpill" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="28"/></filter>
+  <filter id="gfSoft" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency=".018 .05" numOctaves="2" seed="4"><animate attributeName="baseFrequency" dur="14s" values=".018 .05;.024 .062;.016 .046;.018 .05" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" scale="16" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation="4"/></filter>
+  <filter id="gfFlame" x="-25%" y="-25%" width="150%" height="150%"><feTurbulence type="fractalNoise" baseFrequency=".014 .045" numOctaves="3" seed="7"><animate attributeName="baseFrequency" dur="11s" values=".014 .045;.02 .06;.012 .04;.014 .045" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" scale="50" xChannelSelector="R" yChannelSelector="G"><animate attributeName="scale" dur="7s" values="42;60;48;42" repeatCount="indefinite"/></feDisplacementMap><feGaussianBlur stdDeviation="4"/></filter>
+  <filter id="gfTongue" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency=".06 .012" numOctaves="2" seed="21"><animate attributeName="baseFrequency" dur="8s" values=".06 .012;.07 .016;.055 .01;.06 .012" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" scale="70" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation="6"/></filter>
+  <filter id="gfLick" x="-25%" y="-25%" width="150%" height="150%"><feTurbulence type="turbulence" baseFrequency=".03 .09" numOctaves="2" seed="11"><animate attributeName="baseFrequency" dur="9s" values=".03 .09;.036 .11;.026 .08;.03 .09" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" scale="22" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation="1.6"/></filter>
+</defs></svg>
+<div class="mast" id="mast">
   <div class="head">
     <h1><img class="bi" src="a/logo.webp" alt="" onerror="this.remove()"><span class="mt">다 이득 날지니<small>진탈이의 돈 버는 마법 카드</small></span></h1>
     <div class="right">
@@ -977,9 +1009,9 @@ function render(){
     html += revOutHTML(RA.out);
     // 매수 상한을 넘어 뺀 카드는 화면에 따로 알리지 않음(2026-10-21 석진: 지금 사도 되는 카드만 보여 주는 게 원칙)
     var CS = state.cset || {}; (r.cond || CS.cond || []).forEach(function(c){ html += card(c, 1); }); // 조건이 맞을 때만 뜨는 C카드(SGOV·QLD·IEF)
-    html += '<div class="about">투자하며 떠올린 아이디어를 법칙으로 만들고, 클로드와 실제 데이터로 검증해 성공률에 따라 등급을 매겼다.<br>지금 상황에 가장 맞는 카드를 추천하며, 방법은 주기적으로 다시 검증해 등급을 새로 매긴다.<br><b>투자 선택은 각자의 몫, 참고만 하시길</b> (돈 잃어도 책임 못 짐)</div>';
     var bs = r.base || CS.base || [];
-    if (bs.length) { html += '<div class="baseh">상시 카드 · C등급 <small>C등급은 아직 효과가 검증되지 않았거나 보유 기간이 긴 방법이에요. 규칙 신호와 상관없이 언제 사도 되는 교과서적 장기 전략(수익은 낮거나 느림)</small></div>'; bs.forEach(function(c){ html += card(c, 1); }); }
+    if (bs.length) { bs.forEach(function(c){ html += card(c, 1); }); }
+    html += '<div class="about">투자하며 떠올린 아이디어를 법칙으로 만들고, 클로드와 실제 데이터로 검증해 성공률에 따라 등급을 매겼다.<br>지금 상황에 가장 맞는 카드를 추천하며, 방법은 주기적으로 다시 검증해 등급을 새로 매긴다.<br><b>투자 선택은 각자의 몫, 참고만 하시길</b> (돈 잃어도 책임 못 짐)</div>';
   }
   L.innerHTML = html;
   if (window.__fx) window.__fx.after(L);
@@ -1410,9 +1442,9 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
       var key = (tc.id || tc.textContent.slice(0, 40)); sl._key = key;
       sl._rev = !RM && T !== 'C' && !(SEEN[key] && Date.now() - SEEN[key] < 3 * 864e5); if (sl._rev) sl.classList.add('hid');
       var nm = (tc.querySelector('.mvn') || {}).textContent || '', tk = ((tc.querySelector('.nm') || {}).childNodes || []), tick = ''; [].forEach.call(tk, function(x){ if (x.nodeType === 3) tick += x.textContent; }); tick = tick.trim();
-      var rich = T === 'S' || T === 'A', au = '<div class="aura">' + (rich ? '<b class="sw"></b><b class="rim"></b><b class="heat"></b><b class="tw t1"></b><b class="tw t2"></b><b class="tw t3"></b><b class="tw t4"></b>' : T === 'C' ? '' : '<b class="rim"></b>'); for (var k = 0; k < (rich ? 22 : T === 'C' ? 4 : 10); k++) au += '<i style="left:' + (Math.random() < .5 ? -3 + Math.random() * 5 : 98 + Math.random() * 5).toFixed(1) + '%;animation-duration:' + (5 + Math.random() * 5).toFixed(1) + 's;animation-delay:-' + (Math.random() * 8).toFixed(1) + 's;--dx:' + ((Math.random() - .5) * 40).toFixed(0) + 'px"></i>'; au += '</div>';
+      var rich = T === 'S' || T === 'A', au = '<div class="aura">' + (T === 'C' ? '' : '<svg class="fire' + (rich ? ' rich' : '') + '" aria-hidden="true"><g class="fg"><rect class="r0" filter="url(#gfSpill)"/><rect class="r1" filter="url(#' + (rich ? 'gfFlame' : 'gfSoft') + ')"/>' + (rich ? '<rect class="r3" filter="url(#gfTongue)"/><rect class="r2" filter="url(#gfLick)"/>' : '') + '</g></svg>') + (rich ? '<b class="tw t1"></b><b class="tw t2"></b><b class="tw t3"></b><b class="tw t4"></b>' : ''); for (var k = 0; k < (rich ? 22 : T === 'C' ? 4 : 10); k++) au += '<i style="left:' + (Math.random() < .5 ? -3 + Math.random() * 5 : 98 + Math.random() * 5).toFixed(1) + '%;animation-duration:' + (5 + Math.random() * 5).toFixed(1) + 's;animation-delay:-' + (Math.random() * 8).toFixed(1) + 's;--dx:' + ((Math.random() - .5) * 40).toFixed(0) + 'px"></i>'; au += '</div>';
       var st = SUBK[tick] || SUBT[no] || ''; sl.innerHTML = '<div class="mini"><span class="mt2">' + esc(nm).split(/(\s+|·)/).filter(function(x){ return x && !/^\s+$/.test(x); }).map(function(w, wi){ return '<span class="w" style="--i:' + wi + '">' + w + '</span>'; }).join(' ') + '</span>' + (st ? '<span class="mst">' + esc(st) + '</span>' : '') + '<small>' + esc(tick).split('').map(function(ch, ci){ return '<span class="lt" style="--i:' + ci + '">' + ch + '</span>'; }).join('') + '</small></div>'; tc.parentNode.insertBefore(sl, tc); fl.appendChild(tc); if (sl._rev) fl.insertAdjacentHTML('beforeend', '<div class="cback">' + CM + '</div>'); var en = document.createElement('div'); en.className = 'ent'; fl.insertAdjacentHTML('afterbegin', au); en.appendChild(fl); w.appendChild(en); var stk = document.createElement('div'); stk.className = 'stk'; var mn = sl.querySelector('.mini'); stk.appendChild(mn); stk.appendChild(w); var skw = document.createElement('div'); skw.className = 'stkw'; skw.appendChild(stk); skw.insertAdjacentHTML('beforeend', '<div class="pinsp" style="height:' + sl._pin + 'px"></div>'); sl.appendChild(skw); sl._w = w; sl._t = w; sl._en = en; sl._mn = mn; if (nx && nx.classList.contains('freqo')) sl.appendChild(nx);
-      var aue = fl.querySelector('.aura'); if (window.ResizeObserver) new ResizeObserver(function(){ var G = 4; aue.style.cssText = 'left:' + (tc.offsetLeft + G) + 'px;top:' + (tc.offsetTop + G) + 'px;width:' + (tc.offsetWidth - 2 * G) + 'px;height:' + (tc.offsetHeight - 2 * G) + 'px;bottom:auto;transform:none'; }).observe(tc);
+      var aue = fl.querySelector('.aura'); if (window.ResizeObserver) new ResizeObserver(function(){ var G = 4, AW = tc.offsetWidth - 2 * G, AH = tc.offsetHeight - 2 * G, M = 60; if (AW <= 0 || AH <= 0) return; aue.style.cssText = 'left:' + (tc.offsetLeft + G) + 'px;top:' + (tc.offsetTop + G) + 'px;width:' + AW + 'px;height:' + AH + 'px;bottom:auto;transform:none'; var fsv = aue.querySelector('svg.fire'); if (fsv) { fsv.setAttribute('width', AW + 2 * M); fsv.setAttribute('height', AH + 2 * M); fsv.setAttribute('viewBox', '0 0 ' + (AW + 2 * M) + ' ' + (AH + 2 * M)); [].forEach.call(fsv.querySelectorAll('rect'), function(r){ r.setAttribute('x', M); r.setAttribute('y', M); r.setAttribute('width', AW); r.setAttribute('height', AH); r.setAttribute('rx', 15); }); } }).observe(tc);
       if (sl._rev && window.ResizeObserver) { var cb = fl.querySelector('.cback'); new ResizeObserver(function(){ cb.style.cssText = 'inset:auto;left:' + tc.offsetLeft + 'px;top:' + tc.offsetTop + 'px;width:' + tc.offsetWidth + 'px;height:' + tc.offsetHeight + 'px;max-width:none;margin:0'; }).observe(tc); }
       if (first && !L.querySelector('.orn')) { sl.insertAdjacentHTML('beforebegin', '<div class="orn">오늘의 카드</div>'); first = false; } });
     slots = [].slice.call(L.querySelectorAll('.slot'));
