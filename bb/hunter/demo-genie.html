@@ -670,7 +670,7 @@ button,input,select,textarea{font-family:inherit}
 @keyframes tongue{0%{transform:rotate(var(--a)) translateY(-4%) scale(.9,.7);opacity:.5}50%{opacity:.9}100%{transform:rotate(var(--a)) translateY(-16%) scale(1.05,1.2);opacity:.75}}
 .slot.gS .aura .tg{background:radial-gradient(50% 50% at 50% 50%,rgba(255,248,220,.72) 0%,rgba(255,210,120,.42) 26%,rgba(255,150,60,.16) 50%,rgba(255,120,30,0) 70%)}
 /* v10: 빛 상자와 카드 사이 틈 제거 + 파티클 불꽃 캔버스 */
-.aura .spill{inset:0!important;border-radius:16px;box-shadow:0 0 30px 8px rgba(255,180,70,.34),0 0 90px 30px rgba(220,130,40,.15)}
+.aura .spill{inset:0!important;border-radius:16px;box-shadow:0 0 30px 8px rgba(255,180,70,.24),0 0 90px 30px rgba(220,130,40,.1)}
 .aura canvas.fc{pointer-events:none}
 .aura .tg{display:none}
 /* 가로 스크롤·확대 막기 */
@@ -1421,7 +1421,7 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
       for (var k = 0; k < n * br; k++) { var e = edgePt(w, h), lg = Math.random() < .28 * (1 + .6 * Math.sin(t / 900 + cv._ph + e[0] * .02 + e[1] * .015)), sp = (lg ? .9 + Math.random() * 1.3 : .15 + Math.random() * .45) * .7; P.push({ x: e[0] + m, y: e[1] + m, vx: e[2] * sp + (Math.random() - .5) * .35, vy: e[3] * sp - ((lg ? .35 : .15) + Math.random() * .2) * .7, s: ((lg ? 22 : 16) + Math.random() * 20) * .8, g: .5 + Math.random() * .9, l: lg ? 70 + Math.random() * 70 : 28 + Math.random() * 40, a: 0, r: .4 + Math.random() * .6 }); }
       if (P.length > 2200) P.splice(0, P.length - 2200);
       c.setTransform(FDPR, 0, 0, FDPR, 0, 0); c.clearRect(0, 0, w + 2 * m, h + 2 * m); c.globalCompositeOperation = 'lighter';
-      for (var i = P.length - 1; i >= 0; i--) { var q = P[i]; q.a++; if (q.a > q.l) { P.splice(i, 1); continue; } var f = q.a / q.l; q.x += q.vx; q.y += q.vy; q.vx *= .985; var s = q.s * (1 + f * q.g); var dx = Math.max(m - q.x, q.x - m - w, 0), dy = Math.max(m - q.y, q.y - m - h, 0), dd = Math.sqrt(dx * dx + dy * dy); var fo = Math.max(0, 1 - dd / (m * .7 * (.55 + .4 * q.r))), nz = .55 + .45 * Math.sin(q.x * .031 + t / 700) * Math.sin(q.y * .027 - t / 900 + q.r * 6); c.globalAlpha = Math.sin(Math.PI * Math.pow(f, .6)) * .2 * br * Math.pow(fo, 1.6) * (.5 + nz * q.r); var st = 1.2 + f * 1.4; if (Math.abs(q.vy) >= Math.abs(q.vx)) c.drawImage(FSPR, q.x - s * 1.1, q.y - s * st, s * 2.2, s * 2 * st); else c.drawImage(FSPR, q.x - s * st, q.y - s * 1.1, s * 2 * st, s * 2.2); }
+      for (var i = P.length - 1; i >= 0; i--) { var q = P[i]; q.a++; if (q.a > q.l) { P.splice(i, 1); continue; } var f = q.a / q.l; q.x += q.vx; q.y += q.vy; q.vx *= .985; var s = q.s * (1 + f * q.g); var dx = Math.max(m - q.x, q.x - m - w, 0), dy = Math.max(m - q.y, q.y - m - h, 0), dd = Math.sqrt(dx * dx + dy * dy); var fo = Math.max(0, 1 - dd / (m * .7 * (.55 + .4 * q.r))), nz = .55 + .45 * Math.sin(q.x * .031 + t / 700) * Math.sin(q.y * .027 - t / 900 + q.r * 6); c.globalAlpha = Math.sin(Math.PI * Math.pow(f, .6)) * .13 * br * Math.pow(fo, 1.6) * (.5 + nz * q.r); var st = 1.2 + f * 1.4; if (Math.abs(q.vy) >= Math.abs(q.vx)) c.drawImage(FSPR, q.x - s * 1.1, q.y - s * st, s * 2.2, s * 2 * st); else c.drawImage(FSPR, q.x - s * st, q.y - s * 1.1, s * 2 * st, s * 2.2); }
       c.globalAlpha = 1; });
     requestAnimationFrame(flLoop); }
   document.addEventListener('gesturestart', function(e){ e.preventDefault(); }); document.addEventListener('dblclick', function(e){ e.preventDefault(); }, { passive: false });
