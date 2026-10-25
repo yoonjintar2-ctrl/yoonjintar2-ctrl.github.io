@@ -511,11 +511,11 @@ body{color:var(--txt)}
 .dim{background:radial-gradient(55% 40% at 50% var(--cy,45%),rgba(0,0,0,.15),rgba(0,0,0,.86) 85%);transition:opacity 1s ease}
 /* 카드: 떨림 대신 빛을 받아 서서히 밝아지며 살짝 떠오름 → 부드럽게 뒤집힘 */
 .slot.charge .tcw{animation:none}
-.slot.charge .cback{animation:charge2 1.35s ease-in forwards}
+.slot.charge .cback{animation:charge2 .52s ease-in forwards}
 @keyframes charge2{0%{filter:brightness(1)}100%{filter:brightness(2.1) saturate(.75)}}
-.slot.charge .tcw .flip{animation:float2 1.35s cubic-bezier(.4,0,.3,1) forwards}
+.slot.charge .tcw .flip{animation:float2 .52s cubic-bezier(.4,0,.3,1) forwards}
 @keyframes float2{0%{transform:rotateY(180deg) translateY(0)}100%{transform:rotateY(180deg) translateY(-10px) scale(1.04)}}
-.slot.flipping .flip{animation:flip2 .85s cubic-bezier(.45,0,.2,1) forwards}
+.slot.flipping .flip{animation:flip2 .5s cubic-bezier(.45,0,.2,1) forwards}
 @keyframes flip2{0%{transform:rotateY(180deg) translateY(-10px) scale(1.04)}50%{transform:rotateY(90deg) translateY(-6px) scale(1.12)}100%{transform:rotateY(0) translateY(0) scale(1)}}
 .shk{animation:none}
 /* 카드 둘레 빛: 깜빡임 없이 천천히 진해졌다 연해짐 */
@@ -680,6 +680,7 @@ html,body{overflow-x:clip;max-width:100%;touch-action:pan-y;overscroll-behavior-
 .emb .orbit .ob{position:absolute;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;display:block;will-change:transform,opacity;filter:drop-shadow(0 0 6px rgba(255,200,100,.5))}
 .emb .orbit .ob svg{width:100%;height:100%;display:block}
 .emb .medal{z-index:1;position:absolute}
+.cine .lb{display:none}
 </style>
 </head>
 <body>
@@ -1457,7 +1458,7 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
       var SMX = .95, s = SMIN + (SMX - SMIN) * e, vis = Math.min(ch * SMIN, vh * .55), off = Math.max(0, vh * .5 - vis * .5 + 70 - HDR) * (1 - e);
       if (sl._ps !== s.toFixed(4)) { sl._ps = s.toFixed(4); sl._t.style.transform = 'translate3d(0,' + off.toFixed(1) + 'px,0) scale(' + s.toFixed(4) + ')'; sl._mn.style.transform = 'translate3d(0,' + off.toFixed(1) + 'px,0)'; }
       sl.style.setProperty('--mo', (p > 0 ? Math.max(0, 1 - p * 3) : Math.max(0, Math.min(1, 1.3 - A / (vh * .55)))).toFixed(3));
-      if (A <= 2 && sl._rev && !sl._done) { sl._done = 1; sl._hold = 1; scrollTo(0, scrollY + A); lockScroll(true); (function(sl){ setTimeout(function(){ reveal(sl); }, 120); })(sl); } } }
+      if (A <= 2 && sl._rev && !sl._done) { sl._done = 1; sl._hold = 1; scrollTo(0, scrollY + A); lockScroll(true); (function(sl){ setTimeout(function(){ reveal(sl); }, 40); })(sl); } } }
   var KS = window.__kinSeen = window.__kinSeen || {};
   function enter(sl){ if (KS[sl._key]) sl.classList.add('now'); KS[sl._key] = 1; sl.classList.add('kin'); return; if (sl._rev || sl._in) return; sl._in = 1; var f = MOVE[sl._mv], kf = []; for (var k = 0; k <= 10; k++) { var u = 1 - k / 10; kf.push({ transform: f(ease(u)) || 'none', opacity: Math.min(1, .25 + k / 6) }); } sl._en.animate(kf, { duration: 900, easing: 'cubic-bezier(.2,.7,.3,1)' }); }
   var eio2 = null;
@@ -1482,22 +1483,22 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
     var q = function(s){ return cine.querySelector(s); }, beam = q('.beam:not(.core)'), core = q('.beam.core'), bloom = q('.bloom'), fl = q('.flare:not(.soft)'), fl2 = q('.flare.soft');
     cine.classList.add('on'); dim.style.setProperty('--cy', (cy / vh * 100).toFixed(0) + '%'); dim.classList.add('on'); sl.classList.add('charge');
     beam.style.cssText = 'left:' + (cx - bw / 2) + 'px;width:' + bw + 'px;height:' + (cy + 30) + 'px'; core.style.cssText = 'left:' + (cx - 14) + 'px;width:28px;height:' + (cy + 10) + 'px';
-    A(beam, [{ opacity: 0, transform: 'scaleY(0)' }, { opacity: .9, offset: .4 }, { opacity: 1, transform: 'scaleY(1)' }], { duration: 1200, easing: 'cubic-bezier(.3,0,.2,1)' });
-    A(core, [{ opacity: 0, transform: 'scaleY(0) scaleX(.4)' }, { opacity: 1, transform: 'scaleY(1) scaleX(1)' }], { duration: 1100, delay: 150, easing: 'cubic-bezier(.4,0,.2,1)' });
+    A(beam, [{ opacity: 0, transform: 'scaleY(0)' }, { opacity: .9, offset: .4 }, { opacity: 1, transform: 'scaleY(1)' }], { duration: 450, easing: 'cubic-bezier(.3,0,.2,1)' });
+    A(core, [{ opacity: 0, transform: 'scaleY(0) scaleX(.4)' }, { opacity: 1, transform: 'scaleY(1) scaleX(1)' }], { duration: 400, delay: 60, easing: 'cubic-bezier(.4,0,.2,1)' });
     motesRise(cx, cy, bw);
     setTimeout(function(){ var r2 = w.getBoundingClientRect(), x = r2.left + r2.width / 2, y = Math.max(140, Math.min(vh - 160, r2.top + r2.height / 2)), R = Math.max(r2.width, 200) * 1.5;
       sl.classList.remove('charge'); sl.classList.add('flipping');
       bloom.style.cssText = 'left:' + (x - R) + 'px;top:' + (y - R) + 'px;width:' + (R * 2) + 'px;height:' + (R * 2) + 'px';
-      A(bloom, [{ opacity: 0, transform: 'scale(.25)' }, { opacity: 1, transform: 'scale(.8)', offset: .18 }, { opacity: .55, transform: 'scale(1.05)', offset: .5 }, { opacity: 0, transform: 'scale(1.3)' }], { duration: 1900, easing: 'cubic-bezier(.2,.7,.3,1)' });
-      [fl, fl2].forEach(function(f, n){ f.style.top = y + 'px'; A(f, [{ opacity: 0, transform: 'scaleX(0)' }, { opacity: 1, transform: 'scaleX(1)', offset: .12 }, { opacity: n ? .5 : .9, offset: .4 }, { opacity: 0, transform: 'scaleX(1.15)' }], { duration: n ? 2200 : 1600, easing: 'cubic-bezier(.2,.8,.3,1)' }); });
-      A(core, [{ opacity: 1 }, { opacity: 0 }], { duration: 900, easing: 'ease-out' }); A(beam, [{ opacity: 1 }, { opacity: 0 }], { duration: 2200, delay: 300, easing: 'ease-in-out' });
+      A(bloom, [{ opacity: 0, transform: 'scale(.25)' }, { opacity: 1, transform: 'scale(.8)', offset: .18 }, { opacity: .55, transform: 'scale(1.05)', offset: .5 }, { opacity: 0, transform: 'scale(1.3)' }], { duration: 1100, easing: 'cubic-bezier(.2,.7,.3,1)' });
+      [fl, fl2].forEach(function(f, n){ f.style.top = y + 'px'; A(f, [{ opacity: 0, transform: 'scaleX(0)' }, { opacity: 1, transform: 'scaleX(1)', offset: .12 }, { opacity: n ? .5 : .9, offset: .4 }, { opacity: 0, transform: 'scaleX(1.15)' }], { duration: n ? 1200 : 900, easing: 'cubic-bezier(.2,.8,.3,1)' }); });
+      A(core, [{ opacity: 1 }, { opacity: 0 }], { duration: 500, easing: 'ease-out' }); A(beam, [{ opacity: 1 }, { opacity: 0 }], { duration: 900, delay: 100, easing: 'ease-in-out' });
       motesPuff(x, y, r2.width);
-      setTimeout(function(){ sl.classList.remove('hid'); }, 380);
-      setTimeout(function(){ sl.classList.remove('flipping'); sl.classList.add('legend'); dim.classList.remove('on'); }, 900);
-      setTimeout(function(){ cine.classList.remove('on'); }, 1700);
-      setTimeout(function(){ sl._hold = 0; lockScroll(false); onScroll(); }, 2000);
+      setTimeout(function(){ sl.classList.remove('hid'); }, 220);
+      setTimeout(function(){ sl.classList.remove('flipping'); sl.classList.add('legend'); dim.classList.remove('on'); }, 520);
+      setTimeout(function(){ cine.classList.remove('on'); }, 700);
+      setTimeout(function(){ sl._hold = 0; lockScroll(false); onScroll(); }, 900);
       setTimeout(function(){ sl.classList.remove('legend'); }, 5200);
-      SEEN[sl._key] = Date.now(); saveSeen(); }, 1350); }
+      SEEN[sl._key] = Date.now(); saveSeen(); }, 520); }
   var ticking = false; addEventListener('scroll', function(){ if (!ticking) { ticking = true; requestAnimationFrame(function(){ ticking = false; onScroll(); }); } }, { passive: true });
   addEventListener('resize', onScroll); onScroll();
   var CM = '<svg class="cm" viewBox="0 0 200 200">' + (document.querySelector('.medal') ? document.querySelector('.medal').innerHTML : '') + '</svg>';
