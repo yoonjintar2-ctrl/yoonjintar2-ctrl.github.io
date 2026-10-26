@@ -972,12 +972,86 @@ function posImgSel() {
   Object.assign(ov.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
   $('b', ov).textContent = `${Math.round(r.width)} × ${Math.round(r.height)}`;
 }
-function linkMenu() {
+function linkMenu(atSel) {
+  const sel = getSelection(); let at = null, cur = null;
+  if (sel.rangeCount && $('#cbody').contains(sel.anchorNode)) {
+    savedRange = sel.getRangeAt(0).cloneRange();
+    const n = sel.anchorNode; cur = (n.nodeType === 1 ? n : n.parentElement).closest('a');
+    if (atSel) { const r = savedRange.getClientRects(); const last = r.length ? r[r.length - 1] : savedRange.getBoundingClientRect(); at = { x: last.left, y: last.bottom }; }
+  }
+  const hasText = sel.rangeCount && !sel.isCollapsed;
   const node = document.createElement('div');
-  node.innerHTML = `<div class="mh">링크 주소</div><div class="mrow"><input type="text" placeholder="https://"><button class="btn pri" style="padding:4px 10px">넣기</button></div>`;
-  const go = () => { const u = $('input', node).value.trim(); if (!u) return; closeMenus(); restoreSel(); const url = /^https?:\/\//.test(u) ? u : 'https://' + u; if (getSelection().isCollapsed) document.execCommand('insertHTML', false, `<a href="${esc(url)}">${esc(u)}</a>`); else document.execCommand('createLink', false, url); dirty(); };
-  $('button', node).addEventListener('click', go); $('input', node).addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
-  menuAt($('[data-cmd=link]'), [{ node }], true); setTimeout(() => $('input', node).focus());
+  node.innerHTML = `<div class="mh">${hasText ? '선택한 글자에 링크 걸기' : '링크 넣기'} <span style="float:right">Ctrl+K</span></div><div class="mrow"><input type="text" placeholder="https://" value="${cur ? esc(cur.getAttribute('href')) : ''}"><button class="btn pri" style="padding:4px 10px">${cur ? '바꾸기' : '넣기'}</button>${cur ? '<button class="btn" data-un style="padding:4px 10px">링크 해제</button>' : ''}</div>`;
+  const go = () => {
+    const u = $('input', node).value.trim(); if (!u) return; closeMenus(); restoreSel();
+    const url = /^(https?:|mailto:)/.test(u) ? u : (/^[^@\s]+@[^@\s]+$/.test(u) ? 'mailto:' + u : 'https://' + u);
+    if (cur) { cur.href = url; } else if (getSelection().isCollapsed) document.execCommand('insertHTML', false, `<a href="${esc(url)}">${esc(u)}</a>`); else document.execCommand('createLink', false, url);
+    dirty();
+  };
+  $('button', node).addEventListener('click', go);
+  const un = $('[data-un]', node); if (un) un.addEventListener('click', () => { closeMenus(); cur.replaceWith(...cur.childNodes); dirty(); });
+  $('input', node).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } if (e.key === 'Escape') { closeMenus(); restoreSel(); } e.stopPropagation(); });
+  menuAt(at ? $('#cbody') : $('[data-cmd=link]'), [{ node }], true, at); setTimeout(() => { $('input', node).focus(); $('input', node).select(); });
+}
+/* ───────── 붙여넣기: 기본은 서식 그대로 + 옆에 작은 '붙여넣기 옵션' 버튼 (아웃룩처럼) ─────────
+   무시하고 계속 쓰면 버튼은 사라지고 그대로 유지 */
+function cleanHtml(html) {
+  const d = new DOMParser().parseFromString(html, 'text/html');
+  $$('script, style, meta, link, title, xml, iframe, object, embed, form, input, button', d).forEach(x => x.remove());
+  $$('*', d.body).forEach(el => { [...el.attributes].forEach(a => { if (/^on/i.test(a.name) || (/^(href|src)$/i.test(a.name) && /^\s*javascript:/i.test(a.value))) el.removeAttribute(a.name); }); });
+  return d.body.innerHTML.replace(/<!--[\s\S]*?-->/g, '');
+}
+const textToHtml = t => esc(t.replace(/\r\n?/g, '\n')).replace(/\n/g, '<br>');
+// 글자 + 그림만 (글자 서식은 빼고 줄바꿈만 살림)
+function textImgHtml(html) {
+  const d = new DOMParser().parseFromString(html, 'text/html'); const out = []; let line = '';
+  const flush = () => { out.push(line); line = ''; };
+  const walk = n => {
+    if (n.nodeType === 3) { line += esc(n.nodeValue.replace(/\s+/g, ' ')); return; }
+    if (n.nodeType !== 1 || /^(SCRIPT|STYLE|META|TITLE)$/.test(n.tagName)) return;
+    if (n.tagName === 'IMG') { const src = n.getAttribute('src') || ''; if (/^(https?:|data:image)/.test(src)) line += `<img src="${esc(src)}" style="max-width:100%">`; return; }
+    if (n.tagName === 'BR') { flush(); return; }
+    const block = /^(P|DIV|LI|H[1-6]|TR|BLOCKQUOTE|PRE|UL|OL|TABLE|SECTION|ARTICLE)$/.test(n.tagName);
+    if (block && line) flush();
+    if (n.tagName === 'TD' || n.tagName === 'TH') { if (line && !/\t$/.test(line)) line += '&nbsp;&nbsp;'; }
+    n.childNodes.forEach(walk);
+    if (block && line) flush();
+  };
+  d.body.childNodes.forEach(walk); if (line) flush();
+  return out.join('<br>');
+}
+const pasteOpt = { on: false };
+function doPaste(cd) {
+  const html = cd.getData('text/html'), text = cd.getData('text/plain');
+  const v = { rich: html ? cleanHtml(html) : textToHtml(text), plain: textToHtml(text || (html ? new DOMParser().parseFromString(html, 'text/html').body.innerText : '')), ti: html ? textImgHtml(html) : textToHtml(text) };
+  const b = $('#cbody'); let s = getSelection(); if (!s.rangeCount || !b.contains(s.anchorNode)) { restoreSel(); s = getSelection(); }
+  const rg = s.getRangeAt(0); rg.deleteContents();
+  const ms = document.createElement('span'), me = document.createElement('span'); ms.className = me.className = 'gp-pm';
+  rg.insertNode(me); rg.insertNode(ms);
+  const put = k => {
+    const r = document.createRange(); r.setStartAfter(ms); r.setEndBefore(me); r.deleteContents();
+    const t = document.createElement('template'); t.innerHTML = v[k]; me.before(t.content);
+    const c = document.createRange(); c.setStartAfter(me); c.collapse(true); const ss = getSelection(); ss.removeAllRanges(); ss.addRange(c);
+    pasteOpt.cur = k; dirty(); runTypo();
+  };
+  put('rich');
+  showPasteBtn(me, put, Object.keys(v).filter(k => k !== 'rich' && v[k] !== v.rich).length > 0);
+}
+function endPasteOpt() { $$('#pasteBtn').forEach(x => x.remove()); $$('#cbody .gp-pm').forEach(x => x.remove()); pasteOpt.on = false; if ($('.menu') && $('.menu')._paste) closeMenus(); }
+function showPasteBtn(anchorEl, put, useful) {
+  endPasteOpt.skip = true; $$('#pasteBtn').forEach(x => x.remove()); endPasteOpt.skip = false;
+  if (!useful) { $$('#cbody .gp-pm').forEach(x => x.remove()); return; }
+  pasteOpt.on = true;
+  const btn = document.createElement('button'); btn.id = 'pasteBtn'; btn.className = 'pastebtn'; btn.title = '붙여넣기 옵션';
+  btn.innerHTML = `${ico('draft', 15)}<span>(Ctrl)</span>${ico('down', 12)}`;
+  const place = () => { if (!anchorEl.isConnected) return endPasteOpt(); const r = anchorEl.getBoundingClientRect(); btn.style.left = Math.min(innerWidth - 90, r.right + 4) + 'px'; btn.style.top = (r.bottom + 4) + 'px'; };
+  document.body.append(btn); place(); btn._place = place;
+  const open = () => { const m = menuAt(btn, [{ head: '붙여넣기 옵션' },
+    { html: '서식 포함해서 붙여넣기', on: pasteOpt.cur === 'rich', act: () => put('rich') },
+    { html: '서식 없이 글자만', on: pasteOpt.cur === 'plain', act: () => put('plain') },
+    { html: '글자와 그림만 (서식 빼고)', on: pasteOpt.cur === 'ti', act: () => put('ti') }]); m._paste = true; };
+  btn.addEventListener('mousedown', e => { e.preventDefault(); toggleMenu(btn, open); });
+  btn._open = open;
 }
 function syncFmt() { $$('#fmt [data-cmd]').forEach(x => { let on = false; try { on = /^(bold|italic|underline|strikeThrough|insertUnorderedList|insertOrderedList|justifyLeft|justifyCenter|justifyRight)$/.test(x.dataset.cmd) && document.queryCommandState(x.dataset.cmd); } catch (e) { /* */ } x.classList.toggle('on', on); }); }
 /* 표: 먼저 칸 수를 고르고 넣기 */
@@ -1448,13 +1522,27 @@ function wire() {
     if (selImg && e.key !== 'Shift') { selImg = null; posImgSel(); }
     bodyKeydown(e);
   });
-  // 클립보드 그림(캡처 등) 붙여넣기 → 커서 위치에 그림
+  // 붙여넣기: 그림만(캡처 등) → 커서 위치에 그림 / 글자·표 등 → 서식 그대로 + 옵션 버튼
   body.addEventListener('paste', e => {
     const cd = e.clipboardData; if (!cd) return;
+    endPasteOpt();
     const img = [...cd.items].find(i => i.kind === 'file' && i.type.startsWith('image/'));
-    if (!img || (cd.getData('text/plain') || '').trim()) return;
-    e.preventDefault(); readImage(img.getAsFile()).then(insertImage);
+    const hasText = (cd.getData('text/plain') || '').trim() || cd.getData('text/html');
+    if (img && !hasText) { e.preventDefault(); readImage(img.getAsFile()).then(insertImage); return; }
+    if (!hasText) return;
+    e.preventDefault(); doPaste(cd);
   });
+  // 옵션 버튼은 계속 쓰거나 다른 데를 누르면 사라짐 (붙여넣은 내용은 그대로)
+  body.addEventListener('keydown', e => {
+    if (pasteOpt.on && e.key === 'Control' && !e.repeat) { pasteOpt.ctrlAlone = true; return; }
+    if (pasteOpt.on && !/^(Shift|Control|Alt|Meta)$/.test(e.key)) endPasteOpt();
+  }, true);
+  body.addEventListener('keyup', e => { if (pasteOpt.on && e.key === 'Control' && pasteOpt.ctrlAlone) { const b = $('#pasteBtn'); if (b) b._open(); } pasteOpt.ctrlAlone = false; });
+  document.addEventListener('keydown', e => { if (e.key !== 'Control') pasteOpt.ctrlAlone = false; }, true);
+  document.addEventListener('mousedown', e => { if (pasteOpt.on && !e.target.closest('#pasteBtn, .menu')) endPasteOpt(); }, true);
+  document.addEventListener('scroll', () => { const b = $('#pasteBtn'); if (b) b._place(); }, true);
+  // Ctrl+K: 선택한 글자에 링크
+  body.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); e.stopPropagation(); linkMenu(true); } });
   body.addEventListener('mousedown', e => { if (e.target.tagName === 'IMG' && !e.target.closest('.quote')) { e.preventDefault(); selectImg(e.target); } });
   document.addEventListener('mousedown', e => { if (selImg && e.target !== selImg && !e.target.closest('#imgsel')) { selImg = null; posImgSel(); } }, true);
   document.addEventListener('scroll', posImgSel, true);
