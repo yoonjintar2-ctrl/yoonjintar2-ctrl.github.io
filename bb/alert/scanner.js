@@ -405,7 +405,7 @@
         if (!(/Mac/i.test(navigator.platform || '') && /^scan sched/.test(m.message || ''))) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.requests, message: 'claim ' + m.id + ' ' + me }) }); // 맥의 정시 검색은 표시 생략(ntfy 한도 아끼기)
       } catch (e) {}
       try {
-        if (!/^scan sched/.test(m.message || '')) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: (/Mac/i.test(navigator.platform || '') ? '맥' : /Win/i.test(navigator.platform || '') ? '회사 PC' : '클라우드') + '에서 지금 시세로 검색 중이에요 (1~2분)', tags: ['ack'] }) });
+        if (false) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: (/Mac/i.test(navigator.platform || '') ? '맥' : /Win/i.test(navigator.platform || '') ? '회사 PC' : '클라우드') + '에서 지금 시세로 검색 중이에요 (1~2분)', tags: ['ack'] }) });
         try { (0, eval)(await window.__berryLoad('bb/alert/scanner.js')); } catch (e) {} // 항상 최신 규칙으로
         const sched = /^scan sched/.test(m.message || '');
         await window.__berryScan({ slot: sched ? new Date(Date.now() + 9 * 3600e3).getUTCHours() + '시' : '요청' });

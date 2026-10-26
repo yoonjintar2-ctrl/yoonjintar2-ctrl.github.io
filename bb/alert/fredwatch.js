@@ -16,7 +16,7 @@
   window.__fredWatch = function () {
     if (window.__fredWatchState && window.__fredWatchState.alive) return 'already running';
     const st = window.__fredWatchState = { alive: true, n: 0, last: '' };
-    const run = async () => { try { st.last = (await window.__fredPush()) + ' ' + new Date().toISOString(); st.n++; setTimeout(run, 3600e3); } catch (e) { st.last = 'ERR ' + e; setTimeout(run, 600e3); } };
+    const run = async () => { try { st.last = (await window.__fredPush()) + ' ' + new Date().toISOString(); st.n++; setTimeout(run, 4 * 3600e3); } catch (e) { st.last = 'ERR ' + e; setTimeout(run, 600e3); } };
     run();
     return 'fred watching';
   };
