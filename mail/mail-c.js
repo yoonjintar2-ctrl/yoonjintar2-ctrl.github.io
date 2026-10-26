@@ -163,12 +163,14 @@ const SYS = {
   draft: { name: '작성 중인 메일', ic: 'draft', f: m => !!m.draft },
   all: { name: '모든 메일', ic: 'all', f: () => true, hideNav: true }
 };
-const folderFn = k => SYS[k] ? SYS[k].f : (m => descIds(k).includes(m.box));
+const folderFn = k => { if (SYS[k]) return SYS[k].f; const ids = new Set(descIds(k)); const f = m => ids.has(m.box); f.boxId = k; return f; };
 const folderName = k => SYS[k] ? SYS[k].name : boxPath(k);
 
 /* ───────── 왼쪽: 폴더·편지함 트리 ───────── */
 function renderNav() {
-  const unread = f => MAILS.filter(m => f(m) && m.unread).length || '';
+  // 안 읽은 수: 메일을 한 번만 훑어서 편지함별로 셈 (편지함 수 × 메일 수 반복 없앰)
+  const perBox = new Map(); MAILS.forEach(m => { if (m.unread && m.box) perBox.set(m.box, (perBox.get(m.box) || 0) + 1); });
+  const unread = f => f.boxId ? descIds(f.boxId).reduce((a, id) => a + (perBox.get(id) || 0), 0) || '' : MAILS.filter(m => f(m) && m.unread).length || '';
   const sysItem = (k, depth) => { const v = SYS[k]; const n = k === 'draft' ? (MAILS.filter(m => m.draft).length || '') : unread(v.f);
     return `<div class="ni${k !== 'tome' ? ' ni-top' : ''}${st.folder === k ? ' on' : ''}${n && k !== 'draft' ? ' unread' : ''}" data-f="${k}" data-sys="${k}" style="padding-left:${14 + depth * 22}px"><span class="ic">${ico(v.ic)}</span><span class="nm">${v.name}</span><span class="n">${n}</span></div>`; };
   // 받은편지함 └ 나에게 온 메일 연결선
@@ -245,6 +247,12 @@ async function deleteBox(id) {
 /* ───────── 자동 분류 (실제 계정: Gmail 필터라서 JIN-mail을 닫아도 서버에서 분류) ───────── */
 const ruleQuery = r => [r.from && `from:(${r.from})`, r.to && `to:(${r.to})`, r.subject && `subject:(${r.subject})`, r.query].filter(Boolean).join(' ');
 const ruleText = r => [r.from && `보낸사람에 '${r.from}'`, r.to && `받는사람에 '${r.to}'`, r.subject && `제목에 '${r.subject}'`, r.query && `내용·키워드 '${r.query}'`].filter(Boolean).join(' 그리고 ');
+const FILTER_SCOPE = 'https://www.googleapis.com/auth/gmail.settings.basic';
+async function hasFilterScope() {
+  if (!real.on) return true;
+  const sc = store.get('tok-scope', null); if (sc != null && real.scopeTok === real.token) return sc.includes(FILTER_SCOPE);
+  try { const r = await fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(real.token)).then(x => x.json()); store.set('tok-scope', r.scope || ''); real.scopeTok = real.token; return (r.scope || '').includes(FILTER_SCOPE); } catch (e) { return true; }
+}
 async function withScope(job) {
   try { return await job(); }
   catch (e) {
@@ -253,20 +261,22 @@ async function withScope(job) {
     tokCache.clear(); real.token = await googleLogin(true); return job();
   }
 }
-async function loadRules() {
+async function loadRules(fresh) {
   if (!real.on) return store.get('rules', []);
+  if (real.rules && !fresh) return real.rules;
   const r = await withScope(() => gapi('settings/filters'));
-  return (r.filter || []).map(f => ({ id: f.id, box: (f.action.addLabelIds || []).find(x => /^Label_/.test(x)), from: f.criteria.from || '', to: f.criteria.to || '', subject: f.criteria.subject || '', query: f.criteria.query || '', skipInbox: (f.action.removeLabelIds || []).includes('INBOX') })).filter(x => x.box);
+  return real.rules = (r.filter || []).map(f => ({ id: f.id, box: (f.action.addLabelIds || []).find(x => /^Label_/.test(x)), from: f.criteria.from || '', to: f.criteria.to || '', subject: f.criteria.subject || '', query: f.criteria.query || '', skipInbox: (f.action.removeLabelIds || []).includes('INBOX') })).filter(x => x.box);
 }
 async function addRule(r) {
   if (!real.on) { const all = store.get('rules', []); r.id = 'r' + Date.now(); all.push(r); store.set('rules', all); return r; }
   const criteria = {}; ['from', 'to', 'subject', 'query'].forEach(k => { if (r[k]) criteria[k] = r[k]; });
   const f = await withScope(() => gapi('settings/filters', { method: 'POST', body: { criteria, action: { addLabelIds: [r.box], removeLabelIds: r.skipInbox ? ['INBOX'] : [] } } }));
-  r.id = f.id; return r;
+  r.id = f.id; if (real.rules) real.rules.push(Object.assign({}, r)); return r;
 }
 async function delRule(id) {
   if (!real.on) { store.set('rules', store.get('rules', []).filter(x => x.id !== id)); return; }
   await withScope(() => gapi('settings/filters/' + id, { method: 'DELETE' }));
+  if (real.rules) real.rules = real.rules.filter(x => x.id !== id);
 }
 // 지금 바로 실행: 받은편지함에 있는 메일 중 조건에 맞는 것을 바로 그 편지함으로 (box=null이면 모든 규칙)
 async function runRules(box) {
@@ -300,6 +310,11 @@ async function openRules(box) {
   const body = $('#rb', bg);
   const draw = async () => {
     let rules = [];
+    if (!(await hasFilterScope())) {
+      body.innerHTML = `<p class="desc">자동 분류는 Gmail 필터를 만드는 권한이 하나 더 필요해요. 아래 버튼을 누르고 Google 창에서 허용해 주세요. (처음 한 번만)</p><div class="opt"><button class="btn pri" id="grantScope">${ico('env', 16)} 자동 분류 권한 허용하기</button></div>`;
+      $('#grantScope', bg).onclick = async () => { try { tokCache.clear(); real.token = await googleLogin(true); store.set('tok-scope', null); real.scopeTok = null; draw(); } catch (er) { toast('권한을 받지 못했어요: ' + er.message); } };
+      return;
+    }
     try { rules = (await loadRules()).filter(r => r.box === box); } catch (e) { body.innerHTML = `<p class="desc" style="color:#d93025">규칙을 불러오지 못했어요: ${esc(e.message)}</p>`; return; }
     body.innerHTML = `<p class="desc">아래 조건에 맞는 <b>새 메일</b>은 자동으로 이 편지함에 들어가요${real.on ? ' (Gmail 필터로 저장돼서 JIN-mail을 닫아 둬도 분류돼요)' : ''}. 이미 받은편지함에 있는 메일은 '지금 바로 실행'을 누르면 적용돼요.</p>
       <h5>지금 있는 조건</h5>${rules.length ? rules.map(r => `<div class="rulerow"><span>${esc(ruleText(r))}${r.skipInbox ? ' <small>· 받은편지함 건너뛰기</small>' : ''}</span><button class="ib" data-del="${esc(r.id)}" title="조건 삭제">${ico('trash', 16)}</button></div>`).join('') : '<p class="desc">아직 없어요</p>'}
@@ -322,9 +337,11 @@ async function openRules(box) {
     const d = e.target.closest('[data-del]'); if (d) { try { await delRule(d.dataset.del); toast('조건을 지웠어요'); draw(); } catch (er) { toast('지우지 못했어요: ' + er.message); } return; }
     if (e.target.closest('#runNow')) { runRules(box); return; }
     if (e.target.closest('#addRule')) {
+      const btn = e.target.closest('#addRule'); if (btn.disabled) return;
       const r = { box, skipInbox: $('#skipIn', bg).checked }; $$('[data-f]', bg).forEach(i => { r[i.dataset.f] = i.value.trim(); });
       if (!r.from && !r.to && !r.subject && !r.query) { toast('조건을 하나 이상 넣어 주세요'); return; }
-      try { await addRule(r); toast('조건을 추가했어요 — 이미 받은 메일에 적용하려면 지금 바로 실행'); draw(); } catch (er) { toast('추가하지 못했어요: ' + er.message); }
+      btn.disabled = true; btn.textContent = '추가하는 중…';
+      try { await addRule(r); toast('조건을 추가했어요 — 이미 받은 메일에 적용하려면 지금 바로 실행'); draw(); } catch (er) { toast('추가하지 못했어요: ' + er.message); btn.disabled = false; btn.textContent = '조건 추가'; }
     }
   });
   draw();
@@ -574,26 +591,17 @@ const baseName = n => n.replace(/\.[a-z0-9]{1,5}$/i, '');
 const attsOf = m => m.att.map((a, i) => [a, i]).filter(([a]) => !(a[3] && a[3].inline));
 const ftBadges = list => list.map(([[t, n]]) => `<span class="mini" title="${esc(n)}">${ftIcon(t, 15, n)}<span class="nm">${esc(baseName(n))}</span></span>`).join('');
 // 첨부 줄이 넘치면: 1) 파일 이름 숨기고 종류 표시만 2) 그래도 넘치면 뒤쪽을 '…+N'으로
-function fitAttRows() {
-  $$('#rows .l3').forEach(l => {
-    if (l.scrollWidth <= l.clientWidth + 1) return;
-    l.classList.add('compact');
-    const minis = $$('.mini', l); let hidden = 0;
-    while (l.scrollWidth > l.clientWidth + 1 && hidden < minis.length) {
-      minis[minis.length - 1 - hidden].style.display = 'none'; hidden++;
-      let more = $('.more', l); if (!more) { more = document.createElement('span'); more.className = 'more'; l.append(more); }
-      more.textContent = '…+' + hidden;
-    }
-  });
-}
 function renderList() {
   const list = visible();
+  const sig = [st.folder, st.q, JSON.stringify(st.f)].join('|');
+  if (sig !== st.listSig) { st.listSig = sig; st.limit = 200; const r = $('#rows'); if (r) r.scrollTop = 0; }
+  const shown = list.slice(0, st.limit || 200);
   [...st.picked].forEach(id => { if (!list.some(m => m.id === id)) st.picked.delete(id); });
   renderHead(list);
   renderSugg();
   if (!list.length) { $('#rows').innerHTML = '<div class="empty">조건에 맞는 메일이 없어요</div>'; return; }
   let g = '', h = '';
-  list.forEach(m => {
+  shown.forEach(m => {
     const gn = grpName(m.d, m);
     if (gn !== g) { g = gn; h += `<div class="grp">${gn}</div>`; }
     const who = m.sent ? esc('받는사람: ' + m.to.map(nameOf).join(', ')) : `${esc(m.from.name)}${m.from.email && m.from.email.includes('@') ? ` <span class="dom">${esc(m.from.email.split('@')[1])}</span>` : ''}`;
@@ -605,8 +613,8 @@ function renderList() {
       ${attsOf(m).length ? `<div class="l3">${ftBadges(attsOf(m))}</div>` : ''}
     </div></div>`;
   });
+  if (list.length > shown.length) h += `<div class="more-rows">아래로 내리면 ${list.length - shown.length}통 더 보여요</div>`;
   $('#rows').innerHTML = h;
-  fitAttRows();
 }
 function renderHead(list) {
   // 체크한 메일이 없어도, 목록에서 눌러서 열어 둔 메일이 있으면 그 메일에 적용
@@ -1449,7 +1457,7 @@ function googleLogin(interactive = true) {
     if (!okOrigins.includes(location.origin)) return Promise.reject(new Error(location.protocol !== 'https:' ? '보안 연결(https)이 아직 준비 중이에요. https://yoonjintar2-ctrl.github.io/mail/ 에서 연결해 주세요' : '이 주소에서는 로그인할 수 없어요 (' + location.origin + ')'));
     return loadGis().then(() => new Promise((res, rej) => {
       const tc = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPE, hint: c && c.email || undefined,
-        callback: r => r.access_token ? (tokCache.set(r.access_token, r.expires_in), res(r.access_token)) : rej(new Error(r.error || '로그인이 취소됐어요')),
+        callback: r => r.access_token ? (tokCache.set(r.access_token, r.expires_in), store.set('tok-scope', r.scope || ''), res(r.access_token)) : rej(new Error(r.error || '로그인이 취소됐어요')),
         error_callback: e => rej(new Error(e && e.type === 'popup_closed' ? '로그인 창이 닫혔어요' : (e && e.message) || '로그인 실패')) });
       tc.requestAccessToken({ prompt: c ? '' : 'select_account' });
     }));
@@ -1460,7 +1468,7 @@ function googleLogin(interactive = true) {
     chrome.identity.launchWebAuthFlow({ url: 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams(p), interactive }, r => {
       if (chrome.runtime.lastError) return rej(new Error(chrome.runtime.lastError.message));
       const h = new URLSearchParams((r || '').split('#')[1] || '');
-      h.get('access_token') ? (tokCache.set(h.get('access_token'), +h.get('expires_in')), res(h.get('access_token'))) : rej(new Error(h.get('error') || '로그인이 취소됐어요'));
+      h.get('access_token') ? (tokCache.set(h.get('access_token'), +h.get('expires_in')), store.set('tok-scope', h.get('scope') || ''), res(h.get('access_token'))) : rej(new Error(h.get('error') || '로그인이 취소됐어요'));
     });
   });
 }
@@ -1470,12 +1478,14 @@ const real = { on: false, token: null };
 const quota = { win: [] };
 const unitsOf = (path, method) => /batchModify/.test(path) ? 50 : /^settings\/filters/.test(path) ? (method && method !== 'GET' ? 5 : 1) : /^labels/.test(path) ? 1 : 5;
 async function takeQuota(units, bg) {
-  for (;;) {
+  if (!bg) quota.fg = (quota.fg || 0) + 1;
+  try { for (;;) {
+    if (bg && quota.fg > 0) { await new Promise(z => setTimeout(z, 150)); continue; }
     const now = Date.now(); quota.win = quota.win.filter(x => now - x[0] < 1000);
-    const used = quota.win.reduce((a, x) => a + x[1], 0), cap = bg ? 100 : 220;
+    const used = quota.win.reduce((a, x) => a + x[1], 0), cap = bg ? 70 : 220;
     if (used + units <= cap) { quota.win.push([now, units]); return; }
     await new Promise(z => setTimeout(z, 120));
-  }
+  } } finally { if (!bg) setTimeout(() => { quota.fg--; }, 600); }
 }
 async function gapi(path, opt, tries) {
   opt = opt || {}; tries = tries || 0;
@@ -1599,7 +1609,7 @@ async function loadReal(interactive, token) {
           const g = todo[i++];
           try { const x = parseMsg(await gapi(`messages/${g}?format=full&fields=${encodeURIComponent(META_FIELDS)}`, { bg: true }), false); metas.set(g, x); buf.push(x); } catch (e) { /* 한 통 실패는 건너뜀 */ }
           done++;
-          if (done % 50 === 0) { cachePut(db, buf); buf = []; prog(`${label} ${done}/${todo.length}`); show(); }
+          if (done % 50 === 0) { cachePut(db, buf); buf = []; prog(`${label} ${done}/${todo.length}`); if (Date.now() - (real.lastShow || 0) > 3000) { real.lastShow = Date.now(); show(); } }
         }
       }));
       cachePut(db, buf);
@@ -1799,6 +1809,7 @@ function wire() {
   document.addEventListener('dragend', () => { drag = null; $$('.row.dragging').forEach(r => r.classList.remove('dragging')); $$('.ni').forEach(x => x.classList.remove('drop-in', 'drop-before', 'drop-after')); });
   // 목록
   const rows = $('#rows');
+  rows.addEventListener('scroll', () => { if (rows.scrollTop + rows.clientHeight > rows.scrollHeight - 400 && visible().length > (st.limit || 200)) { st.limit = (st.limit || 200) + 200; const t = rows.scrollTop; renderList(); rows.scrollTop = t; } }, { passive: true });
   rows.addEventListener('click', e => {
     const r = e.target.closest('.row'); if (!r) return; const id = +r.dataset.id;
     if (e.target.classList.contains('ck') || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) { if (!e.target.classList.contains('ck')) e.preventDefault(); pickClick(id, e); return; }

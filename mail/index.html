@@ -393,6 +393,12 @@ body.resizing{cursor:col-resize;user-select:none}
 .rulef label{width:130px;flex:none;font-size:13px;color:var(--sub)}
 .rulef input{flex:1;border:1px solid #c4cbd6;border-radius:6px;padding:6px 9px;font:inherit;font-size:13.5px}
 .modal-bg.stack{z-index:70;background:rgba(32,33,36,.28)}
+/* 첨부 줄: 이름이 보이고, 길면 각자 말줄임 */
+.row .l3{display:flex;flex-wrap:nowrap;overflow:hidden;gap:10px;min-width:0}
+.row .l3 > .mini{flex:0 1 auto;min-width:58px;max-width:240px;overflow:hidden}
+.row .l3 > .mini:only-child{max-width:100%}
+.mini .nm{min-width:0}
+.more-rows{padding:14px;text-align:center;font-size:12px;color:var(--mute)}
 </style>
 </head>
 <body>
@@ -446,6 +452,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793004114"></script>
+<script src="mail-c.js?v=1793004611"></script>
 </body>
 </html>
