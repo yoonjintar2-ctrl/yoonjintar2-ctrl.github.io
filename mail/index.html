@@ -331,6 +331,18 @@ body.resizing{cursor:col-resize;user-select:none}
 .pastebtn{position:fixed;z-index:44;display:inline-flex;align-items:center;gap:3px;height:24px;padding:0 6px;border:1px solid #c4cbd6;border-radius:5px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.12);color:var(--sub);font-size:11px;cursor:pointer}
 .pastebtn:hover{border-color:var(--blue);color:var(--blue)}
 .cbody .gp-pm{display:inline}
+/* 목록 (아웃룩식): 보낸사람·제목 검게, 본문 첫 줄·첨부는 작은 회색 */
+.row .who{color:#1f1f1f;font-size:13.5px}
+.row .subj{color:#1f1f1f;font-size:14px;font-weight:600;margin-top:2px}
+.row.unread .who{font-weight:700}
+.row.unread .subj{font-weight:800;color:#0b1f44}
+.row .snip{font-size:12.5px;color:#7a8089;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.row .l3{margin-top:4px}
+.row .subj .draft{vertical-align:1px}
+.mini{font-size:12px;color:#7a8089;gap:4px}
+.l3.compact .mini{gap:0}
+.fti{flex:none;vertical-align:-3px}
+.att .fti{margin-right:2px}
 </style>
 </head>
 <body>
