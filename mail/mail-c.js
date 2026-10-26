@@ -161,20 +161,20 @@ const SYS = {
   tome: { name: '나에게 온 메일', ic: 'me', f: m => m.inbox && !m.sent && m.to.some(isMe), parent: 'inbox' },
   sent: { name: '보낸편지함', ic: 'sent', f: m => m.sent },
   draft: { name: '작성 중인 메일', ic: 'draft', f: m => !!m.draft },
-  all: { name: '모든 메일', ic: 'all', f: () => true, hideNav: true }
+  all: { name: '전체 메일', ic: 'all', f: () => true }
 };
-const folderFn = k => { if (SYS[k]) return SYS[k].f; const ids = new Set(descIds(k)); const f = m => ids.has(m.box); f.boxId = k; return f; };
+const folderFn = k => { if (k === 'all') return () => true; if (SYS[k]) { const sf = SYS[k].f; return m => !m.deleted && sf(m); } const ids = new Set(descIds(k)); const f = m => !m.deleted && ids.has(m.box); f.boxId = k; return f; };
 const folderName = k => SYS[k] ? SYS[k].name : boxPath(k);
 
 /* ───────── 왼쪽: 폴더·편지함 트리 ───────── */
 function renderNav() {
   // 안 읽은 수: 메일을 한 번만 훑어서 편지함별로 셈 (편지함 수 × 메일 수 반복 없앰)
-  const perBox = new Map(); MAILS.forEach(m => { if (m.unread && m.box) perBox.set(m.box, (perBox.get(m.box) || 0) + 1); });
+  const perBox = new Map(); MAILS.forEach(m => { if (m.unread && m.box && !m.deleted) perBox.set(m.box, (perBox.get(m.box) || 0) + 1); });
   const unread = f => f.boxId ? descIds(f.boxId).reduce((a, id) => a + (perBox.get(id) || 0), 0) || '' : MAILS.filter(m => f(m) && m.unread).length || '';
   const sysItem = (k, depth) => { const v = SYS[k]; const n = k === 'draft' ? (MAILS.filter(m => m.draft).length || '') : unread(v.f);
     return `<div class="ni${k !== 'tome' ? ' ni-top' : ''}${st.folder === k ? ' on' : ''}${n && k !== 'draft' ? ' unread' : ''}" data-f="${k}" data-sys="${k}" style="padding-left:${14 + depth * 22}px"><span class="ic">${ico(v.ic)}</span><span class="nm">${v.name}</span><span class="n">${n}</span></div>`; };
   // 받은편지함 └ 나에게 온 메일 연결선
-  let h = sysItem('inbox', 0) + sysItem('tome', 1).replace('<span class="ic">', '<i class="g e" style="left:22px"></i><span class="ic">') + '<div class="nsep"></div>' + sysItem('sent', 0) + sysItem('draft', 0);
+  let h = sysItem('inbox', 0) + sysItem('tome', 1).replace('<span class="ic">', '<i class="g e" style="left:22px"></i><span class="ic">') + '<div class="nsep"></div>' + sysItem('sent', 0) + sysItem('draft', 0) + sysItem('all', 0).replace(/<span class="n">\d*<\/span>/, '<span class="n"></span>');
   h += `<div class="nh">편지함<button class="ib" id="addBox" title="편지함 만들기" style="width:26px;height:26px">${ico('plus', 15)}</button></div>`;
   const nHidden = BOXES.filter(b => b.hidden).length;
   const shown = p => childrenOf(p).filter(b => !b.hidden || SET.showHidden);
@@ -199,14 +199,11 @@ function boxMenu(anchor, id, at) {
   const b = boxById(id); if (!b) return;
   const row = $(`.ni[data-box="${id}"]`); if (row) row.classList.add('menu-open');
   const m = menuAt(anchor, [
-    { html: ico('read2', 16) + ' 모두 읽음으로 표시', act: () => { const ids = descIds(id); let n = 0; MAILS.forEach(x => { if (ids.includes(x.box) && x.unread) { x.unread = 0; n++; } }); renderNav(); renderList();
-      if (!real.on) { toast(`'${b.name}' 메일 ${n}통을 읽음으로 표시했어요`); return; }
-      // 화면에 안 불러온 메일까지 Gmail에서 이 편지함의 안 읽은 메일 전부
-      sync('모두 읽음', async () => { let total = 0; for (const lid of ids) { const r = await gapi(`messages?labelIds=${lid}&labelIds=UNREAD&maxResults=500`); const g = (r.messages || []).map(x => x.id); if (g.length) { await gapi('messages/batchModify', { method: 'POST', body: { ids: g, removeLabelIds: ['UNREAD'] } }); total += g.length; } } toast(`'${b.name}' 메일 ${total}통을 읽음으로 표시했어요`); }); } },
+    { html: ico('read2', 16) + ' 모두 읽음으로 표시', act: () => { const ids = descIds(id); const hit = MAILS.filter(x => ids.includes(x.box) && x.unread && !x.deleted); hit.forEach(x => { x.unread = 0; jSet(x, { u: 0 }); }); renderNav(); renderList(); toast(`'${b.name}' 메일 ${hit.length}통을 읽음으로 표시했어요`); } },
     { html: ico('rename', 16) + ' 이름 바꾸기', act: () => renameBox(id) },
     { html: ico('where', 16) + ' 자동 분류 규칙', act: () => openRules(id) },
     { html: ico('gear', 16) + ' 편지함 관리', act: () => openSettings('boxes') },
-    { html: ico('hide', 16) + (b.hidden ? ' 다시 보이기' : ' 숨기기'), act: () => { const hide = !b.hidden; descIds(id).forEach(x => { boxById(x).hidden = hide; }); if (hide && descIds(id).includes(st.folder)) st.folder = 'inbox'; saveAll(); if (real.on) store.set('real-hidden', BOXES.filter(x => x.hidden).map(x => x.id)); renderNav(); renderTop(); renderList(); toast(hide ? `'${b.name}'을(를) 숨겼어요` : `'${b.name}'이(가) 다시 보여요`); } },
+    { html: ico('hide', 16) + (b.hidden ? ' 다시 보이기' : ' 숨기기'), act: () => { const hide = !b.hidden; descIds(id).forEach(x => { boxById(x).hidden = hide; }); if (hide && descIds(id).includes(st.folder)) st.folder = 'inbox'; saveAll(); renderNav(); renderTop(); renderList(); toast(hide ? `'${b.name}'을(를) 숨겼어요` : `'${b.name}'이(가) 다시 보여요`); } },
     '-',
     { html: ico('trash', 16) + ' 삭제', act: () => deleteBox(id) }
   ], false, at);
@@ -218,25 +215,15 @@ function renameBox(id) {
   nm.replaceWith(inp); inp.focus(); inp.select();
   let done = false;
   const finish = ok => { if (done) return; done = true; const old = b.name; if (ok && inp.value.trim()) b.name = inp.value.trim(); saveAll(); renderNav(); renderList(); renderRead();
-    if (!real.on) return;
-    if (b.pending) { b.pending = false; sync('편지함 만들기', async () => { const r = await gapi('labels', { method: 'POST', body: { name: labelPath(b.id), labelListVisibility: 'labelShow', messageListVisibility: 'show' } }); const oldId = b.id; b.id = r.id; if (st.folder === oldId) st.folder = r.id; renderNav(); toast(`Gmail에 '${labelPath(b.id)}' 편지함을 만들었어요`); }).catch(() => { BOXES = BOXES.filter(x => x !== b); renderNav(); }); return; }
-    if (b.name !== old) renamePaths(id).catch(() => { b.name = old; renderNav(); });
+    b.pending = false;
   };
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); e.stopPropagation(); });
   inp.addEventListener('blur', () => finish(true));
   inp.addEventListener('click', e => e.stopPropagation());
 }
-// Gmail 라벨은 '상위/하위' 전체 경로가 이름 → 상위가 바뀌면 하위도 전부 고침
-function renamePaths(id) { return sync('편지함 이름', async () => { for (const x of descIds(id)) await gapi('labels/' + x, { method: 'PATCH', body: { name: labelPath(x) } }); toast('Gmail 편지함 이름을 바꿨어요'); }); }
+function renamePaths() { return Promise.resolve(); }  // (예전: Gmail 라벨 이름 변경) — 이제 JIN-mail 안에서만
 async function deleteBox(id) {
-  if (real.on) {
-    const ids = descIds(id), b = boxById(id);
-    try { let n = 0; for (const x of ids) n += (await gapi('labels/' + x)).messagesTotal || 0; if (n) { toast(`'${b.name}'에 메일 ${n}통이 있어요. 먼저 다른 곳으로 옮겨 주세요`); return; } } catch (e) { toast(e.message); return; }
-    if (!confirm(`Gmail에서 '${labelPath(id)}' 편지함을 삭제할까요? (비어 있는 편지함이에요)`)) return;
-    sync('편지함 삭제', async () => { for (const x of ids.slice().reverse()) await gapi('labels/' + x, { method: 'DELETE' }); BOXES = BOXES.filter(x => !ids.includes(x.id)); if (ids.includes(st.folder)) st.folder = 'inbox'; renderNav(); renderList(); toast('편지함을 삭제했어요'); });
-    return;
-  }
-  const ids = descIds(id); const n = MAILS.filter(m => ids.includes(m.box)).length;
+  const ids = descIds(id); const n = MAILS.filter(m => ids.includes(m.box) && !m.deleted).length;
   if (n) { toast(`이 편지함에 메일 ${n}통이 있어요. 먼저 다른 곳으로 옮겨 주세요`); return; }
   const before = BOXES.slice();
   BOXES = BOXES.filter(x => !ids.includes(x.id)); if (ids.includes(st.folder)) st.folder = 'inbox';
@@ -248,11 +235,6 @@ async function deleteBox(id) {
 const ruleQuery = r => [r.from && `from:(${r.from})`, r.to && `to:(${r.to})`, r.subject && `subject:(${r.subject})`, r.query].filter(Boolean).join(' ');
 const ruleText = r => [r.from && `보낸사람에 '${r.from}'`, r.to && `받는사람에 '${r.to}'`, r.subject && `제목에 '${r.subject}'`, r.query && `내용·키워드 '${r.query}'`].filter(Boolean).join(' 그리고 ');
 const FILTER_SCOPE = 'https://www.googleapis.com/auth/gmail.settings.basic';
-async function hasFilterScope() {
-  if (!real.on) return true;
-  const sc = store.get('tok-scope', null); if (sc != null && real.scopeTok === real.token) return sc.includes(FILTER_SCOPE);
-  try { const r = await fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(real.token)).then(x => x.json()); store.set('tok-scope', r.scope || ''); real.scopeTok = real.token; return (r.scope || '').includes(FILTER_SCOPE); } catch (e) { return true; }
-}
 async function withScope(job) {
   try { return await job(); }
   catch (e) {
@@ -261,45 +243,28 @@ async function withScope(job) {
     tokCache.clear(); real.token = await googleLogin(true); return job();
   }
 }
-async function loadRules(fresh) {
-  if (!real.on) return store.get('rules', []);
-  if (real.rules && !fresh) return real.rules;
-  const r = await withScope(() => gapi('settings/filters'));
-  return real.rules = (r.filter || []).map(f => ({ id: f.id, box: (f.action.addLabelIds || []).find(x => /^Label_/.test(x)), from: f.criteria.from || '', to: f.criteria.to || '', subject: f.criteria.subject || '', query: f.criteria.query || '', skipInbox: (f.action.removeLabelIds || []).includes('INBOX') })).filter(x => x.box);
-}
+async function loadRules() { return real.on ? (J.data.rules || []) : store.get('rules', []); }
 async function addRule(r) {
-  if (!real.on) { const all = store.get('rules', []); r.id = 'r' + Date.now(); all.push(r); store.set('rules', all); return r; }
-  const criteria = {}; ['from', 'to', 'subject', 'query'].forEach(k => { if (r[k]) criteria[k] = r[k]; });
-  const f = await withScope(() => gapi('settings/filters', { method: 'POST', body: { criteria, action: { addLabelIds: [r.box], removeLabelIds: r.skipInbox ? ['INBOX'] : [] } } }));
-  r.id = f.id; if (real.rules) real.rules.push(Object.assign({}, r)); return r;
+  r.id = 'r' + Date.now();
+  if (real.on) { J.data.rules = (J.data.rules || []).concat([r]); jSave(); } else { const all = store.get('rules', []); all.push(r); store.set('rules', all); }
+  return r;
 }
 async function delRule(id) {
-  if (!real.on) { store.set('rules', store.get('rules', []).filter(x => x.id !== id)); return; }
-  await withScope(() => gapi('settings/filters/' + id, { method: 'DELETE' }));
-  if (real.rules) real.rules = real.rules.filter(x => x.id !== id);
+  if (real.on) { J.data.rules = (J.data.rules || []).filter(x => x.id !== id); jSave(); } else store.set('rules', store.get('rules', []).filter(x => x.id !== id));
 }
-// 지금 바로 실행: 받은편지함에 있는 메일 중 조건에 맞는 것을 바로 그 편지함으로 (box=null이면 모든 규칙)
-async function runRules(box) {
-  try {
-    const rules = (await loadRules()).filter(r => !box || r.box === box);
-    if (!rules.length) { toast('실행할 분류 조건이 없어요'); return; }
-    toast('분류 조건을 받은편지함 메일에 적용하는 중…');
-    let moved = 0;
-    for (const r of rules) {
-      if (real.on) {
-        const ids = await listIds(ruleQuery(r) + ' in:inbox');
-        for (let i = 0; i < ids.length; i += 900) await gapi('messages/batchModify', { method: 'POST', body: { ids: ids.slice(i, i + 900), addLabelIds: [r.box], removeLabelIds: r.skipInbox ? ['INBOX'] : [] } });
-        real.over = real.over || new Map();
-        ids.forEach(g => { const o = real.over.get(g) || {}; o.box = r.box; if (r.skipInbox) o.inbox = 0; real.over.set(g, o); if (real.lab) { real.lab.box.set(g, r.box); if (r.skipInbox) real.lab.inbox.delete(g); } const m = MAILS.find(x => x.gid === g); if (m) { m.box = r.box; if (r.skipInbox) m.inbox = 0; } });
-        moved += ids.length;
-      } else {
-        const has = (hay, k) => !k || k.split(/\s+/).every(w => hay.toLowerCase().includes(w.toLowerCase()));
-        MAILS.forEach(m => { if (!m.inbox) return; if (has(m.from.email + ' ' + m.from.name, r.from) && has(m.to.map(p => p.email + p.name).join(' '), r.to) && has(m.subj, r.subject) && has(m.subj + ' ' + m.body, r.query)) { m.box = r.box; if (r.skipInbox) m.inbox = 0; moved++; } });
-      }
-    }
-    renderNav(); renderList(); renderRead(true);
-    toast(`분류 조건에 맞는 메일 ${moved}통을 옮겼어요`);
-  } catch (e) { toast('분류 실행 실패: ' + e.message); }
+// 조건에 맞는지 (JIN-mail 안에서 판단 — Gmail 필터 아님)
+function ruleHit(m, r) {
+  const has = (hay, k) => !k || k.split(/\s+OR\s+/i).some(alt => alt.split(/\s+/).filter(Boolean).every(w => hay.toLowerCase().includes(w.toLowerCase())));
+  return has((m.from.email || '') + ' ' + (m.from.name || ''), r.from) && has(m.to.concat(m.cc || []).map(p => p.email + ' ' + p.name).join(' '), r.to) && has(m.subj || '', r.subject) && has((m.subj || '') + ' ' + (m.body || m.snippet || ''), r.query);
+}
+// 지금 바로 실행: 받은편지함 메일 중 조건에 맞는 것을 그 편지함으로 (모든 규칙)
+async function runRules() {
+  const rules = await loadRules();
+  if (!rules.length) { toast('실행할 분류 조건이 없어요'); return; }
+  let moved = 0;
+  MAILS.forEach(m => { if (!m.inbox || m.deleted) return; const r = rules.find(x => ruleHit(m, x)); if (!r) return; m.box = r.box; if (r.skipInbox) m.inbox = 0; jSet(m, { b: r.box, i: m.inbox }); moved++; });
+  renderNav(); renderList(); renderRead(true);
+  toast(`분류 조건에 맞는 메일 ${moved}통을 옮겼어요`);
 }
 async function openRules(box) {
   closeMenus();
@@ -310,13 +275,8 @@ async function openRules(box) {
   const body = $('#rb', bg);
   const draw = async () => {
     let rules = [];
-    if (!(await hasFilterScope())) {
-      body.innerHTML = `<p class="desc">자동 분류는 Gmail 필터를 만드는 권한이 하나 더 필요해요. 아래 버튼을 누르고 Google 창에서 허용해 주세요. (처음 한 번만)</p><div class="opt"><button class="btn pri" id="grantScope">${ico('env', 16)} 자동 분류 권한 허용하기</button></div>`;
-      $('#grantScope', bg).onclick = async () => { try { tokCache.clear(); real.token = await googleLogin(true); store.set('tok-scope', null); real.scopeTok = null; draw(); } catch (er) { toast('권한을 받지 못했어요: ' + er.message); } };
-      return;
-    }
     try { rules = (await loadRules()).filter(r => r.box === box); } catch (e) { body.innerHTML = `<p class="desc" style="color:#d93025">규칙을 불러오지 못했어요: ${esc(e.message)}</p>`; return; }
-    body.innerHTML = `<p class="desc">아래 조건에 맞는 <b>새 메일</b>은 자동으로 이 편지함에 들어가요${real.on ? ' (Gmail 필터로 저장돼서 JIN-mail을 닫아 둬도 분류돼요)' : ''}. 이미 받은편지함에 있는 메일은 아래 '모든 분류 조건 지금 실행'을 누르면 모든 편지함 조건이 한꺼번에 적용돼요.</p>
+    body.innerHTML = `<p class="desc">아래 조건에 맞는 <b>새 메일</b>은 자동으로 이 편지함에 들어가요 (JIN-mail 안에서만 분류돼요 — Gmail 라벨·필터는 바뀌지 않아요). 이미 받은편지함에 있는 메일은 아래 '모든 분류 조건 지금 실행'을 누르면 모든 편지함 조건이 한꺼번에 적용돼요.</p>
       <h5>지금 있는 조건 <span class="rcount">${rules.length}개</span></h5>${rules.length ? rules.map(r => `<div class="rulerow"><span>${ico('where', 15)} <b>${esc(ruleText(r))}</b>${r.skipInbox ? ' <small>· 받은편지함 건너뛰기</small>' : ''}</span><button class="ib" data-del="${esc(r.id)}" title="조건 삭제">${ico('trash', 16)}</button></div>`).join('') : '<div class="rulerow empty">아직 조건이 없어요 — 아래에서 추가해 주세요</div>'}
       <h5>조건 추가 <small style="font-weight:400;color:var(--mute)">(여러 칸을 채우면 모두 맞을 때만, 칸 안에서 'OR'로 여러 개)</small></h5>
       <div class="rulef"><label>보낸사람 주소·이름에</label><input data-f="from" placeholder="예: coway.com 또는 kim@nasmedia.co.kr"></div>
@@ -608,7 +568,7 @@ function renderList() {
     h += `<div class="row${m.unread ? ' unread' : ''}${st.open === m.id ? ' open' : ''}${st.picked.has(m.id) ? ' picked' : ''}" data-id="${m.id}" draggable="true">
       <input type="checkbox" class="ck"${st.picked.has(m.id) ? ' checked' : ''}><div class="mid">
       <div class="l1"><span class="who">${who}</span><span class="dt">${dateLabel(m)}</span></div>
-      <div class="subj">${m.draft ? '<span class="draft">작성 중</span> ' : ''}${esc(m.subj)}</div>
+      <div class="subj">${m.deleted ? '<span class="deltag">삭제됨</span> ' : ''}${m.draft ? '<span class="draft">작성 중</span> ' : ''}${esc(m.subj)}</div>
       <div class="snip">${esc(snipOf(m)) || '&nbsp;'}</div>
       ${attsOf(m).length ? `<div class="l3">${ftBadges(attsOf(m))}</div>` : ''}
     </div></div>`;
@@ -648,13 +608,13 @@ function moveMenu(btn, ids) {
 }
 // 삭제 = Gmail 휴지통으로 (30일 동안 되살릴 수 있음, 되돌리기 누르면 바로 복구)
 function trashMails(ids) {
-  const sel = new Set(ids), before = MAILS.slice(), g = gidsOf(ids);
-  real.gone = real.gone || new Set(); g.forEach(x => real.gone.add(x));
-  MAILS = MAILS.filter(m => !sel.has(m.id)); if (sel.has(st.open)) st.open = null; st.picked.clear();
-  renderNav(); renderList(); renderRead();
-  sync('휴지통 이동', () => Promise.all(g.map(x => gapi(`messages/${x}/trash`, { method: 'POST' }))));
-  toast(`${ids.length}통을 ${real.on ? '휴지통으로 옮겼어요' : '삭제했어요'}`, () => { g.forEach(x => real.gone.delete(x)); MAILS = before; renderNav(); renderList(); sync('복구', () => Promise.all(g.map(x => gapi(`messages/${x}/untrash`, { method: 'POST' })))); });
+  const list = MAILS.filter(m => ids.includes(m.id));
+  list.forEach(m => { m.deleted = 1; jSet(m, { d: 1 }); });
+  if (ids.includes(st.open) && st.folder !== 'all') st.open = null; st.picked.clear();
+  renderNav(); renderList(); renderRead(true);
+  toast(`${ids.length}통을 삭제했어요 (전체 메일에서 다시 볼 수 있어요)`, () => restoreMails(list.map(m => m.id)));
 }
+function restoreMails(ids) { MAILS.forEach(m => { if (ids.includes(m.id)) { m.deleted = 0; jSet(m, { d: 0 }); } }); renderNav(); renderList(); renderRead(true); toast(`${ids.length}통을 되살렸어요`); }
 // 편지함으로 옮기면 받은편지함에서는 빠짐 (Gmail의 '보관처리+라벨'과 같음)
 function moveTo(ids, boxId) {
   const before = MAILS.map(m => [m.id, m.box, m.inbox]);
@@ -663,7 +623,7 @@ function moveTo(ids, boxId) {
   st.picked.clear(); renderNav(); renderList(); renderRead();
   syncLabels(ids, [boxId], ['INBOX', ...olds], '편지함 이동');
   toast(`${ids.length}통을 '${boxPath(boxId)}'(으)로 옮겼어요`, () => {
-    before.forEach(([id, b, i]) => { const m = MAILS.find(x => x.id === id); if (m && ids.includes(id)) { m.box = b; m.inbox = i; if (real.on) syncLabels([id], [...(b ? [b] : []), ...(i ? ['INBOX'] : [])], b === boxId ? [] : [boxId], '되돌리기'); } });
+    before.forEach(([id, b, i]) => { const m = MAILS.find(x => x.id === id); if (m && ids.includes(id)) { m.box = b; m.inbox = i; jSet(m, { b: b || '', i }); } });
     renderNav(); renderList(); renderRead(); });
 }
 
@@ -679,7 +639,7 @@ function renderRead(force) {
   const m = MAILS.find(x => x.id === st.open);
   if (!m) { $('#view').innerHTML = '<div class="blank">목록에서 메일을 고르세요</div>'; $('#view').dataset.key = ''; return; }
   // 뒤에서 메일을 받아 오며 화면을 다시 그릴 때, 보고 있는 메일이 그대로면 본문을 새로 그리지 않음 (깜빡임 방지)
-  const key = [m.id, m.full ? 1 : 0, m.box, boxPath(m.box), m.draft ? 1 : 0, attsOf(m).length, m.subj].join('|');
+  const key = [m.id, m.full ? 1 : 0, m.box, boxPath(m.box), m.draft ? 1 : 0, m.deleted ? 1 : 0, attsOf(m).length, m.subj].join('|');
   if (!force && $('#view').dataset.key === key && $('#view').firstElementChild) return;
   $('#view').dataset.key = key;
   const toMe = m.to.some(isMe);
@@ -702,6 +662,7 @@ function renderRead(force) {
       </div>
     </div>
     ${attsOf(m).length ? `<div class="attbar"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b>${attsOf(m).map(([[t, n, s], i]) => `<span class="att" data-ai="${i}" title="${esc(n)} · 누르면 새 창에서 미리보기">${ftIcon(t, 17, n)}${esc(n)} <small>${s}</small></span>`).join('')}</div>` : ''}
+    ${m.deleted ? `<div class="dbanner delb"><span>${ico('trash', 16)} 삭제한 메일이에요</span><button data-act="restore">되살리기</button></div>` : ''}
     ${m.draft ? `<div class="dbanner"><span>${ico('pen', 16)} 이 대화에 작성 중이던 답장이 있어요</span><button data-act="draft">이어서 쓰기</button><button class="ib" data-act="deldraft" title="작성 중이던 메일 삭제">${ico('trash', 17)}</button></div>` : ''}
     <div class="rbody">${m.real && !m.full ? '<div class="blank" style="padding:40px 0">본문 불러오는 중…</div>' : m.html ? '<iframe class="mailhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>' : `<div class="txt">${esc(m.body)}</div>${prevHtml(m.prev, 0)}`}</div>`;
   const fr = $('#view iframe.mailhtml');
@@ -718,7 +679,7 @@ function openMail(id) {
   flushCompose();
   st.open = id;
   const m = MAILS.find(x => x.id === id);
-  if (m && m.unread) { m.unread = 0; if (real.lab) real.lab.unread.delete(m.gid); syncLabels([id], [], ['UNREAD'], '읽음'); }
+  if (m && m.unread) { m.unread = 0; jSet(m, { u: 0 }); }
   if (m && m.real && !m.full) fetchFull(m);
   $('#read').classList.remove('composing');
   renderNav(); renderList(); renderRead();
@@ -1411,7 +1372,7 @@ function tblAct(a) {
 }
 
 /* ───────── 설정 (일반 · 풋터 · 편지함 · 계정) ───────── */
-function saveAll() { if (!real.on) store.set('boxes', BOXES); store.set('footers2', FOOTERS); store.set('settings', SET); }
+function saveAll() { if (!real.on) store.set('boxes', BOXES); else if (J.data) { J.data.boxes = BOXES.map(b => ({ id: b.id, name: b.name, parent: b.parent, hidden: !!b.hidden })); jSave(); } store.set('footers2', FOOTERS); store.set('settings', SET); }
 // 저장 폴더: 브라우저가 고른 폴더 권한을 기억 (IndexedDB)
 const idb = (op, val) => new Promise(res => { try { const rq = indexedDB.open('jin-mail', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('kv'); rq.onsuccess = () => { const tx = rq.result.transaction('kv', op === 'get' ? 'readonly' : 'readwrite'); const s = tx.objectStore('kv'); const r = op === 'get' ? s.get('dir') : s.put(val, 'dir'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }; rq.onerror = () => res(null); } catch (e) { res(null); } });
 function openSettings(tab) {
@@ -1506,7 +1467,6 @@ function openSettings(tab) {
       if (k === 'rule') { f.rule = f.rule || {}; f.rule.type = e.target.value; $('[data-k=kw]', fr).style.display = e.target.value === 'from' ? '' : 'none'; }
       $('.ed', fr).setAttribute('style', footerStyle(f)); saveAll();
     }
-    if (br && k === 'name' && real.on) renamePaths(br.dataset.id);
     if (br && k === 'hide') { descIds(br.dataset.id).forEach(x => { boxById(x).hidden = e.target.checked; }); if (e.target.checked && descIds(br.dataset.id).includes(st.folder)) st.folder = 'inbox'; rerender(); show('boxes'); }
     if (e.target.id === 'ftrImg' && imgTarget) {
       const file = e.target.files[0]; if (!file) return;
@@ -1532,7 +1492,7 @@ function openSettings(tab) {
     if (t.id === 'disconn') { store.set('connected', null); show('account'); toast('연결을 해제했어요'); return; }
     if (t.id === 'addFtr') { FOOTERS.push({ id: 'f' + Date.now(), name: '새 풋터', html: '', font: { family: '맑은 고딕', size: 10, color: '#202124' }, rule: { type: 'none', kw: '' } }); saveAll(); show('footers'); renderFooterBar(); return; }
     if (t.id === 'runAllRules') { runRules(null); return; }
-    if (t.id === 'addTop') { const nb = { id: 'b' + Date.now(), name: '새 편지함', parent: null, pending: real.on }; BOXES.push(nb); if (real.on) { bg.remove(); renderNav(); renameBox(nb.id); return; } rerender(); show('boxes'); return; }
+    if (t.id === 'addTop') { const nb = { id: 'b' + Date.now(), name: '새 편지함', parent: null, }; BOXES.push(nb); rerender(); show('boxes'); return; }
     if (fr) {
       const f = FOOTERS.find(x => x.id === fr.dataset.id);
       if (t.dataset.k === 'del') { FOOTERS = FOOTERS.filter(x => x !== f); saveAll(); show('footers'); renderFooterBar(); }
@@ -1544,7 +1504,7 @@ function openSettings(tab) {
     if (br) {
       const b = boxById(br.dataset.id);
       if (t.dataset.k === 'rules') { openRules(b.id); return; }
-      if (t.dataset.k === 'sub') { const nb = { id: 'b' + Date.now(), name: '새 하위 편지함', parent: b.id, pending: real.on }; BOXES.push(nb); st.collapsed.delete(b.id); if (real.on) { bg.remove(); renderNav(); renameBox(nb.id); return; } rerender(); show('boxes'); }
+      if (t.dataset.k === 'sub') { const nb = { id: 'b' + Date.now(), name: '새 하위 편지함', parent: b.id, }; BOXES.push(nb); st.collapsed.delete(b.id); rerender(); show('boxes'); }
       if (t.dataset.k === 'del') { bg.remove(); deleteBox(b.id); }
     }
   });
@@ -1566,7 +1526,7 @@ function openSettings(tab) {
 
 /* ───────── 첫 접속: Gmail 계정 연결 ───────── */
 const CLIENT_ID = '94151073420-uuu2lscanfblmr7f7ghllcpe90e7c2uv.apps.googleusercontent.com';
-const SCOPE = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.settings.basic';  // + 자동 분류(필터)  // 읽기 + 읽음표시·라벨(편지함)·휴지통 이동
+const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive.appdata';  // Gmail은 읽기·보내기만, JIN-mail 편지함 정보는 드라이브 숨은 앱 공간  // + 자동 분류(필터)  // 읽기 + 읽음표시·라벨(편지함)·휴지통 이동
 const IS_EXT = !!(window.chrome && chrome.identity && chrome.identity.launchWebAuthFlow);
 // 로그인 토큰(1시간)은 이 브라우저에만 잠깐 보관 → 새로고침해도 다시 로그인하지 않음
 const tokCache = { get() { const t = store.get('tok', null); return t && t.exp > Date.now() + 60000 ? t.t : null; }, set(t, sec) { store.set('tok', { t, exp: Date.now() + (sec || 3500) * 1000 }); }, clear() { store.set('tok', null); } };
@@ -1632,17 +1592,10 @@ async function gapi(path, opt, tries) {
 // 화면에서 바꾼 것을 Gmail에도 반영 (실패하면 알림)
 function sync(label, job) { if (!real.on) return Promise.resolve(); return job().catch(e => { toast(`Gmail 반영 실패 (${label}): ${e.message}`); throw e; }); }
 const gidsOf = ids => ids.map(id => (MAILS.find(m => m.id === id) || {}).gid).filter(Boolean);
-// 이 화면에서 바꾼 상태는 따로 기억 → 뒤에서 받아 오는 목록이 옛 상태로 덮어쓰지 않게
-const syncLabels = (ids, add, remove, what) => { real.over = real.over || new Map(); gidsOf(ids).forEach(g => {
-    const o = real.over.get(g) || {}; if (add.includes('UNREAD')) o.unread = 1; if (remove.includes('UNREAD')) o.unread = 0;
-    if (add.includes('INBOX')) o.inbox = 1; if (remove.includes('INBOX')) o.inbox = 0;
-    const nb2 = add.find(x => /^Label_/.test(x)); if (nb2) o.box = nb2; real.over.set(g, o); });
-  if (real.lab) gidsOf(ids).forEach(g => {
-    if (add.includes('UNREAD')) real.lab.unread.add(g); if (remove.includes('UNREAD')) real.lab.unread.delete(g);
-    if (add.includes('INBOX')) real.lab.inbox.add(g); if (remove.includes('INBOX')) real.lab.inbox.delete(g);
-    const nb = add.find(x => /^Label_/.test(x)); if (nb) real.lab.box.set(g, nb); else if (remove.some(x => real.lab.box.get(g) === x)) real.lab.box.delete(g); });
-  return syncLabels0(ids, add, remove, what); };
-const syncLabels0 = (ids, add, remove, what) => sync(what || '라벨', () => gapi('messages/batchModify', { method: 'POST', body: { ids: gidsOf(ids), addLabelIds: add || [], removeLabelIds: remove || [] } }));
+// 읽음·이동은 JIN-mail 기록에만 (Gmail은 바꾸지 않음)
+const syncLabels = (ids, add, remove) => { ids.forEach(id => { const m = MAILS.find(x => x.id === id); if (!m) return;
+    const p = {}; if (add.includes('UNREAD')) p.u = 1; if (remove.includes('UNREAD')) p.u = 0; if (add.includes('INBOX')) p.i = 1; if (remove.includes('INBOX')) p.i = 0;
+    const nb = add.find(x => x !== 'UNREAD' && x !== 'INBOX'); if (nb) p.b = nb; jSet(m, p); }); return Promise.resolve(); };
 const labelPath = id => { const out = []; let b = boxById(id); while (b) { out.unshift(b.name); b = boxById(b.parent); } return out.join('/'); };
 const FT_OF = { xls: 'XLS', xlsx: 'XLS', csv: 'XLS', ppt: 'PPT', pptx: 'PPT', pdf: 'PDF', doc: 'DOC', docx: 'DOC', hwp: 'DOC', hwpx: 'DOC', jpg: 'IMG', jpeg: 'IMG', png: 'IMG', gif: 'IMG', webp: 'IMG', bmp: 'IMG', zip: 'ZIP', '7z': 'ZIP', rar: 'ZIP' };
 const b64bytes = s => { const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/')); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
@@ -1678,15 +1631,66 @@ function parseMsg(g, full) {
   return { gid: g.id, threadId: g.threadId, msgId: H['message-id'] || '', refs: H['references'] || '', when: +when, from: parsePeople(H.from)[0] || { name: '(알 수 없음)', email: '' }, to: parsePeople(H.to), cc: parsePeople(H.cc),
     subj: H.subject || '(제목 없음)', snippet: decodeEnt(g.snippet), body: full ? plain.replace(/\r/g, '').trim() : '', html: full ? html : '', att, full: !!full };
 }
-// 목록용 데이터 → 화면용 메일 (라벨 상태는 따로 매번 새로 받아서 씌움)
+/* ───────── JIN-mail 자체 기록 (Gmail과 별개) ─────────
+   메일마다 { b: 편지함, i: 받은편지함에 있음, u: 안 읽음, d: 삭제 } 를 JIN-mail이 따로 기억.
+   처음 한 번은 그때의 Gmail 라벨 상태를 복사해 오고, 이후로는 Gmail을 따라가지도, 바꾸지도 않음.
+   저장: 내 Google 드라이브의 숨은 앱 공간(jin-mail.json) + 이 PC 사본 */
+const J = { data: null, fileId: null, t: null };
+const DRIVE = 'https://www.googleapis.com/drive/v3', DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3';
+async function dfetch(url, opt) {
+  opt = opt || {};
+  const r = await fetch(url, Object.assign({}, opt, { headers: Object.assign({ Authorization: 'Bearer ' + real.token }, opt.headers || {}) }));
+  if (r.status === 401) { tokCache.clear(); real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요'); }
+  if (!r.ok) { let msg = 'Drive ' + r.status; try { msg += ': ' + (await r.json()).error.message; } catch (e) { /* */ } const e = new Error(msg); e.status = r.status; throw e; }
+  return r;
+}
+async function jLoad() {
+  const local = store.get('jstate-' + ME.email, null);
+  let remote = null;
+  const l = await (await dfetch(`${DRIVE}/files?spaces=appDataFolder&fields=files(id,modifiedTime)&q=${encodeURIComponent("name='jin-mail.json'")}`)).json();
+  if (l.files && l.files[0]) { J.fileId = l.files[0].id; remote = await (await dfetch(`${DRIVE}/files/${J.fileId}?alt=media`)).json(); }
+  J.data = local && (!remote || (local.savedAt || 0) > (remote.savedAt || 0)) ? local : remote;
+  if (J.data && J.data === local && remote) jSave();  // 이 PC 쪽이 더 최신이면 드라이브에 올림
+  if (J.data) { J.data.m = J.data.m || {}; J.data.rules = J.data.rules || []; }
+  return !!J.data;
+}
+function jSave() {
+  if (!J.data) return; J.data.savedAt = Date.now();
+  try { store.set('jstate-' + ME.email, J.data); } catch (e) { /* */ }
+  clearTimeout(J.t); J.t = setTimeout(jUpload, 2000);
+}
+async function jUpload() {
+  try {
+    const body = JSON.stringify(J.data);
+    if (J.fileId) await dfetch(`${DRIVE_UP}/files/${J.fileId}?uploadType=media`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body });
+    else {
+      const b = boundary(); const mp = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: 'jin-mail.json', parents: ['appDataFolder'] })}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${b}--`;
+      J.fileId = (await (await dfetch(`${DRIVE_UP}/files?uploadType=multipart&fields=id`, { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${b}` }, body: mp })).json()).id;
+    }
+  } catch (e) { toast('편지함 정보를 드라이브에 저장하지 못했어요 (이 PC에는 저장됨): ' + e.message); }
+}
+window.addEventListener('pagehide', () => { if (J.t) { clearTimeout(J.t); jUpload(); } });
+function jSet(m, patch) {
+  if (!real.on || !J.data || !m || !m.gid) return;
+  const r = J.data.m[m.gid] || (J.data.m[m.gid] = { b: m.box || '', i: m.inbox ? 1 : 0, u: m.unread ? 1 : 0, d: m.deleted ? 1 : 0 });
+  Object.assign(r, patch); jSave();
+}
+// 목록용 데이터 → 화면용 메일 (편지함·읽음·삭제는 JIN-mail 기록에서)
 function toMail(meta, lab) {
   const when = new Date(meta.when), day = new Date(when); day.setHours(0, 0, 0, 0);
-  const g = meta.gid;
-  const m = Object.assign({}, meta, { id: real.num(g), real: true, d: Math.max(0, Math.round((TODAY - day) / 86400000)), t: when.toTimeString().slice(0, 5),
-    prev: [], draft: null, inbox: lab.inbox.has(g) ? 1 : 0, sent: lab.sent.has(g) ? 1 : 0, unread: lab.unread.has(g) ? 1 : 0, box: lab.box.get(g) || null });
+  const g = meta.gid, sent = lab.sent.has(g);
+  const m = Object.assign({}, meta, { id: real.num(g), real: true, d: Math.max(0, Math.round((TODAY - day) / 86400000)), t: when.toTimeString().slice(0, 5), prev: [], draft: null, sent: sent ? 1 : 0 });
   if (m.from.email === ME.email) m.from = ME;
-  const o = real.over && real.over.get(g); if (o) Object.assign(m, o);
-  return m;
+  let r = J.data && J.data.m[g];
+  if (!r) {
+    const isNew = !J.data || meta.when > J.data.initAt, received = !sent || lab.inbox.has(g);
+    let b = isNew ? '' : (lab.box.get(g) || ''), i = isNew ? (received ? 1 : 0) : (lab.inbox.has(g) ? 1 : 0);
+    // 새로 들어온 메일엔 JIN-mail 자동 분류 규칙 적용
+    if (isNew && received && J.data) { const rule = (J.data.rules || []).find(x => ruleHit(m, x)); if (rule) { b = rule.box; if (rule.skipInbox) i = 0; } }
+    r = { b, i, u: !sent && lab.unread.has(g) ? 1 : 0, d: 0 };
+    if (real.labReady && J.data) { J.data.m[g] = r; J.dirty = true; }
+  }
+  return Object.assign(m, { box: r.b || null, inbox: r.i, unread: r.u, deleted: r.d });
 }
 // 이 브라우저 안의 저장소(IndexedDB) — 한 번 받은 목록은 다음부터 다시 안 받음
 function cacheDb() {
@@ -1722,16 +1726,23 @@ async function loadReal(interactive, token) {
   if (real.loading) return; real.loading = true;
   const prog = t => { real.prog = t; renderTop(); const bm = $('#bootMsg'); if (bm && t) bm.textContent = t; };
   try {
+    if (!token && !interactive) { const sc = store.get('tok-scope', null); if (sc != null && !sc.includes('drive.appdata')) { tokCache.clear(); throw Object.assign(new Error('JIN-mail이 Gmail을 바꾸지 않도록 권한을 바꿨어요. 한 번만 다시 연결해 주세요'), { relogin: true }); } }
     real.token = token || await googleLogin(interactive); real.expired = false;
     prog('Gmail 연결 중…');
     const [prof, labs] = await Promise.all([gapi('profile'), gapi('labels')]);
     ME.email = prof.emailAddress.toLowerCase();
     real.ids = real.ids || new Map(); real.num = g => { if (!real.ids.has(g)) real.ids.set(g, real.ids.size + 1); return real.ids.get(g); };
-    // 라벨 → 편지함 ('상위/하위' 이름 구조 그대로). 숨김은 이 브라우저에만 기억
-    const hid = new Set(store.get('real-hidden', []));
+    // JIN-mail 편지함·분류 기록 (드라이브 숨은 앱 공간). 처음이면 지금의 Gmail 라벨 구조를 한 번만 복사
+    prog('JIN-mail 편지함 불러오는 중…');
+    const hasJ = await jLoad();
     const user = (labs.labels || []).filter(l => l.type === 'user').sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
     const byName = new Map(user.map(l => [l.name, l.id]));
-    BOXES = user.map(l => { const k = l.name.lastIndexOf('/'); return { id: l.id, name: k < 0 ? l.name : l.name.slice(k + 1), parent: k < 0 ? null : (byName.get(l.name.slice(0, k)) || null), hidden: hid.has(l.id) }; });
+    if (!hasJ) {
+      const hid = new Set(store.get('real-hidden', []));
+      J.data = { v: 1, initAt: Date.now(), boxes: user.map(l => { const k = l.name.lastIndexOf('/'); return { id: l.id, name: k < 0 ? l.name : l.name.slice(k + 1), parent: k < 0 ? null : (byName.get(l.name.slice(0, k)) || null), hidden: hid.has(l.id) }; }), m: {}, rules: [] };
+    }
+    BOXES = J.data.boxes.map(b => Object.assign({}, b));
+    real.labReady = false;
     const db = await cacheDb(); const cached = new Map((await cacheAll(db)).map(x => [x.gid, x]));
     real.texts = new Map((await idbAll(db, 'text')).map(x => [x.gid, x.t]));
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* */ }
@@ -1740,8 +1751,9 @@ async function loadReal(interactive, token) {
     const first = !real.on;
     const show = () => {
       const keepFull = new Map(MAILS.filter(m => m.real && m.full).map(m => [m.gid, m]));
-      MAILS = [...metas.values()].filter(x => !(real.gone && real.gone.has(x.gid))).map(x => { const k = keepFull.get(x.gid); return toMail(k ? Object.assign({}, x, { body: k.body, html: k.html, htmlReady: k.htmlReady, att: k.att, full: true }) : Object.assign({}, x, { body: real.texts.get(x.gid) || '' }), lab); }).sort((a, b) => b.when - a.when);
+      MAILS = [...metas.values()].map(x => { const k = keepFull.get(x.gid); return toMail(k ? Object.assign({}, x, { body: k.body, html: k.html, htmlReady: k.htmlReady, att: k.att, full: true }) : Object.assign({}, x, { body: real.texts.get(x.gid) || '' }), lab); }).sort((a, b) => b.when - a.when);
       if (first && !real.on) { real.on = true; st.folder = 'inbox'; st.open = null; st.picked.clear(); }
+      if (J.dirty) { J.dirty = false; jSave(); }
       bootScreen('off'); renderNav(); renderList(); renderTop();
       if (st.open == null) { const f = visible()[0]; if (f) openMail(f.id); } else renderRead();
     };
@@ -1765,19 +1777,23 @@ async function loadReal(interactive, token) {
     const stage = async (q, label) => {
       const [all, inb, snt, unr] = await Promise.all([listIds(q), listIds(q, 'INBOX'), listIds(q, 'SENT'), listIds(q, 'UNREAD')]);
       inb.forEach(g => lab.inbox.add(g)); snt.forEach(g => lab.sent.add(g)); unr.forEach(g => lab.unread.add(g));
+      if (/newer_than:9/.test(q)) real.labReady = true;  // 3개월치 상태를 다 알았을 때부터 처음 본 메일을 기록
       const n = await fetchMetas(all, label); show(); return [all.length, n];
     };
     await stage('newer_than:7d', '최근 메일 받는 중');
     // 편지함(라벨) 정보: 편지함마다 3개월치 번호만 (가벼움)
     prog('편지함 정리 중…');
-    for (const b of BOXES) { try { (await listIds(`newer_than:${DAYS}d`, b.id)).forEach(g => { if (!lab.box.has(g)) lab.box.set(g, b.id); }); } catch (e) { /* 건너뜀 */ } }
+    if (!hasJ || Object.keys(J.data.m).length === 0) { for (const l of user) { try { (await listIds(`newer_than:${DAYS}d`, l.id)).forEach(g => { if (!lab.box.has(g)) lab.box.set(g, l.id); }); } catch (e) { /* 건너뜀 */ } } }
     show();
     // 2단계: 나머지 3개월 — 뒤에서 차차
     const [total, fresh] = await stage(`newer_than:${DAYS}d`, '3개월치 메일 받는 중');
     prog('');
     toast(`${prof.emailAddress} · 최근 3개월 메일 ${total}통 준비 완료${fresh ? ` (새로 받은 ${fresh}통)` : ''}`);
     prefetchBodies();
-  } catch (err) { real.expired = !real.on; prog(''); renderTop(); if (!real.on && $('#boot')) bootScreen('login', '메일을 불러오지 못했어요: ' + err.message); else toast('실제 메일을 불러오지 못했어요: ' + err.message); }
+  } catch (err) {
+    if (/Drive 403/.test(err.message) && /insufficient|scope/i.test(err.message)) { tokCache.clear(); err.message = 'JIN-mail이 Gmail을 바꾸지 않도록 권한을 바꿨어요. 한 번만 다시 연결해 주세요'; }
+    if (/accessNotConfigured|has not been used|is disabled/i.test(err.message)) err.message = 'Google 드라이브 연결 준비가 아직 안 됐어요 (관리자 설정 중). 잠시 후 다시 시도해 주세요';
+    real.expired = !real.on; prog(''); renderTop(); if (!real.on && $('#boot')) bootScreen('login', err.relogin || /권한을 바꿨어요/.test(err.message) ? err.message : '메일을 불러오지 못했어요: ' + err.message); else toast('실제 메일을 불러오지 못했어요: ' + err.message); }
   finally { real.loading = false; }
 }
 async function prefetchBodies() {
@@ -1907,7 +1923,6 @@ function navDrop(e, el, doIt) {
     if (pos === 'in') { me.parent = tgt.id; BOXES.push(me); st.collapsed.delete(tgt.id); }
     else { me.parent = tgt.parent; const i = BOXES.indexOf(tgt); BOXES.splice(pos === 'before' ? i : i + 1, 0, me); }
     saveAll(); renderNav(); renderList(); renderRead();
-    if (real.on && oldParent !== me.parent) renamePaths(me.id);  // Gmail은 상·하위 관계만 반영 (순서는 이 화면에서만)
   }
 }
 /* 영역 너비: 경계선을 끌어서 조절, 다음에도 유지 */
@@ -1957,7 +1972,7 @@ function wire() {
   // 왼쪽
   const nav = $('#nav');
   nav.addEventListener('click', e => {
-    if (e.target.closest('#addBox')) { const nb = { id: 'b' + Date.now(), name: '새 편지함', parent: null, pending: real.on }; BOXES.push(nb); saveAll(); renderNav(); renameBox(nb.id); return; }
+    if (e.target.closest('#addBox')) { const nb = { id: 'b' + Date.now(), name: '새 편지함', parent: null }; BOXES.push(nb); saveAll(); renderNav(); renameBox(nb.id); return; }
     if (e.target.closest('#hidToggle')) { SET.showHidden = !SET.showHidden; saveAll(); renderNav(); return; }
     const dots = e.target.closest('[data-dots]'); if (dots) { e.stopPropagation(); boxMenu(dots, dots.dataset.dots); return; }
     const tw = e.target.closest('[data-tw]');
@@ -2002,6 +2017,7 @@ function wire() {
     const act = b.dataset.act, m = MAILS.find(x => x.id === st.open);
     if (act === 'popview') { popView(st.open); return; }
     if (act === 'deldraft') { deleteDraft(m); return; }
+    if (act === 'restore') { restoreMails([m.id]); return; }
     if (act === 'more') { menuAt(b, [{ html: ico('move', 16) + ' 다른 편지함으로 이동', act: () => setTimeout(() => moveMenu(b, [st.open])) }, { html: ico('read2', 16) + ' 안 읽음으로 표시', act: () => { m.unread = 1; renderNav(); renderList(); syncLabels([m.id], ['UNREAD'], [], '안 읽음'); } }, { html: ico('trash', 16) + ' 삭제', act: () => trashMails([m.id]) }]); return; }
     openCompose(act, document.body.classList.contains('popmode') ? { inline: true } : {});
   });
