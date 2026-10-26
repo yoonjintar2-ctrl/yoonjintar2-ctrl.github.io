@@ -1743,14 +1743,15 @@ function wire() {
   $('#subj').addEventListener('input', dirty);
   setupRcpt($('#toBox')); setupRcpt($('#ccBox'));
   document.addEventListener('mousedown', e => { if (!e.target.closest('.typo')) $$('.typo').forEach(x => x.remove()); });
-  // 단축키: j/k 다음·이전, r 답장, a 전체답장, f 전달, c 새 메일, / 검색, Esc 작성 닫기
+  // 단축키: j/k 다음·이전, a 전체답장, f 전달, c 새 메일, / 검색, Esc 작성 닫기 (답장 r은 Ctrl+R 새로고침과 헷갈려서 없앰)
   document.addEventListener('keydown', e => {
     if (e.target.closest('input, textarea, select, [contenteditable="true"]')) { if (e.key === 'Escape' && $('#read').classList.contains('composing') && !$('.menu')) closeCompose(); return; }
     if ($('.modal-bg')) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;  // Ctrl+R 새로고침 등 브라우저 단축키는 그대로
     const list = visible(); const i = list.findIndex(m => m.id === st.open);
     if (e.key === 'j' && list[i + 1]) openMail(list[i + 1].id);
     else if (e.key === 'k' && i > 0) openMail(list[i - 1].id);
-    else if (st.open && /^[raf]$/.test(e.key)) { e.preventDefault(); openCompose({ r: 'reply', a: 'all', f: 'fwd' }[e.key], document.body.classList.contains('popmode') ? { inline: true } : {}); }
+    else if (st.open && /^[af]$/.test(e.key)) { e.preventDefault(); openCompose({ a: 'all', f: 'fwd' }[e.key], document.body.classList.contains('popmode') ? { inline: true } : {}); }
     else if (e.key === 'c') { e.preventDefault(); openCompose('new'); }
     else if (e.key === '/') { e.preventDefault(); $('#q').focus(); }
   });
