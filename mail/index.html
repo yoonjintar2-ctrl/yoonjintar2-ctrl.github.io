@@ -55,6 +55,36 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .fbtn.on::after{content:"";position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--blue)}
 .top .sp{flex:1}
 
+/* ── 목록 위 자주 쓰는 필터 (글자 버튼) ── */
+.lfilt{flex:none;display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line2);background:var(--panel);flex-wrap:wrap}
+.lfilt .tf{display:inline-flex;align-items:center;gap:3px;max-width:180px;height:28px;padding:0 10px;border:1px solid #c9ced6;border-radius:14px;background:#fff;color:#3c4043;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lfilt .tf:hover{background:var(--hover)}
+.lfilt .tf .cv{color:var(--mute);font-size:10px;margin-left:1px}
+.lfilt .tf.on{background:var(--blue-l);border-color:var(--blue);color:var(--blue);font-weight:600}
+.lfilt .tf.on .cv{color:var(--blue)}
+.lfilt .tfx{border:0;background:none;color:var(--mute);font-size:12px;padding:0 4px;text-decoration:underline}
+.lfilt .tfx:hover{color:var(--blue)}
+.lfilt.off .tf{opacity:.45}
+/* 선택한 메일이 있으면 위 막대를 파랗게 */
+.lhead{transition:background .12s}
+.lhead.sel{background:var(--blue-m);border-bottom-color:#a8c7fa;color:var(--blue-d)}
+.lhead.sel .cnt b{color:var(--blue-d)}
+/* 대화 보기 */
+.convbar{flex:none;display:flex;align-items:center;gap:7px;padding:8px 10px;background:#eef3fb;border-bottom:1px solid #d6e2f3;color:var(--blue-d);font-size:13px}
+.convbar .k{flex:none;font-weight:700}
+.convbar b{flex:1;min-width:0;color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.convbar .n{flex:none;color:var(--sub);font-size:12px}
+.convbar .btn{flex:none;padding:3px 9px;font-size:12px}
+.lhead .convt{display:inline-flex;align-items:center;gap:6px;min-width:0;flex:1;color:var(--ink);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lhead .convt b{overflow:hidden;text-overflow:ellipsis}
+.row{position:relative}
+.row .convb{position:absolute;right:10px;top:31px;display:none;align-items:center;gap:2px;height:20px;padding:0 5px;border:1px solid transparent;border-radius:10px;background:transparent;color:#80868b;font-size:11px;font-weight:600;line-height:1}
+.row .convb.has{display:inline-flex}
+.row .convb svg{width:15px;height:15px}
+.row .convb:hover{border-color:#a8c7fa;background:#fff;color:var(--blue)}
+.row .subj{padding-right:34px}
+.l3.compact .mini .nm{display:inline}  /* 종류+개수는 짧아서 항상 보이게 */
+
 /* ── 본문 3칸 + 경계선 끌기 ── */
 .body{flex:1;min-height:0;display:flex}
 nav{width:var(--w-nav);flex:none;background:var(--panel);overflow:auto;padding:8px 0 20px}
@@ -138,16 +168,8 @@ input.ck{width:15px;height:15px;margin:0;accent-color:var(--blue);cursor:pointer
 .attbar b{font-size:12.5px;color:var(--sub);margin-right:4px;display:flex;align-items:center;gap:4px}
 .att{display:inline-flex;align-items:center;gap:5px;border:1px solid #dadce0;border-radius:7px;padding:5px 9px;background:#fff;font-size:13px;white-space:nowrap;cursor:pointer}
 .att:hover{border-color:var(--blue);color:var(--blue)}
-.attbar{flex-wrap:nowrap!important;align-items:flex-start!important}
-.attbar > b{flex:none;padding-top:7px}
-.attlist{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:8px}
-.attw{display:inline-flex;align-items:stretch;min-width:0;max-width:calc((100% - 16px) / 3)}
 .attw .att{min-width:0;flex:0 1 auto}
 .att .an{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.attbar.full .attw{max-width:100%}
-.attbar.full .att .an{white-space:normal;word-break:break-all}
-.attbar.full .att{white-space:normal}
-.attmore{flex:none;border:none;background:none;color:var(--blue);font-size:12.5px;cursor:pointer;padding:7px 2px 0 6px;white-space:nowrap}
 .attmore:hover{text-decoration:underline}
 .att small{flex:none}
 .row .l3 .ftc{display:inline-flex;align-items:center;gap:2px;flex:none;font-size:11.5px;color:#7a8089}
@@ -165,6 +187,19 @@ input.ck{width:15px;height:15px;margin:0;accent-color:var(--blue);cursor:pointer
 .donut.spin{animation:dspin .9s linear infinite}
 @keyframes dspin{to{transform:rotate(360deg)}}
 .att small{color:var(--sub)}
+/* 첨부 막대: 한 줄에 3개까지, 긴 이름은 … / [펼치기]로 전체 이름 */
+.attbar{align-items:flex-start;flex-wrap:nowrap;gap:10px}
+.attbar > b{flex:none;padding-top:6px}
+.attgrid{flex:1;min-width:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 8px}
+.attgrid .attw{display:flex;min-width:0}
+.attgrid .att{flex:1;min-width:0}
+.att .an{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att .fti,.att small,.attdrv{flex:none}
+.attbar.full .attgrid{grid-template-columns:minmax(0,1fr)}
+.attbar.full .att{white-space:normal;align-items:flex-start}
+.attbar.full .att .an{white-space:normal;word-break:break-all;overflow:visible}
+.attmore{flex:none;margin-top:5px;border:0;background:none;color:var(--blue);font-size:12.5px;font-weight:600;cursor:pointer;padding:0 2px;white-space:nowrap}
+.attmore:hover{text-decoration:underline}
 .dbanner{flex:none;margin:12px 22px 0;padding:9px 10px 9px 16px;border-radius:9px;background:var(--blue);color:#fff;font-weight:600;display:flex;gap:8px;align-items:center}
 .dbanner span{flex:1}
 .dbanner button{border:0;background:#fff;color:var(--blue);border-radius:15px;padding:5px 13px;font-weight:700}
@@ -415,16 +450,50 @@ body.resizing{cursor:col-resize;user-select:none}
 #boot .later{display:block;margin:12px auto 0;border:0;background:none;color:var(--mute);font-size:12.5px;cursor:pointer}
 /* 편지함 상·하위 연결선 없음 */
 .ni .g{display:none}
-/* 로딩: 봉투 열림 → 편지 나옴 (반복) */
-#boot .envani{width:120px;height:96px;margin:4px auto 0}
+/* 로딩: 봉투 등장 → 뚜껑 열림 → 편지 솟음(글씨 써짐) → 들어감 → 뚜껑 닫힘 → 통통 (반복, 3.4초)
+   앞뒤 순서: 열린 뚜껑(뒤) · 봉투 안쪽 · 편지 · 앞 주머니 · 닫힌 뚜껑(맨 앞) */
+#boot .envani{width:140px;height:124px;margin:0 auto}
 #boot .envani svg{overflow:visible}
-#boot .envani .f1,#boot .envani .f2{transform-box:fill-box;transform-origin:50% 0}
-#boot .envani .f1{animation:envf1 2.8s ease-in-out infinite}
-#boot .envani .f2{animation:envf2 2.8s ease-in-out infinite}
-#boot .envani .letter{animation:envletter 2.8s ease-in-out infinite}
-@keyframes envf1{0%,4%{transform:scaleY(1)}18%,86%{transform:scaleY(0)}100%{transform:scaleY(1)}}
-@keyframes envf2{0%,18%{transform:scaleY(0)}30%,70%{transform:scaleY(-1)}84%,100%{transform:scaleY(0)}}
-@keyframes envletter{0%,28%{transform:translateY(0)}48%,62%{transform:translateY(-32px)}80%,100%{transform:translateY(0)}}
+#boot .envani .ebody,#boot .envani .letter,#boot .envani .eshadow{transform-box:fill-box;transform-origin:50% 100%}
+#boot .envani .ff,#boot .envani .bf{transform-box:fill-box;transform-origin:50% 0}
+#boot .envani .ebody{animation:envBody 3.4s infinite}
+#boot .envani .eshadow{transform-origin:50% 50%;animation:envShadow 3.4s infinite}
+#boot .envani .ff{animation:envFF 3.4s infinite}
+#boot .envani .bf{animation:envBF 3.4s infinite}
+#boot .envani .letter{transform-origin:50% 50%;animation:envLetter 3.4s infinite}
+#boot .envani .ln{stroke-dasharray:60;stroke-dashoffset:60;animation:envLn 3.4s infinite}
+#boot .envani .l2{animation-name:envLn2}
+#boot .envani .l3{animation-name:envLn3}
+@keyframes envBody{
+  0%{transform:translateY(14px) scale(.8) rotate(-7deg);opacity:0;animation-timing-function:cubic-bezier(.3,1.6,.6,1)}
+  9%{transform:translateY(0) scale(1) rotate(0);opacity:1}
+  12%{transform:scale(1.04,.95)} 15%{transform:scale(1)}
+  48%{transform:translateY(-3px)} 66%{transform:translateY(0)}
+  88%{transform:scale(1);animation-timing-function:ease-in}
+  91%{transform:scale(1.07,.9)} 94%{transform:scale(.97,1.04)} 97%,100%{transform:scale(1);opacity:1}}
+@keyframes envShadow{0%{transform:scale(.5);opacity:0}9%,88%{transform:scale(1);opacity:1}48%{transform:scale(.9)}91%{transform:scale(1.1)}100%{transform:scale(1)}}
+@keyframes envFF{
+  0%,14%{transform:scaleY(1);animation-timing-function:cubic-bezier(.6,0,.9,.4)}
+  20%,80%{transform:scaleY(0);animation-timing-function:cubic-bezier(.2,.9,.3,1.3)}
+  87%{transform:scaleY(1.05)} 90%,100%{transform:scaleY(1)}}
+@keyframes envBF{
+  0%,20%{transform:scaleY(0);animation-timing-function:cubic-bezier(.2,.9,.3,1.4)}
+  28%{transform:scaleY(-1.08)} 31%,72%{transform:scaleY(-1);animation-timing-function:cubic-bezier(.6,0,.9,.4)}
+  80%,100%{transform:scaleY(0)}}
+@keyframes envLetter{
+  0%,27%{transform:translateY(14px) rotate(0);animation-timing-function:cubic-bezier(.25,1.5,.5,1)}
+  40%{transform:translateY(-36px) rotate(-4deg)}
+  46%{transform:translateY(-31px) rotate(2deg)}
+  52%{transform:translateY(-33px) rotate(-1deg)}
+  62%{transform:translateY(-33px) rotate(0);animation-timing-function:cubic-bezier(.55,0,.8,.3)}
+  74%,100%{transform:translateY(14px) rotate(0)}}
+@keyframes envLn{0%,36%{stroke-dashoffset:60}44%,68%{stroke-dashoffset:0}74%,100%{stroke-dashoffset:60}}
+@keyframes envLn2{0%,40%{stroke-dashoffset:60}48%,68%{stroke-dashoffset:0}74%,100%{stroke-dashoffset:60}}
+@keyframes envLn3{0%,44%{stroke-dashoffset:60}52%,68%{stroke-dashoffset:0}74%,100%{stroke-dashoffset:60}}
+/* 다 불러오면 로딩 화면이 살짝 커지며 사라짐 */
+#boot{transition:opacity .4s ease,transform .4s ease}
+#boot.out{opacity:0;transform:scale(1.03);pointer-events:none}
+@media (prefers-reduced-motion:reduce){#boot .envani *{animation:none!important}#boot .envani .bf,#boot .envani .ln{stroke-dashoffset:0}}
 .menu .boxlist{max-height:min(52vh,440px);overflow:auto;min-width:260px}
 .afile{cursor:grab;gap:4px}
 .afile.dragging{opacity:.4}
@@ -476,17 +545,13 @@ body.resizing{cursor:col-resize;user-select:none}
   <button class="fbtn" id="fBox" title="편지함"></button>
   <button class="fbtn" id="fWhere" title="검색 범위"></button>
   <button class="fbtn" id="fPeriod" title="기간"></button>
-  <button class="fbtn" id="fAtt" title="첨부"></button>
-  <button class="fbtn" id="fRead" title="읽음 여부"></button>
-  <button class="fbtn" id="fFrom" title="보낸사람"></button>
-  <button class="fbtn" id="fTo" title="받는사람"></button>
   <span class="sp"></span>
   <button class="ib" id="gear" title="설정"></button>
 </div>
 <div class="body">
   <nav id="nav"></nav>
   <div class="split" data-split="nav"></div>
-  <div class="list"><div class="lhead" id="lhead"></div><div class="rows" id="rows"></div></div>
+  <div class="list"><div class="lfilt" id="lfilt"><button class="tf" id="fFrom"></button><button class="tf" id="fTo"></button><button class="tf" id="fAtt"></button><button class="tf" id="fRead"></button><button class="tfx" id="fClear" title="이 필터 모두 해제" hidden>초기화</button></div><div class="lhead" id="lhead"></div><div class="rows" id="rows"></div></div>
   <div class="split" data-split="list"></div>
   <div class="read" id="read">
     <div class="view" id="view"></div>
@@ -515,6 +580,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793013614"></script>
+<script src="mail-c.js?v=1793013845"></script>
 </body>
 </html>
