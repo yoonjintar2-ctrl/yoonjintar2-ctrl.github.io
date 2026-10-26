@@ -296,7 +296,7 @@ body.resizing{cursor:col-resize;user-select:none}
 /* 날짜 묶음 제목: 읽은 메일 배경과 확실히 구분 */
 .grp{background:#e4e9f1;color:#3c4a5e;font-weight:700;font-size:12px;letter-spacing:.02em;border-top:1px solid #d3dae5;border-bottom:1px solid #d3dae5;padding:5px 14px}
 .menu .mh.big{font-size:13.5px;font-weight:700;color:var(--ink);padding:8px 14px 5px}
-/* 메일함 상·하위 연결선 */
+/* 편지함 상·하위 연결선 */
 .ni .g{position:absolute;top:0;bottom:0;width:0;border-left:1px solid #b9c0cb;pointer-events:none}
 .ni .g.e{bottom:50%}
 .ni .g.e::after,.ni .g.t::after{content:"";position:absolute;top:17px;left:0;width:11px;border-top:1px solid #b9c0cb}
@@ -344,8 +344,8 @@ body.resizing{cursor:col-resize;user-select:none}
 .l3.compact .mini{gap:0}
 .fti{flex:none;vertical-align:-3px}
 .att .fti{margin-right:2px}
-/* 메일함: 최상위·기본 폴더 굵게 */
-.ni.top .nm{font-weight:700}
+/* 편지함: 최상위·기본 폴더 굵게 */
+.ni.ni-top .nm{font-weight:700}
 /* 목록: 읽은 메일은 제목 보통 굵기, 전체 살짝 연하게 */
 .row .who,.row .subj{color:#3c4043}
 .row .subj{font-weight:400}
@@ -364,7 +364,7 @@ body.resizing{cursor:col-resize;user-select:none}
 #boot .spin{width:28px;height:28px;margin:0 auto;border:3px solid #dfe3ea;border-top-color:var(--blue);border-radius:50%;animation:bootspin .8s linear infinite}
 @keyframes bootspin{to{transform:rotate(360deg)}}
 #boot .later{display:block;margin:12px auto 0;border:0;background:none;color:var(--mute);font-size:12.5px;cursor:pointer}
-/* 메일함 상·하위 연결선 없음 */
+/* 편지함 상·하위 연결선 없음 */
 .ni .g{display:none}
 /* 로딩: 봉투 열림 → 편지 나옴 (반복) */
 #boot .envani{width:120px;height:96px;margin:4px auto 0}
@@ -382,6 +382,16 @@ body.resizing{cursor:col-resize;user-select:none}
 .afile.drop-l{box-shadow:-3px 0 0 var(--blue)}
 .afile.drop-r{box-shadow:3px 0 0 var(--blue)}
 .afile .fwdtag{font-size:10.5px;color:var(--mute);border:1px solid #dfe3ea;border-radius:4px;padding:0 4px}
+.nsep{height:1px;background:var(--line);margin:6px 14px}
+/* 읽은 메일 제목도 살짝 굵게 */
+.row .subj{font-weight:500}
+.row.unread .subj{font-weight:700}
+/* 자동 분류 */
+.rulerow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border:1px solid var(--line2);border-radius:8px;margin-bottom:6px;font-size:13.5px}
+.rulerow small{color:var(--mute)}
+.rulef{display:flex;align-items:center;gap:10px;margin:6px 0}
+.rulef label{width:130px;flex:none;font-size:13px;color:var(--sub)}
+.rulef input{flex:1;border:1px solid #c4cbd6;border-radius:6px;padding:6px 9px;font:inherit;font-size:13.5px}
 </style>
 </head>
 <body>
@@ -391,7 +401,7 @@ body.resizing{cursor:col-resize;user-select:none}
     <div class="sbox"><input id="q" placeholder="메일 검색" autocomplete="off"><button class="go" id="goSearch" title="검색"></button></div>
     <div class="sugg" id="sugg"></div>
   </div>
-  <button class="fbtn" id="fBox" title="메일함"></button>
+  <button class="fbtn" id="fBox" title="편지함"></button>
   <button class="fbtn" id="fWhere" title="검색 범위"></button>
   <button class="fbtn" id="fPeriod" title="기간"></button>
   <button class="fbtn" id="fAtt" title="첨부"></button>
@@ -435,6 +445,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793003317"></script>
+<script src="mail-c.js?v=1793003844"></script>
 </body>
 </html>
