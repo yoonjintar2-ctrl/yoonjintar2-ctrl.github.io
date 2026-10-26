@@ -156,7 +156,8 @@ const boxLabel = (b, dep) => `<span style="padding-left:${dep * 14}px;display:in
 
 /* ───────── 폴더(시스템) ───────── */
 const SYS = {
-  inbox: { name: '받은편지함', ic: 'inbox', f: m => m.inbox },
+  // 받은편지함 = Gmail 받은편지함 + 나에게 온 메일(필터로 바로 메일함에 들어간 것 포함) → 하위 '나에게 온 메일'과 숫자가 맞음
+  inbox: { name: '받은편지함', ic: 'inbox', f: m => m.inbox || (!m.sent && m.to.some(isMe)) },
   tome: { name: '나에게 온 메일', ic: 'me', f: m => !m.sent && m.to.some(isMe), parent: 'inbox' },
   sent: { name: '보낸편지함', ic: 'sent', f: m => m.sent },
   draft: { name: '작성 중인 메일', ic: 'draft', f: m => !!m.draft },
@@ -1009,6 +1010,38 @@ function posImgSel() {
   Object.assign(ov.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
   $('b', ov).textContent = `${Math.round(r.width)} × ${Math.round(r.height)}`;
 }
+/* ───────── 서식 복사·붙여넣기 ───────── */
+let fmtClip = null;
+function caretEl() { const s = getSelection(); if (!s.rangeCount) return null; let n = s.getRangeAt(0).startContainer; if (n.nodeType === 3) { if (s.getRangeAt(0).startOffset === n.length && n.nextSibling == null && !s.isCollapsed) { /* 끝 */ } n = n.parentElement; } return n && $('#cbody').contains(n) ? n : null; }
+function copyFormat() {
+  const el = caretEl(); if (!el) return;
+  const cs = getComputedStyle(el), b = $('#cbody');
+  let deco = [], bg = '';
+  for (let x = el; x && x !== b; x = x.parentElement) {
+    const c = getComputedStyle(x);
+    (c.textDecorationLine || '').split(' ').forEach(d => { if (d && d !== 'none' && !deco.includes(d)) deco.push(d); });
+    if (!bg && c.backgroundColor && !/rgba\(0, 0, 0, 0\)|transparent/.test(c.backgroundColor)) bg = c.backgroundColor;
+  }
+  fmtClip = { fontFamily: cs.fontFamily, fontSize: (Math.round(parseFloat(cs.fontSize) * 0.75 * 2) / 2) + 'pt', fontWeight: cs.fontWeight, fontStyle: cs.fontStyle, color: cs.color, textDecoration: deco.join(' ') || 'none', backgroundColor: bg || 'transparent' };
+  const pt = Math.round(parseFloat(cs.fontSize) * 0.75);
+  toast(`서식을 복사했어요 (${cs.fontFamily.split(',')[0].replace(/['"]/g, '')} ${pt}pt${+cs.fontWeight >= 600 ? ' · 굵게' : ''}${cs.fontStyle === 'italic' ? ' · 기울임' : ''}) — 바꿀 글자를 고르고 Ctrl+Shift+V`);
+}
+const FMT_TAGS = /^(B|STRONG|I|EM|U|S|STRIKE|FONT|SPAN|MARK|SMALL|BIG)$/;
+function pasteFormat() {
+  const s = getSelection(); if (!s.rangeCount || !$('#cbody').contains(s.anchorNode)) return;
+  if (s.isCollapsed) { s.modify('move', 'backward', 'word'); s.modify('extend', 'forward', 'word'); }  // 선택이 없으면 커서가 있는 낱말에
+  if (s.isCollapsed) return;
+  const r = s.getRangeAt(0);
+  const frag = r.extractContents();
+  // 원래 글자 모양은 지우고(굵게·색 등) 복사한 모양만 입힘 — 링크·줄바꿈·그림은 그대로
+  const strip = node => { [...node.childNodes].forEach(c => { if (c.nodeType !== 1) return; strip(c); if (FMT_TAGS.test(c.tagName)) c.replaceWith(...c.childNodes); else { ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'color', 'textDecoration', 'backgroundColor'].forEach(k => { c.style[k] = ''; }); } }); };
+  strip(frag);
+  const sp = document.createElement('span');
+  Object.assign(sp.style, fmtClip);
+  sp.append(frag); r.insertNode(sp);
+  const nr = document.createRange(); nr.selectNodeContents(sp); s.removeAllRanges(); s.addRange(nr);
+  dirty(); runTypo();
+}
 function linkMenu(atSel) {
   const sel = getSelection(); let at = null, cur = null;
   if (sel.rangeCount && $('#cbody').contains(sel.anchorNode)) {
@@ -1691,6 +1724,12 @@ function wire() {
   document.addEventListener('scroll', () => { const b = $('#pasteBtn'); if (b) b._place(); }, true);
   // Ctrl+K: 선택한 글자에 링크
   body.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); e.stopPropagation(); linkMenu(true); } });
+  // 서식 복사/붙여넣기 (워드·아웃룩처럼): Ctrl+Shift+C → 커서 자리 글자 모양 복사, Ctrl+Shift+V → 선택한 글자에 입힘
+  body.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.altKey) return;
+    if (e.code === 'KeyC') { e.preventDefault(); e.stopPropagation(); copyFormat(); }
+    else if (e.code === 'KeyV' && fmtClip) { e.preventDefault(); e.stopPropagation(); pasteFormat(); }
+  }, true);
   body.addEventListener('mousedown', e => { if (e.target.tagName === 'IMG' && !e.target.closest('.quote')) { e.preventDefault(); selectImg(e.target); } });
   document.addEventListener('mousedown', e => { if (selImg && e.target !== selImg && !e.target.closest('#imgsel')) { selImg = null; posImgSel(); } }, true);
   document.addEventListener('scroll', posImgSel, true);
