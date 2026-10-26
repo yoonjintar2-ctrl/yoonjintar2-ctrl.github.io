@@ -55,72 +55,73 @@ const store = {
 };
 
 /* ───────── 예시 데이터 ───────── */
-const ME = { name: '윤석진', email: 'jintar@smtown.com' };
+const ME = { name: '홍길동', email: 'me@example.com' };  // 예시 화면용 (실제 연결하면 Gmail 계정 이름·주소로 바뀜)
 const C = (name, email) => ({ name, email });
+// 예시 메일: 실제 회사·브랜드와 관계없는 가상의 이름만 사용
 const P = {
-  kwon: C('권OO', 'kwon@nasmedia.co.kr'), lee_n: C('이OO', 'lee@nasmedia.co.kr'), kim_n: C('김OO', 'kim@nasmedia.co.kr'),
-  kim_b: C('김OO', 'kim.b@bmw.co.kr'), jung_b: C('정OO', 'jung@bmw.co.kr'),
-  lee_c: C('이OO', 'jieun@coway.com'), park_c: C('박OO', 'park@coway.com'), kang_c: C('강OO', 'kang@coway.com'),
-  choi_k: C('최OO', 'choi@ktnasmedia.co.kr'), jung_t: C('정OO', 'jung@cj.net'), park_h: C('박OO', 'park@hanabank.com'),
-  park_s: C('박OO', 'park2@smtown.com'), hr: C('인사팀', 'hr@smtown.com'), mezzo: C('메조미디어', 'report@mezzomedia.co.kr')
+  kwon: C('김하늘', 'sky.kim@adpartner.example'), lee_n: C('이도윤', 'doyun@adpartner.example'), kim_n: C('박서준', 'seojun@adpartner.example'),
+  kim_b: C('최유나', 'yuna@haeorum.example'), jung_b: C('정민호', 'minho@haeorum.example'),
+  lee_c: C('한소희', 'sohee@pureforest.example'), park_c: C('오지훈', 'jihoon@pureforest.example'), kang_c: C('강다은', 'daeun@pureforest.example'),
+  choi_k: C('윤재원', 'jaewon@mediarep.example'), jung_t: C('서하린', 'harin@starlight.example'), park_h: C('임채원', 'chaewon@bluebank.example'),
+  park_s: C('송지아', 'jia@example.com'), hr: C('인사팀', 'hr@example.com'), mezzo: C('트렌드랩', 'report@trendlab.example')
 };
 const CONTACTS = [ME, ...Object.values(P)];
 const DEFAULT_BOXES = [
-  { id: 'hana', name: '하나은행', parent: null },
-  { id: 'bmw', name: 'BMW', parent: null },
-  { id: 'bmw-fs', name: 'FS', parent: 'bmw' },
-  { id: 'bmw-mt', name: 'Motorrad', parent: 'bmw' },
-  { id: 'bmw-mkt', name: 'MKT (On Going)', parent: 'bmw' },
-  { id: 'tlj', name: '뚜레쥬르', parent: null },
-  { id: 'coway', name: '코웨이', parent: null },
-  { id: 'coway-nf', name: '넷플릭스 캠페인', parent: 'coway' },
+  { id: 'hana', name: '푸른은행', parent: null },
+  { id: 'bmw', name: '해오름식품', parent: null },
+  { id: 'bmw-fs', name: '정산', parent: 'bmw' },
+  { id: 'bmw-mt', name: '신제품', parent: 'bmw' },
+  { id: 'bmw-mkt', name: '온라인 캠페인', parent: 'bmw' },
+  { id: 'tlj', name: '별빛여행', parent: null },
+  { id: 'coway', name: '푸른숲가구', parent: null },
+  { id: 'coway-nf', name: '겨울 캠페인', parent: 'coway' },
   { id: 'trend', name: '트렌드 리포트', parent: null },
   { id: 'life', name: '회사생활', parent: null },
   { id: 'life-me', name: '개인', parent: 'life' }
 ];
 const FONT_LIST = ['맑은 고딕', '나눔고딕', '돋움', '굴림', '바탕', 'Arial', 'Calibri', 'Tahoma'];
+// 기본 풋터: {이름}은 연결한 계정의 이름으로 바뀜
 const DEFAULT_FOOTERS = [
-  { id: 'f1', name: '미디어 3팀 공식', html: '고맙습니다.<br>윤석진 드림.<br><br><b>윤석진</b> | Media Planner / 부장<br>SM CULTURE &amp; CONTENTS · Media 3 team', font: { family: '맑은 고딕', size: 10, color: '#202124' }, rule: { type: 'reply', kw: '' } },
-  { id: 'f2', name: 'SM C&C', html: '고맙습니다.<br>SM C&amp;C 윤석진 드림.', font: { family: '맑은 고딕', size: 10, color: '#202124' }, rule: { type: 'new', kw: '' } },
-  { id: 'f3', name: 'BMW 회신', html: '감사합니다.<br>윤석진 드림.', font: { family: '맑은 고딕', size: 10, color: '#202124' }, rule: { type: 'from', kw: 'bmw' } }
+  { id: 'f1', name: '기본', html: '고맙습니다.<br>{이름} 드림.', font: { family: '맑은 고딕', size: 10, color: '#202124' }, rule: { type: 'new', kw: '' } },
+  { id: 'f2', name: '답장용', html: '감사합니다.<br>{이름} 드림.', font: { family: '맑은 고딕', size: 10, color: '#202124' }, rule: { type: 'reply', kw: '' } }
 ];
 const M = (o) => Object.assign({ to: [ME], cc: [], att: [], prev: [], inbox: 0, unread: 0 }, o);
 let MAILS = [
   M({ id: 1, d: 0, t: '09:42', from: P.kwon, cc: [P.kim_n, P.lee_n], box: 'hana', inbox: 1, unread: 1,
-    subj: 'RE: [SM C&C] 하나은행 앞치마 광고 관련 문의드립니다_261026', att: [['XLS', '하나은행_앞치마_견적_261026.xlsx', '48 KB'], ['PDF', '매체소개서.pdf', '2.1 MB']],
-    body: '안녕하세요 부장님,\n나스미디어 권OO입니다.\n\n문의주신 앞치마 광고 건 견적 첨부드립니다.\n11월 첫째 주 집행 가능하며, 소재는 10/30까지 전달 부탁드립니다.\n\n감사합니다.',
-    prev: [{ from: ME, to: [P.kwon], cc: [P.kim_n], d: 2, t: '11:12', body: '안녕하세요, SM C&C 윤석진입니다.\n하나은행 앞치마 광고 집행 가능 여부와 견적 문의드립니다.\n\n고맙습니다.\n윤석진 드림.' },
-           { from: P.park_h, to: [ME], cc: [], d: 4, t: '15:20', body: '부장님, 앞치마 광고 매체 가능한 곳 알아봐 주실 수 있을까요?\n11월 초 집행 희망합니다.' }] }),
+    subj: 'RE: [예시컴퍼니] 푸른은행 지하철 광고 견적 문의드립니다', att: [['XLS', '푸른은행_지하철광고_견적.xlsx', '48 KB'], ['PDF', '매체소개서.pdf', '2.1 MB']],
+    body: '안녕하세요 매니저님,\n애드파트너 김하늘입니다.\n\n문의주신 지하철 광고 건 견적 첨부드립니다.\n11월 첫째 주 집행 가능하며, 소재는 10/30까지 전달 부탁드립니다.\n\n감사합니다.',
+    prev: [{ from: ME, to: [P.kwon], cc: [P.kim_n], d: 2, t: '11:12', body: '안녕하세요, 예시컴퍼니 홍길동입니다.\n푸른은행 지하철 광고 집행 가능 여부와 견적 문의드립니다.\n\n고맙습니다.\n홍길동 드림.' },
+           { from: P.park_h, to: [ME], cc: [], d: 4, t: '15:20', body: '매니저님, 지하철 광고 가능한 노선 알아봐 주실 수 있을까요?\n11월 초 집행 희망합니다.' }] }),
   M({ id: 2, d: 0, t: '09:10', from: P.kim_b, box: 'bmw-fs', inbox: 1, unread: 1,
-    subj: 'Re: [BMW AS] 2026년 10월 세금계산서 발행 요청 건', att: [['PDF', '10월_계산서_요청.pdf', '120 KB']],
-    body: '부장님 안녕하세요.\n10월분 세금계산서 발행 부탁드립니다.\n금액은 첨부 확인 부탁드립니다.\n\n감사합니다.' }),
-  M({ id: 3, d: 0, t: '08:55', from: P.lee_c, cc: [P.park_c], box: 'coway-nf', inbox: 1, draft: '부장님, 증액분 반영해서 다시 정리드리겠습니다.',
-    subj: 'Re: [코웨이] 제로 음식물처리기 - 넷플릭스 VA 광고 집행 문의 건_1006',
-    body: '부장님, 추가 증액분(2,500만 원) 반영된 금액으로 다시 확인 부탁드립니다.',
+    subj: 'Re: [해오름식품] 10월 정산서 발행 요청 건', att: [['PDF', '10월_정산_요청.pdf', '120 KB']],
+    body: '매니저님 안녕하세요.\n10월분 정산서 발행 부탁드립니다.\n금액은 첨부 확인 부탁드립니다.\n\n감사합니다.' }),
+  M({ id: 3, d: 0, t: '08:55', from: P.lee_c, cc: [P.park_c], box: 'coway-nf', inbox: 1, draft: '매니저님, 증액분 반영해서 다시 정리드리겠습니다.',
+    subj: 'Re: [푸른숲가구] 겨울 시즌 영상 광고 집행 문의 건',
+    body: '매니저님, 추가 증액분(2,500만 원) 반영된 금액으로 다시 확인 부탁드립니다.',
     prev: [{ from: ME, to: [P.lee_c], cc: [P.park_c], d: 4, t: '17:21', body: '알겠습니다~!\n제가 이해한 게 맞다면 아래와 같이 예산 확인하고 부킹 진행하겠습니다.' }] }),
   M({ id: 4, d: 0, t: '08:31', from: P.park_s, to: [P.lee_c], cc: [ME], box: 'coway', inbox: 1, unread: 1,
-    subj: '[공유] 11월 IMC 서비스 집행 제안', att: [['PPT', '11월_IMC_제안서.pptx', '8.4 MB']], body: '참고용으로 공유드립니다.\n11월 IMC 서비스 집행 제안서 첨부합니다.' }),
+    subj: '[공유] 11월 통합 캠페인 제안', att: [['PPT', '11월_통합캠페인_제안서.pptx', '8.4 MB']], body: '참고용으로 공유드립니다.\n11월 통합 캠페인 제안서 첨부합니다.' }),
   M({ id: 5, d: 1, t: '17:20', from: P.choi_k, cc: [P.jung_b], box: 'bmw-mkt',
-    subj: 'RE: [SM C&C] BMW - Automedia On-Going 집행 관련 문의드립니다', body: '안녕하세요 부장님,\n아래 내용으로 오토미디어 측에 전달하였습니다.\n랜딩 URL은 확인되는 대로 공유드리겠습니다.' }),
+    subj: 'RE: [예시컴퍼니] 해오름식품 온라인 캠페인 집행 관련 문의드립니다', body: '안녕하세요 매니저님,\n아래 내용으로 매체 측에 전달하였습니다.\n랜딩 URL은 확인되는 대로 공유드리겠습니다.' }),
   M({ id: 6, d: 1, t: '14:05', from: P.jung_t, box: 'tlj', inbox: 1, unread: 1,
-    subj: '[뚜레쥬르] 11월 매장 POP 소재 전달드립니다', att: [['ZIP', 'POP_소재_11월.zip', '34 MB']], body: '안녕하세요.\n11월 매장 POP 소재 압축파일 첨부드립니다.\n확인 부탁드립니다.' }),
+    subj: '[별빛여행] 11월 매장 포스터 소재 전달드립니다', att: [['ZIP', '포스터_소재_11월.zip', '34 MB']], body: '안녕하세요.\n11월 매장 포스터 소재 압축파일 첨부드립니다.\n확인 부탁드립니다.' }),
   M({ id: 7, d: 2, t: '11:12', from: ME, to: [P.kwon], cc: [P.kim_n], box: 'hana', sent: 1,
-    subj: '[SM C&C] 하나은행 앞치마 광고 문의드립니다', body: '안녕하세요, SM C&C 윤석진입니다.\n하나은행 앞치마 광고 집행 가능 여부와 견적 문의드립니다.\n\n고맙습니다.\n윤석진 드림.' }),
+    subj: '[예시컴퍼니] 푸른은행 지하철 광고 문의드립니다', body: '안녕하세요, 예시컴퍼니 홍길동입니다.\n푸른은행 지하철 광고 집행 가능 여부와 견적 문의드립니다.\n\n고맙습니다.\n홍길동 드림.' }),
   M({ id: 8, d: 3, t: '16:40', from: P.kim_b, to: [P.jung_b], cc: [ME], box: 'bmw',
-    subj: 'Re: [BMW Korea] Tesla Conquest Campaign', body: '일정 확인 부탁드립니다.\n이번 주 금요일까지 회신 주시면 됩니다.' }),
+    subj: 'Re: [해오름식품] 신제품 출시 캠페인 일정', body: '일정 확인 부탁드립니다.\n이번 주 금요일까지 회신 주시면 됩니다.' }),
   M({ id: 9, d: 3, t: '11:48', from: P.lee_c, cc: [P.kang_c, P.choi_k], box: 'coway',
-    subj: 'Re: [미디어 3팀 윤석진] 코웨이 안마매트리스 넷플릭스 추가 캠페인', att: [['XLS', '261023_코웨이_MediaMix_F.xlsx', '177 KB']],
-    body: '안녕하세요 부장님,\n안마매트리스 11~12월 믹스 최종본(1.25억) 공유드립니다.\n변경 필요시 말씀 부탁드립니다.' }),
+    subj: 'Re: 푸른숲가구 겨울 캠페인 미디어믹스 최종본', att: [['XLS', '겨울캠페인_MediaMix_F.xlsx', '177 KB']],
+    body: '안녕하세요 매니저님,\n겨울 캠페인 11~12월 믹스 최종본(1.25억) 공유드립니다.\n변경 필요시 말씀 부탁드립니다.' }),
   M({ id: 10, d: 4, t: '10:02', from: P.mezzo, box: 'trend', unread: 1, subj: '[트렌드] 2026 4Q 업종 분석 리포트', att: [['PDF', '2026_4Q_업종분석.pdf', '6.2 MB']], body: '이번 분기 업종별 광고 동향 리포트를 보내드립니다.' }),
-  M({ id: 11, d: 5, t: '15:30', from: P.hr, to: [C('전 직원', 'all@smtown.com')], box: 'life', unread: 1, subj: '[공지] 11월 사내 건강검진 일정 안내', body: '11월 건강검진 일정을 안내드립니다.' }),
-  M({ id: 12, d: 9, t: '09:15', from: P.park_h, box: 'hana', subj: '[하나은행] 4분기 디지털 캠페인 결과 보고 요청', att: [['DOC', '보고양식.docx', '64 KB']], body: '4분기 디지털 캠페인 결과 보고 부탁드립니다.' }),
-  M({ id: 13, d: 20, t: '13:00', from: P.jung_t, box: 'tlj', subj: '[뚜레쥬르] 10월 프로모션 결과 공유', att: [['IMG', '프로모션_현장.jpg', '1.8 MB']], body: '10월 프로모션 결과 공유드립니다.' }),
-  M({ id: 14, d: 45, t: '10:10', from: P.kim_b, box: 'bmw-mt', subj: '[Motorrad] 3분기 집행 결과 공유', att: [['XLS', 'Q3_결과.xlsx', '210 KB']], body: '3분기 Motorrad 집행 결과 공유드립니다.' })
+  M({ id: 11, d: 5, t: '15:30', from: P.hr, to: [C('전 직원', 'all@example.com')], box: 'life', unread: 1, subj: '[공지] 11월 사내 건강검진 일정 안내', body: '11월 건강검진 일정을 안내드립니다.' }),
+  M({ id: 12, d: 9, t: '09:15', from: P.park_h, box: 'hana', subj: '[푸른은행] 4분기 디지털 캠페인 결과 보고 요청', att: [['DOC', '보고양식.docx', '64 KB']], body: '4분기 디지털 캠페인 결과 보고 부탁드립니다.' }),
+  M({ id: 13, d: 20, t: '13:00', from: P.jung_t, box: 'tlj', subj: '[별빛여행] 10월 프로모션 결과 공유', att: [['IMG', '프로모션_현장.jpg', '1.8 MB']], body: '10월 프로모션 결과 공유드립니다.' }),
+  M({ id: 14, d: 45, t: '10:10', from: P.kim_b, box: 'bmw-mt', subj: '[해오름식품] 3분기 신제품 판매 결과 공유', att: [['XLS', 'Q3_결과.xlsx', '210 KB']], body: '3분기 신제품 판매 결과 공유드립니다.' })
 ];
 const SAMPLE_MAILS = MAILS.slice();
 
 /* ───────── 상태 ───────── */
-let BOXES = store.get('boxes', DEFAULT_BOXES);
+let BOXES = store.get('sample-boxes', DEFAULT_BOXES);
 let FOOTERS = store.get('footers2', DEFAULT_FOOTERS);
 let SET = Object.assign({ composeMode: 'inline', typo: true, showHidden: false, font: { family: '맑은 고딕', size: 10 } }, store.get('settings', {}));
 let IGNORE = new Set(store.get('typo-ignore', []));
@@ -319,9 +320,9 @@ async function openRules(box) {
       <h5>지금 있는 조건 <span class="rcount">${rules.length}개</span></h5>${rules.length ? rules.map(r => `<div class="rulerow"><span>${ico('where', 15)} <b>${esc(ruleText(r))}</b>${r.skipInbox ? ' <small>· 받은편지함 건너뛰기</small>' : ''}</span><button class="ib" data-del="${esc(r.id)}" title="조건 삭제">${ico('trash', 16)}</button></div>`).join('') : '<div class="rulerow empty">아직 조건이 없어요 — 아래에서 추가해 주세요</div>'}
       <h5>조건 추가 <small style="font-weight:400;color:var(--mute)">(여러 칸을 채우면 모두 맞을 때만, 칸 안에서 'OR'로 여러 개)</small></h5>
       <div class="rulef"><label>보낸사람 주소·이름에</label><input data-f="from" placeholder="예: coway.com 또는 kim@nasmedia.co.kr"></div>
-      <div class="rulef"><label>제목에</label><input data-f="subject" placeholder="예: 코웨이"></div>
+      <div class="rulef"><label>제목에</label><input data-f="subject" placeholder="예: 정산"></div>
       <div class="rulef"><label>내용·키워드에</label><input data-f="query" placeholder="예: 넷플릭스 OR 제로 음식물처리기"></div>
-      <div class="rulef"><label>받는사람에</label><input data-f="to" placeholder="예: media3@smtown.com"></div>
+      <div class="rulef"><label>받는사람에</label><input data-f="to" placeholder="예: team@company.com"></div>
       <label class="opt"><input type="checkbox" id="skipIn" checked> 받은편지함에는 남기지 않기 (이 편지함으로만)</label>
       <div class="opt"><button class="btn pri" id="addRule">${ico('plus', 15)} 조건 추가</button></div>`;
   };
@@ -914,7 +915,8 @@ function trimLead(html) {
   while (d.firstChild && empty(d.firstChild)) d.firstChild.remove();
   return d.innerHTML;
 }
-const footerHtml = f => f ? `<div class="gp-footer" spellcheck="false" data-footer="${f.id}" style="${footerStyle(f)}">${trimLead(f.html)}</div>` : '<div class="gp-footer" spellcheck="false"></div>';
+const fillName = h => (h || '').replace(/\{이름\}/g, esc(ME.name || ''));
+const footerHtml = f => f ? `<div class="gp-footer" spellcheck="false" data-footer="${f.id}" style="${footerStyle(f)}">${fillName(trimLead(f.html))}</div>` : '<div class="gp-footer" spellcheck="false"></div>';
 // 풋터 자동 선택: 조건에 맞는 풋터 중 가장 구체적인 것 (메일 주소 키워드 > 답장/새 메일 > 모든 메일)
 function pickFooter(kind, m) {
   const isReply = kind === 'reply' || kind === 'all' || kind === 'draft';
@@ -1029,7 +1031,7 @@ function applyFooter(id) {
   const b = $('#cbody');
   let slot = $('.gp-footer', b);
   if (!slot) { slot = document.createElement('div'); slot.className = 'gp-footer'; slot.spellcheck = false; const q = $('.quote', b); q ? b.insertBefore(slot, q) : b.append(slot); }
-  slot.dataset.footer = id; slot.setAttribute('style', footerStyle(f)); slot.innerHTML = trimLead(f.html);
+  slot.dataset.footer = id; slot.setAttribute('style', footerStyle(f)); slot.innerHTML = fillName(trimLead(f.html));
   cs.footer = id; renderFooterBar(); dirty();
 }
 /* 첨부: 첨부 칸을 눌러 고르거나, 작성 화면 어디에든 끌어다 놓기 */
@@ -1849,7 +1851,7 @@ function startTSize(e) {
 document.addEventListener('scroll', () => { placeTSize(); if ($('#tbar')) tableBar(); }, true);
 
 /* ───────── 설정 (일반 · 풋터 · 편지함 · 계정) ───────── */
-function saveAll() { if (!real.on) store.set('boxes', BOXES); else if (J.data) { J.data.boxes = BOXES.map(b => ({ id: b.id, name: b.name, parent: b.parent, hidden: !!b.hidden })); jSave(); } store.set('footers2', FOOTERS); store.set('settings', SET); }
+function saveAll() { if (!real.on) store.set('sample-boxes', BOXES); else if (J.data) { J.data.boxes = BOXES.map(b => ({ id: b.id, name: b.name, parent: b.parent, hidden: !!b.hidden })); jSave(); } store.set('footers2', FOOTERS); store.set('settings', SET); }
 // 저장 폴더: 브라우저가 고른 폴더 권한을 기억 (IndexedDB)
 const idb = (op, val) => new Promise(res => { try { const rq = indexedDB.open('jin-mail', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('kv'); rq.onsuccess = () => { const tx = rq.result.transaction('kv', op === 'get' ? 'readonly' : 'readwrite'); const s = tx.objectStore('kv'); const r = op === 'get' ? s.get('dir') : s.put(val, 'dir'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }; rq.onerror = () => res(null); } catch (e) { res(null); } });
 function openSettings(tab) {
@@ -1868,7 +1870,7 @@ function openSettings(tab) {
       <label class="opt"><input type="radio" name="cm" value="inline"${SET.composeMode === 'inline' ? ' checked' : ''}> 이 화면 안에서 쓰기 (읽기 칸 자리)</label>
       <label class="opt"><input type="radio" name="cm" value="popup"${SET.composeMode === 'popup' ? ' checked' : ''}> 새 창(팝업)으로 쓰기</label>
       <h5>작성 칸 맨 위 인사말</h5><p class="desc">새 메일·답장을 열 때 맨 위에 자동으로 넣을 글이에요. 풋터에 인사말이 이미 있으면 비워 두세요.</p>
-      <textarea id="setGreet" rows="2" placeholder="예: 안녕하세요, SM C&C 윤석진입니다." style="width:100%;border:1px solid #c4cbd6;border-radius:6px;padding:7px 9px;font:inherit;resize:vertical">${esc(SET.greeting || '')}</textarea>
+      <textarea id="setGreet" rows="2" placeholder="예: 안녕하세요, OO팀 OOO입니다." style="width:100%;border:1px solid #c4cbd6;border-radius:6px;padding:7px 9px;font:inherit;resize:vertical">${esc(SET.greeting || '')}</textarea>
       <h5>기본 글꼴</h5><p class="desc">새로 쓰는 메일과 답장의 기본 글꼴이에요. 보내는 메일에도 이 글꼴로 들어가요.</p>
       <div class="opt"><select id="setFont">${FONT_LIST.map(f => `<option${f === SET.font.family ? ' selected' : ''}>${f}</option>`).join('')}</select>
         <select id="setSize">${SIZES.map(z => `<option value="${z}"${z === SET.font.size ? ' selected' : ''}>${z}pt</option>`).join('')}</select>
@@ -2034,8 +2036,9 @@ function googleLogin(interactive = true, force = false) {
   });
 }
 /* ───────── 로그인 자동 연장 ─────────
-   Google 로그인은 1시간짜리라, 끝나기 5분 전에 조용히 새로 받음 (이미 허락한 계정이라 창이 잠깐 떴다 바로 닫힘).
-   브라우저가 그 창을 막으면 다음에 화면을 한 번 누를 때 연장 → 쓰던 화면·작성 내용은 그대로 */
+   Google 로그인은 1시간짜리. 끝나기 5분 전부터는 '다음 클릭' 때 새로 받음 → 이미 허락한 계정이라 작은 창이 잠깐 떴다 바로 닫힘.
+   (클릭 없이 창을 띄우면 크롬이 막고 주소창에 '팝업 차단' 표시가 생기므로, 웹에서는 늘 클릭할 때만)
+   확장 프로그램 안에서는 창 없이 조용히 연장. 쓰던 화면·작성 내용은 그대로 */
 const auth = { p: null, needClick: false, waiters: [] };
 function renewToken() {
   if (auth.p) return auth.p;
@@ -2047,9 +2050,10 @@ function renewToken() {
 // 401(만료)을 받았을 때: 연장해 보고, 안 되면 다음 클릭까지 기다렸다가 이어서 진행
 function tokenAfter401() {
   tokCache.clear();
-  return renewToken().catch(e => {
+  const tryNow = IS_EXT ? renewToken() : Promise.reject(new Error('click'));
+  return tryNow.catch(e => {
     auth.needClick = true; real.expired = true; renderTop();
-    if (e.type !== 'popup_closed') toast('로그인을 이어가려면 화면 아무 곳이나 한 번 눌러 주세요');
+    toast('로그인을 이어가려면 화면 아무 곳이나 한 번 눌러 주세요');
     return new Promise(res => auth.waiters.push(res));
   });
 }
@@ -2057,7 +2061,7 @@ const authGesture = () => { if (auth.needClick && !auth.p) renewToken().catch(()
 ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, authGesture, true));
 setInterval(() => {
   if (!real.on || auth.p || auth.needClick) return;
-  if (tokCache.left() < 6 * 60000) renewToken().catch(e => { if (e.type === 'popup_failed_to_open' || /막혔/.test(e.message)) { auth.needClick = true; renderTop(); } });
+  if (tokCache.left() < 6 * 60000) { if (IS_EXT) renewToken().catch(() => { auth.needClick = true; }); else auth.needClick = true; }  // 웹: 다음 클릭 때 연장 (표시 없이)
 }, 60000);
 /* ───────── 실제 Gmail 메일 불러오기 · 바뀐 내용 Gmail에 반영 ───────── */
 const real = { on: false, token: null };
@@ -2236,6 +2240,10 @@ async function loadReal(interactive, token) {
     prog('Gmail 연결 중…');
     const [prof, labs] = await Promise.all([gapi('profile'), gapi('labels')]);
     ME.email = prof.emailAddress.toLowerCase();
+    // 내 이름: Gmail '보내는 사람' 설정의 이름 → 없으면 저장해 둔 이름 → 주소 앞부분 (보내는 메일의 From 이름에 쓰임)
+    const cn = store.get('connected', null) || {};
+    ME.name = (cn.email === prof.emailAddress && cn.name) || prof.emailAddress.split('@')[0];
+    try { const sa = await gapi('settings/sendAs'); const pr = (sa.sendAs || []).find(x => x.isPrimary) || (sa.sendAs || [])[0]; if (pr && pr.displayName) { ME.name = pr.displayName; store.set('connected', Object.assign({}, cn, { email: prof.emailAddress, name: pr.displayName })); } } catch (e) { /* 못 읽으면 보낸 메일에서 찾음 */ }
     real.ids = real.ids || new Map(); real.num = g => { if (!real.ids.has(g)) real.ids.set(g, real.ids.size + 1); return real.ids.get(g); };
     // JIN-mail 편지함·분류 기록 (드라이브 숨은 앱 공간). 처음이면 지금의 Gmail 라벨 구조를 한 번만 복사
     prog('JIN-mail 편지함 불러오는 중…');
@@ -2287,7 +2295,9 @@ async function loadReal(interactive, token) {
       const [all, inb, snt, unr] = await Promise.all([listIds(q), listIds(q, 'INBOX'), listIds(q, 'SENT'), listIds(q, 'UNREAD')]);
       inb.forEach(g => lab.inbox.add(g)); snt.forEach(g => lab.sent.add(g)); unr.forEach(g => lab.unread.add(g));
       if (/newer_than:9/.test(q)) real.labReady = true;  // 3개월치 상태를 다 알았을 때부터 처음 본 메일을 기록
-      const n = await fetchMetas(all, label); show(); return [all.length, n];
+      const n = await fetchMetas(all, label);
+      if (ME.name === ME.email.split('@')[0]) { const mine = snt.map(g => metas.get(g)).find(x => x && x.from && x.from.email && x.from.email.toLowerCase() === ME.email && x.from.name && x.from.name !== x.from.email); if (mine) { ME.name = mine.from.name; store.set('connected', Object.assign({}, store.get('connected', null) || {}, { name: ME.name })); } }
+      show(); return [all.length, n];
     };
     await stage('newer_than:7d', '최근 메일 받는 중');
     // 편지함(라벨) 정보: 편지함마다 3개월치 번호만 (가벼움)
@@ -2512,7 +2522,7 @@ function bootScreen(mode, msg) {
       </g></svg></div><p id="bootMsg">${esc(msg || 'Gmail에서 메일을 불러오는 중…')}</p>`
     : `<p>${esc(msg || (c.email ? c.email + ' 로그인이 만료됐어요' : 'Gmail 계정 연결이 필요해요'))}</p><button class="btn pri gbtn" id="bootGo">${ico('env', 18)} Gmail 다시 연결</button><button class="later" id="bootSample">예시 메일로 둘러보기</button>`}</div>`;
   const go = $('#bootGo', el); if (go) go.onclick = () => { bootScreen('loading'); loadReal(true); };
-  const sm = $('#bootSample', el); if (sm) sm.onclick = () => { store.set('skip-connect', true); location.hash = ''; MAILS = SAMPLE_MAILS.slice(); BOXES = store.get('boxes', DEFAULT_BOXES); real.expired = false; bootScreen('off'); renderTop(); renderNav(); renderList(); const f = visible()[0]; if (f) openMail(f.id); };
+  const sm = $('#bootSample', el); if (sm) sm.onclick = () => { store.set('skip-connect', true); location.hash = ''; MAILS = SAMPLE_MAILS.slice(); BOXES = store.get('sample-boxes', DEFAULT_BOXES); real.expired = false; bootScreen('off'); renderTop(); renderNav(); renderList(); const f = visible()[0]; if (f) openMail(f.id); };
 }
 function openWelcome(force) {
   if (!force && (store.get('connected', null) || store.get('skip-connect', false))) return;
@@ -2521,7 +2531,7 @@ function openWelcome(force) {
     <div class="steps"><div><span class="st" id="s1">1</span>Gmail 계정으로 로그인 (메일 읽기·정리 권한)</div><div><span class="st" id="s2">2</span>라벨을 편지함으로, 서명을 풋터로 가져오기</div><div><span class="st" id="s3">3</span>시작</div></div>
     <button class="btn pri gbtn" id="gConn">${ico('env', 18)} Gmail 계정 연결하기</button><div class="res" id="gRes"></div><button class="later" id="gLater">나중에 할게요 (예시 메일로 둘러보기)</button></div>`;
   document.body.append(bg);
-  $('#gLater', bg).addEventListener('click', () => { store.set('skip-connect', true); bg.remove(); });
+  $('#gLater', bg).addEventListener('click', () => { store.set('skip-connect', true); bg.remove(); MAILS = SAMPLE_MAILS.slice(); BOXES = store.get('sample-boxes', DEFAULT_BOXES); renderNav(); renderList(); const f = visible()[0]; if (f) openMail(f.id); else renderRead(); });
   $('#gConn', bg).addEventListener('click', async () => {
     const res = $('#gRes', bg); res.textContent = '로그인 창을 여는 중…'; res.style.color = 'var(--sub)';
     try {
@@ -2783,11 +2793,13 @@ if (hash === '#compose') {
   // 연결해 둔 계정이면 예시 메일을 잠깐이라도 보여 주지 않고 로딩 화면 → 실제 메일
   MAILS = []; BOXES = []; renderNav(); renderList(); renderRead();
   if (IS_EXT || tokCache.get()) { bootScreen('loading'); loadReal(false); }
-  else { bootScreen('loading'); googleLogin(true, true).then(t => loadReal(false, t)).catch(() => { real.expired = true; renderTop(); bootScreen('login'); }); }
+  else { real.expired = true; renderTop(); bootScreen('login'); }
+} else if (!store.get('skip-connect', false)) {
+  MAILS = []; BOXES = []; renderNav(); renderList(); renderRead();
+  openWelcome(false);
 } else {
   renderList();
   const first = visible()[0]; if (first) openMail(first.id); else renderRead();
-  openWelcome(false);
 }
 // 새 버전이 올라오면 알아서 적용 (홈페이지 캐시 때문에 옛 화면이 10분쯤 남는 것 방지). 메일을 쓰는 중이면 묻기
 (function verCheck() {

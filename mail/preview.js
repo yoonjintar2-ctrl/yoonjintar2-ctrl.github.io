@@ -14,8 +14,8 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') window.close
 const ph = n => Array.from({ length: n }, (_, i) => `<div class="ph" style="width:${70 + (i * 37) % 30}%"></div>`).join('');
 const views = {
   XLS() {
-    const rows = [['매체', '상품', '기간', '노출(만)', '단가', '금액(원)'], ['네이버', 'GFA', '11/1~11/30', '1,200', '3,000', '36,000,000'], ['카카오', '비즈보드', '11/1~11/30', '900', '3,500', '31,500,000'],
-      ['유튜브', '트루뷰', '11/4~11/24', '650', '4,200', '27,300,000'], ['넷플릭스', 'VA 15s', '11/1~11/30', '400', '7,500', '30,000,000']];
+    const rows = [['매체', '상품', '기간', '노출(만)', '단가', '금액(원)'], ['포털 배너', '메인 롤링', '11/1~11/30', '1,200', '3,000', '36,000,000'], ['메신저 광고', '채팅 상단', '11/1~11/30', '900', '3,500', '31,500,000'],
+      ['동영상 플랫폼', '인스트림 15s', '11/4~11/24', '650', '4,200', '27,300,000'], ['OTT', '중간광고 15s', '11/1~11/30', '400', '7,500', '30,000,000']];
     const cols = 'ABCDEF';
     let h = `<div><table class="xl"><tr><th></th>${[...cols].map(c => `<th>${c}</th>`).join('')}</tr>`;
     rows.forEach((r, i) => { h += `<tr class="${i === 0 ? 'h' : ''}"><th>${i + 1}</th>${r.map((v, j) => `<td class="${j >= 3 && i ? 'n' : ''}">${esc(v)}</td>`).join('')}</tr>`; });
@@ -25,9 +25,9 @@ const views = {
   },
   PPT() {
     return `<div class="slides">
-      <div class="page slide"><span class="k">PROPOSAL</span><h1>${esc(d.n.replace(/\.\w+$/, ''))}</h1><div style="color:#5f6368;font-size:16px">SM C&amp;C Media 3팀</div><div class="num">1 / 3</div></div>
+      <div class="page slide"><span class="k">PROPOSAL</span><h1>${esc(d.n.replace(/\.\w+$/, ''))}</h1><div style="color:#5f6368;font-size:16px">예시컴퍼니 마케팅팀</div><div class="num">1 / 3</div></div>
       <div class="page slide"><span class="k">STRATEGY</span><h1>집행 방향</h1><ul><li>브랜드 인지 확대: 대형 영상 매체 중심</li><li>전환 강화: 검색·리타게팅 병행</li><li>11월 프로모션 기간 집중 편성</li></ul><div class="num">2 / 3</div></div>
-      <div class="page slide"><span class="k">BUDGET</span><h1>매체별 예산</h1><div class="bars"><div style="height:80%"><span>네이버</span></div><div style="height:70%"><span>카카오</span></div><div style="height:60%"><span>유튜브</span></div><div style="height:66%"><span>넷플릭스</span></div></div><div class="num">3 / 3</div></div></div>`;
+      <div class="page slide"><span class="k">BUDGET</span><h1>매체별 예산</h1><div class="bars"><div style="height:80%"><span>포털</span></div><div style="height:70%"><span>메신저</span></div><div style="height:60%"><span>동영상</span></div><div style="height:66%"><span>OTT</span></div></div><div class="num">3 / 3</div></div></div>`;
   },
   PDF() { return `<div class="page doc"><h1>${esc(d.n.replace(/\.\w+$/, ''))}</h1><div class="sub">${esc(d.from || '')}</div><h3>1. 개요</h3>${ph(5)}<h3>2. 주요 내용</h3>${ph(8)}<h3>3. 참고</h3>${ph(4)}</div>`; },
   DOC() { return `<div class="page doc"><h1>${esc(d.n.replace(/\.\w+$/, ''))}</h1><div class="sub">작성: ${esc(d.from || '')}</div><h3>보고 항목</h3>${ph(4)}<h3>결과 요약</h3>${ph(7)}</div>`; },
