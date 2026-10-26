@@ -445,14 +445,20 @@ const grpName = (d, m) => d === 0 ? '오늘' : d === 1 ? '어제' : d <= 7 ? '�
 // 목록 미리보기 한 줄: 본문 앞부분 (인용·빈 줄 제외)
 const snipOf = m => (m.snippet || m.body || '').replace(/\s+/g, ' ').trim().slice(0, 200);
 const dateLabel = m => m.d === 0 ? m.t : fmtD(dayOf(m));
-// 파일 종류 아이콘 (글자 대신 색·모양으로 구분)
-const FT_ICON = { XLS: ['#188038', 'M9 12h8M9 15h8M9 18h8M13 11v8'], PPT: ['#d24726', 'M9 18v-3M12 18v-6M15 18v-4'], PDF: ['#d93025', 'M9 13h7M9 16h7M9 19h4'],
-  DOC: ['#1a5dc8', 'M9 12h8M9 15h8M9 18h5'], IMG: ['#8430ce', 'M8 19l3-4 2 2 2-3 2.5 5zM10 12h.01'], ZIP: ['#6b7280', 'M13 9v1M13 11v1M13 13v1M12 15h2v3h-2z'], FILE: ['#6b7280', 'M9 13h7M9 16h7'] };
-const ftIcon = (t, sz) => { const [c, g] = FT_ICON[t] || FT_ICON.FILE; return `<svg class="fti" viewBox="0 0 24 24" style="width:${sz || 15}px;height:${sz || 15}px" aria-label="${t}"><path d="M6 2.5h9l4.5 4.5v14.5H6z" fill="${c}"/><path d="M15 2.5V7h4.5" fill="#fff" fill-opacity=".35"/><path d="${g}" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`; };
+// 파일 종류 아이콘: 무채색 종이 모양 + 확장자 앞 글자 (그림은 산 모양, 압축은 지퍼)
+const extOf = n => ((n || '').split('.').length > 1 ? n.split('.').pop() : '').toLowerCase();
+const ftIcon = (t, sz, name) => {
+  const ext = extOf(name);
+  let mark;
+  if (t === 'IMG') mark = '<path d="M8.5 18.5l2.6-3.4 1.9 2 1.6-2.2 2.4 3.6z" fill="#5f6368"/><circle cx="10.2" cy="12.2" r="1.1" fill="#5f6368"/>';
+  else if (t === 'PDF') mark = '<text x="12.75" y="17.6" text-anchor="middle" font-size="5.6" font-weight="800" font-family="Arial,sans-serif" fill="#5f6368">PDF</text>';
+  else { const L = (ext[0] || (t || 'F')[0] || 'F').toUpperCase(); mark = `<text x="12.75" y="18.2" text-anchor="middle" font-size="9" font-weight="800" font-family="Arial,sans-serif" fill="#5f6368">${esc(L)}</text>`; }
+  return `<svg class="fti" viewBox="0 0 24 24" style="width:${sz || 15}px;height:${sz || 15}px" aria-label="${esc(ext || t)}"><path d="M6 2.5h9l4.5 4.5v14.5H6z" fill="#fff" stroke="#80868b" stroke-width="1.3" stroke-linejoin="round"/><path d="M15 2.5V7h4.5" fill="none" stroke="#80868b" stroke-width="1.3" stroke-linejoin="round"/>${mark}</svg>`;
+};
 const baseName = n => n.replace(/\.[a-z0-9]{1,5}$/i, '');
 // 본문 안에 들어간 그림(서명 로고 등)은 첨부로 안 보여 줌
 const attsOf = m => m.att.map((a, i) => [a, i]).filter(([a]) => !(a[3] && a[3].inline));
-const ftBadges = list => list.map(([[t, n]]) => `<span class="mini" title="${esc(n)}">${ftIcon(t)}<span class="nm">${esc(baseName(n))}</span></span>`).join('');
+const ftBadges = list => list.map(([[t, n]]) => `<span class="mini" title="${esc(n)}">${ftIcon(t, 15, n)}<span class="nm">${esc(baseName(n))}</span></span>`).join('');
 // 첨부 줄이 넘치면: 1) 파일 이름 숨기고 종류 표시만 2) 그래도 넘치면 뒤쪽을 '…+N'으로
 function fitAttRows() {
   $$('#rows .l3').forEach(l => {
@@ -569,7 +575,7 @@ function renderRead() {
         </div>
       </div>
     </div>
-    ${attsOf(m).length ? `<div class="attbar"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b>${attsOf(m).map(([[t, n, s], i]) => `<span class="att" data-ai="${i}" title="${esc(n)} · 누르면 새 창에서 미리보기">${ftIcon(t, 17)}${esc(n)} <small>${s}</small></span>`).join('')}</div>` : ''}
+    ${attsOf(m).length ? `<div class="attbar"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b>${attsOf(m).map(([[t, n, s], i]) => `<span class="att" data-ai="${i}" title="${esc(n)} · 누르면 새 창에서 미리보기">${ftIcon(t, 17, n)}${esc(n)} <small>${s}</small></span>`).join('')}</div>` : ''}
     ${m.draft ? `<div class="dbanner"><span>${ico('pen', 16)} 이 대화에 작성 중이던 답장이 있어요</span><button data-act="draft">이어서 쓰기</button><button class="ib" data-act="deldraft" title="작성 중이던 메일 삭제">${ico('trash', 17)}</button></div>` : ''}
     <div class="rbody">${m.real && !m.full ? '<div class="blank" style="padding:40px 0">본문 불러오는 중…</div>' : m.html ? '<iframe class="mailhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>' : `<div class="txt">${esc(m.body)}</div>${prevHtml(m.prev, 0)}`}</div>`;
   const fr = $('#view iframe.mailhtml');
@@ -1472,8 +1478,8 @@ function bootScreen(mode, msg) {
   if (mode === 'off') { if (el) el.remove(); return; }
   if (!el) { el = document.createElement('div'); el.id = 'boot'; document.body.append(el); }
   const c = store.get('connected', null) || {};
-  el.innerHTML = `<div class="bootbox"><div class="logo">${ico('env', 44)}</div><h2>JIN-mail</h2>${mode === 'loading'
-    ? `<div class="spin"></div><p id="bootMsg">${esc(msg || 'Gmail에서 메일을 불러오는 중…')}</p>`
+  el.innerHTML = `<div class="bootbox">${mode === 'loading' ? '' : `<div class="logo">${ico('env', 44)}</div>`}<h2>JIN-mail</h2>${mode === 'loading'
+    ? `<div class="envani"><svg viewBox="0 0 120 96" width="120" height="96"><path d="M18 44h84v42H18z" fill="#eef0f3" stroke="#80868b" stroke-width="2" stroke-linejoin="round"/><path class="f2" d="M18 44l42 28 42-28z" fill="#e4e7ec" stroke="#80868b" stroke-width="2" stroke-linejoin="round"/><g class="letter"><rect x="28" y="34" width="64" height="44" rx="3" fill="#fff" stroke="#80868b" stroke-width="2"/><path d="M38 46h44M38 54h44M38 62h28" stroke="#b5bac2" stroke-width="2.4" stroke-linecap="round"/></g><path d="M18 44l42 26 42-26v42H18z" fill="#f6f7f9" stroke="#80868b" stroke-width="2" stroke-linejoin="round"/><path class="f1" d="M18 44l42 28 42-28z" fill="#e4e7ec" stroke="#80868b" stroke-width="2" stroke-linejoin="round"/></svg></div><p id="bootMsg">${esc(msg || 'Gmail에서 메일을 불러오는 중…')}</p>`
     : `<p>${esc(msg || (c.email ? c.email + ' 로그인이 만료됐어요' : 'Gmail 계정 연결이 필요해요'))}</p><button class="btn pri gbtn" id="bootGo">${ico('env', 18)} Gmail 다시 연결</button><button class="later" id="bootSample">예시 메일로 둘러보기</button>`}</div>`;
   const go = $('#bootGo', el); if (go) go.onclick = () => { bootScreen('loading'); loadReal(true); };
   const sm = $('#bootSample', el); if (sm) sm.onclick = () => { store.set('skip-connect', true); location.hash = ''; MAILS = SAMPLE_MAILS.slice(); BOXES = store.get('boxes', DEFAULT_BOXES); real.expired = false; bootScreen('off'); renderTop(); renderNav(); renderList(); const f = visible()[0]; if (f) openMail(f.id); };
