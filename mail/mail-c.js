@@ -537,7 +537,7 @@ function openCalendar() {
 /* 검색: 입력하는 동안 아래 목록이 바로 걸러지고, 검색창 아래엔 추천(사람·메일)이 뜸 */
 function queryMatch(m, raw) {
   const f = st.f; const q = (raw || '').trim();
-  const hay = f.where === 'subj' ? m.subj : [m.subj, m.body, m.from.name, m.from.email].join(' ');
+  const hay = f.where === 'subj' ? m.subj : [m.subj, m.body || m.snippet || '', m.from.name, m.from.email].join(' ');
   if (f.exclude) { const ex = f.exclude.split(/[,，]/).map(s => s.trim().toLowerCase()).filter(Boolean); if (ex.some(w => hay.toLowerCase().includes(w))) return false; }
   if (!q) return true;
   if (f.exact) return hay.includes(q);
@@ -1335,8 +1335,13 @@ function openSettings(tab) {
       <label class="opt"><input type="radio" name="cm" value="popup"${SET.composeMode === 'popup' ? ' checked' : ''}> 새 창(팝업)으로 쓰기</label>
       <h5>맞춤법 표시</h5><label class="opt"><input type="checkbox" id="setTypo"${SET.typo ? ' checked' : ''}> 자주 틀리는 한글 표현에 밑줄 표시</label>
       <p class="desc">무시한 단어 ${IGNORE.size}개 ${IGNORE.size ? '<button class="btn" id="clrIgn" style="padding:2px 8px;margin-left:6px">무시 목록 비우기</button>' : ''}</p>
+      <h5>이 PC에 저장한 메일</h5><p class="desc">불러온 메일 목록과 본문을 이 PC(브라우저 저장소)에 저장해 두고, 다음부터 바로 열고 본문 전체에서 검색해요. Google 외 다른 곳으로는 보내지 않아요.</p>
+      <div class="opt"><span id="cacheInfo" style="color:var(--sub)">확인 중…</span><button class="btn" id="clrCache" style="padding:3px 10px">저장한 메일 비우기</button></div>
       <h5>메일 저장 폴더 (내 컴퓨터)</h5><p class="desc">첨부파일 저장과 메일 백업에 쓸 폴더예요. 브라우저 보안상 한 번 골라 주시면 그 폴더만 쓸 수 있어요.</p>
       <div class="opt"><button class="btn" id="pickDir">${ico('folder', 16)} 폴더 고르기</button><span id="dirName" style="color:var(--sub)">불러오는 중…</span></div>`;
+      (async () => { const el = $('#cacheInfo', body); if (!el) return; let n = real.texts ? real.texts.size : 0, sz = '';
+        try { const e = await navigator.storage.estimate(); sz = ` · 사용 ${fmtSize(e.usage || 0)}`; } catch (er) { /* */ }
+        el.textContent = real.on ? `본문 저장 ${n}통 / 전체 ${MAILS.length}통${sz}` : `예시 메일 사용 중${sz}`; })();
       idb('get').then(h => { const el = $('#dirName', body); if (el) el.textContent = h && h.name ? '현재: ' + h.name : '아직 고르지 않았어요'; });
     }
     if (t === 'footers') {
@@ -1405,6 +1410,7 @@ function openSettings(tab) {
   body.addEventListener('click', async e => {
     const t = e.target.closest('button'); if (!t) return;
     const fr = t.closest('.ftr'), br = t.closest('.bxr');
+    if (t.id === 'clrCache') { if (!confirm('이 PC에 저장한 메일 목록·본문을 지울까요? (Gmail의 메일은 그대로예요. 다음에 열 때 다시 받아요)')) return; try { if (real.db) real.db.close(); real.db = null; indexedDB.deleteDatabase('jin-cache-' + ME.email); } catch (er) { /* */ } toast('저장한 메일을 비웠어요 — 새로고침하면 다시 받아요'); return; }
     if (t.id === 'clrIgn') { IGNORE.clear(); store.set('typo-ignore', []); show('general'); runTypo(); return; }
     if (t.id === 'pickDir') {
       if (!window.showDirectoryPicker) { toast('이 브라우저에서는 폴더 고르기를 지원하지 않아요'); return; }
@@ -1575,7 +1581,23 @@ function toMail(meta, lab) {
 }
 // 이 브라우저 안의 저장소(IndexedDB) — 한 번 받은 목록은 다음부터 다시 안 받음
 function cacheDb() {
-  return new Promise(res => { try { const rq = indexedDB.open('jin-cache-' + ME.email, 1); rq.onupgradeneeded = () => rq.result.createObjectStore('meta', { keyPath: 'gid' }); rq.onsuccess = () => res(rq.result); rq.onerror = () => res(null); } catch (e) { res(null); } });
+  if (real.db) return Promise.resolve(real.db);
+  return new Promise(res => { try {
+    const rq = indexedDB.open('jin-cache-' + ME.email, 2);
+    rq.onupgradeneeded = () => { const d = rq.result; ['meta', 'text', 'full'].forEach(n => { if (!d.objectStoreNames.contains(n)) d.createObjectStore(n, { keyPath: 'gid' }); }); };
+    rq.onsuccess = () => { real.db = rq.result; res(rq.result); }; rq.onerror = () => res(null);
+  } catch (e) { res(null); } });
+}
+const idbAll = (db, store) => new Promise(res => { if (!db) return res([]); try { const r = db.transaction(store).objectStore(store).getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => res([]); } catch (e) { res([]); } });
+const idbGet = (db, store, key) => new Promise(res => { if (!db) return res(null); try { const r = db.transaction(store).objectStore(store).get(key); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); } catch (e) { res(null); } });
+const idbPut = (db, store, val) => { if (!db) return; try { db.transaction(store, 'readwrite').objectStore(store).put(val); } catch (e) { /* 저장 공간 부족 등은 무시 */ } };
+const stripAttData = att => att.map(a => [a[0], a[1], a[2], Object.assign({}, a[3], { data: undefined })]);
+// 본문을 PC에 저장 (검색용 글자는 따로 → 시작할 때 한꺼번에 불러와 전체 본문 검색)
+function saveFull(m) {
+  if (!real.db || !m.full) return;
+  idbPut(real.db, 'text', { gid: m.gid, t: (m.body || '').slice(0, 20000) });
+  idbPut(real.db, 'full', { gid: m.gid, body: m.body, html: (m.html || '').length < 600000 ? m.html : '', htmlReady: m.htmlReady && m.htmlReady.length < 3000000 ? m.htmlReady : null, att: stripAttData(m.att) });
+  if (real.texts) real.texts.set(m.gid, (m.body || '').slice(0, 20000));
 }
 const cacheAll = db => new Promise(res => { if (!db) return res([]); try { const r = db.transaction('meta').objectStore('meta').getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => res([]); } catch (e) { res([]); } });
 const cachePut = (db, list) => { if (!db || !list.length) return; try { const tx = db.transaction('meta', 'readwrite'); const os = tx.objectStore('meta'); list.forEach(x => os.put(Object.assign({}, x, { body: '', html: '', full: false, att: x.att.map(a => [a[0], a[1], a[2], Object.assign({}, a[3], { data: undefined })]) }))); } catch (e) { /* 저장 실패는 무시 */ } };
@@ -1602,12 +1624,14 @@ async function loadReal(interactive, token) {
     const byName = new Map(user.map(l => [l.name, l.id]));
     BOXES = user.map(l => { const k = l.name.lastIndexOf('/'); return { id: l.id, name: k < 0 ? l.name : l.name.slice(k + 1), parent: k < 0 ? null : (byName.get(l.name.slice(0, k)) || null), hidden: hid.has(l.id) }; });
     const db = await cacheDb(); const cached = new Map((await cacheAll(db)).map(x => [x.gid, x]));
+    real.texts = new Map((await idbAll(db, 'text')).map(x => [x.gid, x.t]));
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* */ }
     const metas = new Map(); const lab = { inbox: new Set(), sent: new Set(), unread: new Set(), box: new Map() };
     real.lab = lab;
     const first = !real.on;
     const show = () => {
       const keepFull = new Map(MAILS.filter(m => m.real && m.full).map(m => [m.gid, m]));
-      MAILS = [...metas.values()].filter(x => !(real.gone && real.gone.has(x.gid))).map(x => { const k = keepFull.get(x.gid); return toMail(k ? Object.assign({}, x, { body: k.body, html: k.html, htmlReady: k.htmlReady, att: k.att, full: true }) : x, lab); }).sort((a, b) => b.when - a.when);
+      MAILS = [...metas.values()].filter(x => !(real.gone && real.gone.has(x.gid))).map(x => { const k = keepFull.get(x.gid); return toMail(k ? Object.assign({}, x, { body: k.body, html: k.html, htmlReady: k.htmlReady, att: k.att, full: true }) : Object.assign({}, x, { body: real.texts.get(x.gid) || '' }), lab); }).sort((a, b) => b.when - a.when);
       if (first && !real.on) { real.on = true; st.folder = 'inbox'; st.open = null; st.picked.clear(); }
       bootScreen('off'); renderNav(); renderList(); renderTop();
       if (st.open == null) { const f = visible()[0]; if (f) openMail(f.id); } else renderRead();
@@ -1643,14 +1667,37 @@ async function loadReal(interactive, token) {
     const [total, fresh] = await stage(`newer_than:${DAYS}d`, '3개월치 메일 받는 중');
     prog('');
     toast(`${prof.emailAddress} · 최근 3개월 메일 ${total}통 준비 완료${fresh ? ` (새로 받은 ${fresh}통)` : ''}`);
+    prefetchBodies();
   } catch (err) { real.expired = !real.on; prog(''); renderTop(); if (!real.on && $('#boot')) bootScreen('login', '메일을 불러오지 못했어요: ' + err.message); else toast('실제 메일을 불러오지 못했어요: ' + err.message); }
   finally { real.loading = false; }
+}
+async function prefetchBodies() {
+  if (real.prefetching || !real.db) return; real.prefetching = true;
+  try {
+    const todo = MAILS.filter(m => m.real && !real.texts.has(m.gid)).sort((a, b) => b.when - a.when).map(m => m.gid);
+    let i = 0, done = 0;
+    await Promise.all(Array.from({ length: 3 }, async () => {
+      while (i < todo.length) {
+        const g = todo[i++];
+        try {
+          const x = parseMsg(await gapi(`messages/${g}?format=full`, { bg: true }), true);
+          const tmp = { gid: g, body: x.body, html: x.html, att: x.att, full: true }; saveFull(tmp);
+          const m = MAILS.find(y => y.gid === g); if (m && !m.full) m.body = x.body;
+        } catch (e) { if (/로그인이 만료/.test(e.message)) return; }
+        done++; if (done % 25 === 0 || done === todo.length) { real.prog = done < todo.length ? `본문 저장 중 ${done}/${todo.length}` : ''; renderTop(); }
+      }
+    }));
+  } finally { real.prefetching = false; real.prog = ''; renderTop(); }
 }
 // 메일을 열 때 본문 전체 받기
 async function fetchFull(m) {
   if (!m || !m.real || m.full || m._loading) return;
   m._loading = true;
-  try { const x = parseMsg(await gapi(`messages/${m.gid}?format=full`), true); Object.assign(m, { body: x.body, html: x.html, att: x.att, full: true }); }
+  try {
+    const c = await idbGet(real.db, 'full', m.gid);
+    if (c && (c.html || c.body)) Object.assign(m, { body: c.body, html: c.html, htmlReady: c.htmlReady || null, att: c.att, full: true });
+    else { const x = parseMsg(await gapi(`messages/${m.gid}?format=full`), true); Object.assign(m, { body: x.body, html: x.html, att: x.att, full: true }); saveFull(m); }
+  }
   catch (e) { toast('본문을 불러오지 못했어요: ' + e.message); }
   finally { m._loading = false; if (st.open === m.id) renderRead(); renderList(); }
 }
@@ -1665,7 +1712,8 @@ async function resolveInline(m) {
       h = h.split('cid:' + a[3].cid).join(src);
     } catch (e) { /* 그림 하나 실패는 건너뜀 */ }
   }));
-  return (m.htmlReady = h);
+  m.htmlReady = h; if (m.real) saveFull(m);
+  return h;
 }
 
 async function openRealAtt(m, a) {
