@@ -1084,9 +1084,11 @@ function outgoingHtml() {
   $$('[data-tsbg]', d).forEach(x => x.removeAttribute('data-tsbg'));
   $$('[contenteditable], [spellcheck]', d).forEach(x => { x.removeAttribute('contenteditable'); x.removeAttribute('spellcheck'); });
   const inl = [];
-  $$('img[src^="data:"]', d).forEach((img, i) => {
-    const m = /^data:([^;,]+);base64,(.*)$/.exec(img.getAttribute('src')); if (!m) return;
-    const cid = `img${i}.${Date.now().toString(36)}@jin-mail`; inl.push({ cid, mime: m[1], b64: m[2] });
+  const seen = new Map();
+  $$('img[src^="data:"]', d).forEach(img => {
+    const src = img.getAttribute('src'), m = /^data:([^;,]+);base64,(.*)$/.exec(src); if (!m) return;
+    let cid = seen.get(src);
+    if (!cid) { cid = `img${inl.length}.${Date.now().toString(36)}@jin-mail`; seen.set(src, cid); inl.push({ cid, mime: m[1], b64: m[2], name: `image${inl.length + 1}.${(m[1].split('/')[1] || 'png').replace('jpeg', 'jpg').replace(/\+.*$/, '')}` }); }
     img.setAttribute('src', 'cid:' + cid);
   });
   // 인용(원본 메일) 칸 모양을 받는 쪽에서도 보이게
@@ -1101,11 +1103,12 @@ async function buildMime(d) {
   const alt = boundary(), rel = boundary(), mix = boundary();
   const hdr = [`From: ${addrHdr([ME])}`, `To: ${addrHdr(d.to)}`];
   if (d.cc.length) hdr.push(`Cc: ${addrHdr(d.cc)}`);
+  hdr.push(`X-JIN-Id: ${d.jid || (d.jid = 'jin' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8))}`);
   hdr.push(`Subject: ${encHdr(d.subj)}`, 'MIME-Version: 1.0', `Date: ${new Date().toUTCString().replace('GMT', '+0000')}`);
   if (d.inReplyTo) { hdr.push(`In-Reply-To: ${d.inReplyTo}`, `References: ${[d.refs, d.inReplyTo].filter(Boolean).join(' ')}`); }
   const altPart = [`Content-Type: multipart/alternative; boundary="${alt}"`, '', `--${alt}`, 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', wrap76(strB64(text)), `--${alt}`, 'Content-Type: text/html; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', wrap76(strB64(html)), `--${alt}--`, ''].join('\r\n');
   let bodyPart = altPart;
-  if (inl.length) bodyPart = [`Content-Type: multipart/related; boundary="${rel}"`, '', `--${rel}`, altPart, ...inl.flatMap(x => [`--${rel}`, `Content-Type: ${x.mime}`, 'Content-Transfer-Encoding: base64', `Content-ID: <${x.cid}>`, 'Content-Disposition: inline', '', wrap76(x.b64)]), `--${rel}--`, ''].join('\r\n');
+  if (inl.length) bodyPart = [`Content-Type: multipart/related; boundary="${rel}"`, '', `--${rel}`, altPart, ...inl.flatMap(x => [`--${rel}`, `Content-Type: ${x.mime}; name="${x.name}"`, 'Content-Transfer-Encoding: base64', `Content-ID: <${x.cid}>`, `Content-Disposition: inline; filename="${x.name}"`, '', wrap76(x.b64)]), `--${rel}--`, ''].join('\r\n');
   if (!d.files.length) return hdr.join('\r\n') + '\r\n' + bodyPart;
   const parts = [];
   for (const f of d.files) {
@@ -1123,10 +1126,20 @@ async function uploadMime(kind, mime, meta) {
     const waits = [0, 6, 15, 30];
     for (let t = 0; ; t++) {
       if (waits[t]) { toast(`Gmail 사용량이 잠깐 몰렸어요. ${waits[t]}초 뒤에 다시 보낼게요 (작성 내용은 그대로예요)`); await new Promise(z => setTimeout(z, waits[t] * 1000)); }
+      // 연결이 끊겨 실패로 보였어도 실제로는 보내졌을 수 있음 → 다시 보내기 전에 보낸편지함 확인 (두 번 가지 않게)
+      if (t > 0 && kind === 'messages/send') { const done = await alreadySent(mime); if (done) return done; }
       try { return await uploadOnce(kind, mime, meta, t > 0 && mime.length < 3.5 * 1048576); }
-      catch (e) { if (!e.retry || t >= waits.length - 1) throw e; }
+      catch (e) { if (!e.retry || t >= waits.length - 1) { if (e.retry && kind === 'messages/send') { const done = await alreadySent(mime); if (done) return done; } throw e; } }
     }
   } finally { quota.hold--; }
+}
+async function alreadySent(mime) {
+  const jid = (/^X-JIN-Id: (\S+)/m.exec(mime) || [])[1]; if (!jid) return null;
+  try {
+    const l = await gapi('messages?maxResults=10&q=' + encodeURIComponent('in:sent newer_than:1d'));
+    for (const x of l.messages || []) { const g = await gapi(`messages/${x.id}?format=metadata&metadataHeaders=X-JIN-Id`); if ((g.payload.headers || []).some(h => h.value === jid)) return { id: x.id, threadId: g.threadId }; }
+  } catch (e) { /* 확인 못 하면 그냥 다시 시도 */ }
+  return null;
 }
 async function uploadOnce(kind, mime, meta, viaJson) {
   await takeQuota(100, false);
@@ -1679,7 +1692,10 @@ function tableBar() {
   bar.style.maxWidth = Math.max(320, cr.width - 8) + 'px';  // 작성 칸보다 넓으면 두 줄로
   bar.style.left = Math.max(cr.left + 4, Math.min(tr.left, cr.right - bar.offsetWidth - 4)) + 'px';
   const h = bar.offsetHeight, vb = Math.min(innerHeight, cr.bottom) - 4;
-  bar.style.top = (tr.bottom + 6 + h <= vb ? tr.bottom + 6 : vb - h) + 'px';
+  const top = tr.bottom + 6 + h <= vb ? tr.bottom + 6 : vb - h;
+  bar.style.top = top + 'px';
+  const cur = cellAtCaret();
+  if (cur && !tableBar.scrolling) { const r = cur.getBoundingClientRect(); if (r.bottom > top - 4 && r.top > cr.top) { const sc = $('#cbody'); const by = Math.min(r.bottom - top + 12, r.top - cr.top - 8); if (by > 0 && sc.scrollHeight > sc.clientHeight) { tableBar.scrolling = true; sc.scrollTop += by; tableBar.scrolling = false; } } }
 }
 // 칸 합치기: 고른 사각형의 왼쪽 위 칸에 내용을 모으고 rowspan/colspan
 function mergeCells(cells) {
@@ -1771,7 +1787,7 @@ async function tblAct(a, btn) {
 // 여러 칸을 끌어서 고르기 + 고른 칸 Delete로 내용 지우기
 document.addEventListener('mousedown', e => {
   const td = e.target.closest && e.target.closest('#cbody td, #cbody th');
-  if (e.target.closest && e.target.closest('#tbar, .menu, #tsize')) return;
+  if (e.target.closest && e.target.closest('#tbar, .menu, #tsize, #fmt')) return;  // 위 서식 막대(색·굵게 등)를 눌러도 고른 칸 유지
   if (!td) { if (TS.multi) tdSel([]); TS.drag = null; return; }
   if (e.shiftKey && TS.cells[0] && TS.cells[0].closest('table') === td.closest('table')) { e.preventDefault(); tdSel(rectCells(TS.cells[0], td), true); TS.drag = TS.cells[0]; tableBar(); return; }
   TS.drag = td; TS.multi = false;
@@ -2066,7 +2082,7 @@ function parseMsg(g, full) {
   let plain = '', html = ''; const parts = [];
   const walk = (p, parent) => {
     const ph = {}; (p.headers || []).forEach(h => { ph[h.name.toLowerCase()] = h.value; });
-    if (p.filename && p.body && (p.body.attachmentId || p.body.data)) parts.push({ p, cid: (ph['content-id'] || '').replace(/[<>]/g, ''), disp: ph['content-disposition'] || '', related: parent === 'multipart/related' });
+    if ((p.filename || (ph['content-id'] && /^image\//.test(p.mimeType))) && p.body && (p.body.attachmentId || p.body.data)) parts.push({ p, cid: (ph['content-id'] || '').replace(/[<>]/g, ''), disp: ph['content-disposition'] || '', related: parent === 'multipart/related' });
     else if (p.mimeType === 'text/plain' && p.body && p.body.data && !plain) plain = b64text(p.body.data);
     else if (p.mimeType === 'text/html' && p.body && p.body.data && !html) html = b64text(p.body.data);
     (p.parts || []).forEach(c => walk(c, p.mimeType));
@@ -2074,6 +2090,7 @@ function parseMsg(g, full) {
   walk(g.payload, '');
   // 본문 안에만 들어간 그림(서명 로고 등) = inline → 첨부 표시에서 뺌
   const att = parts.map(({ p, cid, disp, related }) => {
+    if (!p.filename) p = Object.assign({}, p, { filename: 'image.' + ((p.mimeType.split('/')[1] || 'png').replace('jpeg', 'jpg')) });
     const ext = (p.filename.split('.').pop() || '').toLowerCase();
     const img = /^image\//.test(p.mimeType);
     const inline = full && html ? (!!cid && html.includes('cid:' + cid)) || (img && /^\s*inline/i.test(disp)) : img && (/^\s*inline/i.test(disp) || (!!cid && related));
@@ -2169,7 +2186,7 @@ const cacheAll = db => new Promise(res => { if (!db) return res([]); try { const
 const cachePut = (db, list) => { if (!db || !list.length) return; try { const tx = db.transaction('meta', 'readwrite'); const os = tx.objectStore('meta'); list.forEach(x => os.put(Object.assign({}, x, { body: '', html: '', full: false, att: x.att.map(a => [a[0], a[1], a[2], Object.assign({}, a[3], { data: undefined })]) }))); } catch (e) { /* 저장 실패는 무시 */ } };
 async function listIds(q, label) {
   const out = []; let tok = '';
-  do { const r = await gapi(`messages?maxResults=500&q=${encodeURIComponent(q)}${label ? '&labelIds=' + label : ''}${tok ? '&pageToken=' + tok : ''}`, { bg: true }); (r.messages || []).forEach(x => out.push(x.id)); tok = r.nextPageToken || ''; } while (tok);
+  do { const r = await gapi(`messages?maxResults=500&q=${encodeURIComponent(q)}${label ? '&labelIds=' + label : ''}${tok ? '&pageToken=' + tok : ''}`, { bg: !!real.on }  /* 첫 화면 전에는 우선 처리 */); (r.messages || []).forEach(x => out.push(x.id)); tok = r.nextPageToken || ''; } while (tok);
   return out;
 }
 const META_FIELDS = 'id,threadId,labelIds,internalDate,snippet,payload(mimeType,headers,parts(mimeType,filename,headers,body(attachmentId,size),parts(mimeType,filename,headers,body(attachmentId,size),parts(mimeType,filename,headers,body(attachmentId,size),parts(mimeType,filename,headers,body(attachmentId,size))))))';
@@ -2221,7 +2238,7 @@ async function loadReal(interactive, token) {
       await Promise.all(Array.from({ length: 8 }, async () => {
         while (i < todo.length) {
           const g = todo[i++];
-          try { const raw = await gapi(`messages/${g}?format=full&fields=${encodeURIComponent(META_FIELDS + (withLabels ? ',labelIds' : ''))}`, { bg: true }); const x = parseMsg(raw, false); if (withLabels) { x.lb = raw.labelIds || []; labFrom(x); } metas.set(g, x); buf.push(x); } catch (e) { if (/로그인이 만료/.test(e.message)) throw e; /* 한 통 실패는 건너뜀 */ }
+          try { const raw = await gapi(`messages/${g}?format=full&fields=${encodeURIComponent(META_FIELDS + (withLabels ? ',labelIds' : ''))}`, { bg: !!real.on }  /* 첫 화면 전에는 우선 처리 */); const x = parseMsg(raw, false); if (withLabels) { x.lb = raw.labelIds || []; labFrom(x); } metas.set(g, x); buf.push(x); } catch (e) { if (/로그인이 만료/.test(e.message)) throw e; /* 한 통 실패는 건너뜀 */ }
           done++;
           if (done % 50 === 0) { cachePut(db, buf); buf = []; prog(/옛날/.test(label) ? `옛날 메일 저장 중 · ${metas.size.toLocaleString()}통` : `${label} ${done}/${todo.length}`); if (Date.now() - (real.lastShow || 0) > 3000) { real.lastShow = Date.now(); show(); } }
         }
