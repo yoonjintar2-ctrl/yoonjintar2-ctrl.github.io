@@ -1241,6 +1241,9 @@ function googleLogin(interactive = true) {
   if (cached && !interactive) return Promise.resolve(cached);
   if (!IS_EXT) {
     if (!interactive) return Promise.reject(new Error('다시 로그인이 필요해요'));
+    // Google 로그인은 등록된 https 주소에서만 됨
+    const okOrigins = ['https://mail.jintar.co.kr', 'https://yoonjintar2-ctrl.github.io'];
+    if (!okOrigins.includes(location.origin)) return Promise.reject(new Error(location.protocol !== 'https:' ? '보안 연결(https)이 아직 준비 중이에요. https://yoonjintar2-ctrl.github.io/mail/ 에서 연결해 주세요' : '이 주소에서는 로그인할 수 없어요 (' + location.origin + ')'));
     return loadGis().then(() => new Promise((res, rej) => {
       const tc = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPE, hint: c && c.email || undefined,
         callback: r => r.access_token ? (tokCache.set(r.access_token, r.expires_in), res(r.access_token)) : rej(new Error(r.error || '로그인이 취소됐어요')),
