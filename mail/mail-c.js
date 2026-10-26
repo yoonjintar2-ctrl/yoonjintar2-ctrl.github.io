@@ -305,7 +305,7 @@ async function openRules(box) {
   closeMenus();
   const bg = document.createElement('div'); bg.className = 'modal-bg stack';
   bg.innerHTML = `<div class="modal set"><h3>${ico('where', 18)} '${esc(boxPath(box))}' 자동 분류</h3><div class="mbody" id="rb"><p class="desc">불러오는 중…</p></div>
-    <div class="mfoot"><button class="btn" id="runNow">${ico('where', 15)} 지금 바로 실행 (받은편지함 메일에 적용)</button><button class="btn" data-x>취소</button><button class="btn pri" id="ruleOk">확인</button></div></div>`;
+    <div class="mfoot"><button class="btn" id="runNow" title="모든 편지함의 분류 조건을 지금 받은편지함 메일에 적용">${ico('where', 15)} 모든 분류 조건 지금 실행</button><button class="btn" data-x>취소</button><button class="btn pri" id="ruleOk">확인</button></div></div>`;
   document.body.append(bg);
   const body = $('#rb', bg);
   const draw = async () => {
@@ -316,8 +316,8 @@ async function openRules(box) {
       return;
     }
     try { rules = (await loadRules()).filter(r => r.box === box); } catch (e) { body.innerHTML = `<p class="desc" style="color:#d93025">규칙을 불러오지 못했어요: ${esc(e.message)}</p>`; return; }
-    body.innerHTML = `<p class="desc">아래 조건에 맞는 <b>새 메일</b>은 자동으로 이 편지함에 들어가요${real.on ? ' (Gmail 필터로 저장돼서 JIN-mail을 닫아 둬도 분류돼요)' : ''}. 이미 받은편지함에 있는 메일은 '지금 바로 실행'을 누르면 적용돼요.</p>
-      <h5>지금 있는 조건</h5>${rules.length ? rules.map(r => `<div class="rulerow"><span>${esc(ruleText(r))}${r.skipInbox ? ' <small>· 받은편지함 건너뛰기</small>' : ''}</span><button class="ib" data-del="${esc(r.id)}" title="조건 삭제">${ico('trash', 16)}</button></div>`).join('') : '<p class="desc">아직 없어요</p>'}
+    body.innerHTML = `<p class="desc">아래 조건에 맞는 <b>새 메일</b>은 자동으로 이 편지함에 들어가요${real.on ? ' (Gmail 필터로 저장돼서 JIN-mail을 닫아 둬도 분류돼요)' : ''}. 이미 받은편지함에 있는 메일은 아래 '모든 분류 조건 지금 실행'을 누르면 모든 편지함 조건이 한꺼번에 적용돼요.</p>
+      <h5>지금 있는 조건 <span class="rcount">${rules.length}개</span></h5>${rules.length ? rules.map(r => `<div class="rulerow"><span>${ico('where', 15)} <b>${esc(ruleText(r))}</b>${r.skipInbox ? ' <small>· 받은편지함 건너뛰기</small>' : ''}</span><button class="ib" data-del="${esc(r.id)}" title="조건 삭제">${ico('trash', 16)}</button></div>`).join('') : '<div class="rulerow empty">아직 조건이 없어요 — 아래에서 추가해 주세요</div>'}
       <h5>조건 추가 <small style="font-weight:400;color:var(--mute)">(여러 칸을 채우면 모두 맞을 때만, 칸 안에서 'OR'로 여러 개)</small></h5>
       <div class="rulef"><label>보낸사람 주소·이름에</label><input data-f="from" placeholder="예: coway.com 또는 kim@nasmedia.co.kr"></div>
       <div class="rulef"><label>제목에</label><input data-f="subject" placeholder="예: 코웨이"></div>
@@ -335,7 +335,7 @@ async function openRules(box) {
       bg.remove(); return;
     }
     const d = e.target.closest('[data-del]'); if (d) { try { await delRule(d.dataset.del); toast('조건을 지웠어요'); draw(); } catch (er) { toast('지우지 못했어요: ' + er.message); } return; }
-    if (e.target.closest('#runNow')) { runRules(box); return; }
+    if (e.target.closest('#runNow')) { runRules(null); return; }
     if (e.target.closest('#addRule')) {
       const btn = e.target.closest('#addRule'); if (btn.disabled) return;
       const r = { box, skipInbox: $('#skipIn', bg).checked }; $$('[data-f]', bg).forEach(i => { r[i.dataset.f] = i.value.trim(); });
