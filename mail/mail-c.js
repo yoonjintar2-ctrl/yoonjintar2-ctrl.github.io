@@ -395,9 +395,9 @@ function renderTop() {
   let pill = $('#srcPill'); if (!pill) { pill = document.createElement('span'); pill.id = 'srcPill'; $('#gear').before(pill); }
   const R = typeof real !== 'undefined' ? real : {};
   pill.className = 'srcpill' + (R.expired ? ' warn' : R.on ? ' real' : '');
-  pill.textContent = R.expired ? 'Gmail 다시 연결하기 (클릭)' : R.prog ? R.prog : R.on ? `Gmail · ${ME.email}` : '예시 메일';
+  pill.textContent = R.expired ? (auth.needClick ? '로그인 연장 — 화면을 한 번 눌러 주세요' : 'Gmail 다시 연결하기 (클릭)') : R.prog ? R.prog : R.on ? `Gmail · ${ME.email}` : '예시 메일';
   pill.title = R.expired ? '로그인이 만료됐어요. 누르면 다시 연결해요' : '';
-  pill.onclick = R.expired ? () => loadReal(true) : null;
+  pill.onclick = R.expired ? () => (R.on ? renewToken().catch(e => toast('연결하지 못했어요: ' + e.message)) : loadReal(true)) : null;
   const set = (id, ic, on, tip) => { const b = $(id); b.innerHTML = ico(ic); b.classList.toggle('on', !!on); b.title = tip; };
   set('#fBox', 'folder', st.folder !== 'all', st.folder === 'all' ? '편지함: 전체 (필터 없음)' : '편지함: ' + folderName(st.folder));
   set('#fWhere', 'where', f.where !== 'all' || f.exclude || f.exact, '검색 범위: ' + (f.where === 'subj' ? '제목만' : '제목+내용') + (f.exact ? ' · 정확히 일치' : '') + (f.exclude ? ' · 제외: ' + f.exclude : ''));
@@ -799,6 +799,7 @@ function renderRead(force) {
   if (fr) {
     fr.addEventListener('load', () => { try {
       const d = fr.contentDocument, W = fr.clientWidth, sw = d.documentElement.scrollWidth;
+      ['pointerdown', 'keydown'].forEach(ev => d.addEventListener(ev, authGesture, true));  // 메일 본문을 눌러도 로그인 연장
       // 화면보다 조금 넓은 메일(서명·표)은 살짝 줄여서 한눈에 (너무 많이 줄여야 하면 그대로 두고 옆으로 스크롤)
       if (sw > W + 4) { const z = W / sw; if (z >= 0.72) d.body.style.zoom = z.toFixed(3); }
       fr.style.height = Math.max(d.documentElement.scrollHeight, d.body.getBoundingClientRect().height) + 20 + 'px';
@@ -1161,7 +1162,7 @@ async function uploadOnce(kind, mime, meta, viaJson) {
       r = await fetch(`https://gmail.googleapis.com/upload/gmail/v1/users/me/${kind}?uploadType=multipart`, { method: 'POST', headers: { Authorization: 'Bearer ' + real.token, 'Content-Type': `multipart/related; boundary=${b}` }, body });
     }
   } catch (e) { throw Object.assign(new Error('Gmail에 연결하지 못했어요 (사용량 초과 또는 네트워크)'), { retry: true }); }
-  if (r.status === 401) { tokCache.clear(); real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요. 다시 연결한 뒤 보내 주세요 (작성한 내용은 남아 있어요)'); }
+  if (r.status === 401) { await tokenAfter401(); throw Object.assign(new Error('로그인을 연장했어요'), { retry: true }); }
   if (!r.ok) {
     let msg = 'Gmail ' + r.status; try { msg += ': ' + (await r.json()).error.message; } catch (e) { /* */ }
     const busy = r.status === 429 || r.status >= 500 || (r.status === 403 && /quota|rate/i.test(msg));
@@ -2002,14 +2003,14 @@ const CLIENT_ID = '94151073420-uuu2lscanfblmr7f7ghllcpe90e7c2uv.apps.googleuserc
 const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file';  // Gmail은 읽기·보내기만, JIN-mail 편지함 정보는 드라이브 숨은 앱 공간  // + 자동 분류(필터)  // 읽기 + 읽음표시·라벨(편지함)·휴지통 이동
 const IS_EXT = !!(window.chrome && chrome.identity && chrome.identity.launchWebAuthFlow);
 // 로그인 토큰(1시간)은 이 브라우저에만 잠깐 보관 → 새로고침해도 다시 로그인하지 않음
-const tokCache = { get() { const t = store.get('tok', null); return t && t.exp > Date.now() + 60000 ? t.t : null; }, set(t, sec) { store.set('tok', { t, exp: Date.now() + (sec || 3500) * 1000 }); }, clear() { store.set('tok', null); } };
+const tokCache = { get() { const t = store.get('tok', null); return t && t.exp > Date.now() + 60000 ? t.t : null; }, left() { const t = store.get('tok', null); return t ? t.exp - Date.now() : 0; }, set(t, sec) { store.set('tok', { t, exp: Date.now() + (sec || 3500) * 1000 }); }, clear() { store.set('tok', null); } };
 let gisReady = null;
 const loadGis = () => gisReady || (gisReady = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.onload = res; sc.onerror = () => rej(new Error('구글 로그인 도구를 불러오지 못했어요')); document.head.append(sc); }));
 // interactive=false: 창을 띄우지 않고 가능한 경우에만 로그인
-function googleLogin(interactive = true) {
+function googleLogin(interactive = true, force = false) {
   const c = store.get('connected', null);
   const cached = tokCache.get();
-  if (cached && !interactive) return Promise.resolve(cached);
+  if (cached && !interactive && !force) return Promise.resolve(cached);
   if (!IS_EXT) {
     if (!interactive) return Promise.reject(new Error('다시 로그인이 필요해요'));
     // Google 로그인은 등록된 https 주소에서만 됨
@@ -2018,7 +2019,7 @@ function googleLogin(interactive = true) {
     return loadGis().then(() => new Promise((res, rej) => {
       const tc = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPE, hint: c && c.email || undefined,
         callback: r => r.access_token ? (tokCache.set(r.access_token, r.expires_in), store.set('tok-scope', r.scope || ''), res(r.access_token)) : rej(new Error(r.error || '로그인이 취소됐어요')),
-        error_callback: e => rej(new Error(e && e.type === 'popup_closed' ? '로그인 창이 닫혔어요' : (e && e.message) || '로그인 실패')) });
+        error_callback: e => rej(Object.assign(new Error(e && e.type === 'popup_closed' ? '로그인 창이 닫혔어요' : e && e.type === 'popup_failed_to_open' ? '로그인 창이 막혔어요' : (e && e.message) || '로그인 실패'), { type: e && e.type })) });
       tc.requestAccessToken({ prompt: c ? '' : 'select_account' });
     }));
   }
@@ -2032,6 +2033,32 @@ function googleLogin(interactive = true) {
     });
   });
 }
+/* ───────── 로그인 자동 연장 ─────────
+   Google 로그인은 1시간짜리라, 끝나기 5분 전에 조용히 새로 받음 (이미 허락한 계정이라 창이 잠깐 떴다 바로 닫힘).
+   브라우저가 그 창을 막으면 다음에 화면을 한 번 누를 때 연장 → 쓰던 화면·작성 내용은 그대로 */
+const auth = { p: null, needClick: false, waiters: [] };
+function renewToken() {
+  if (auth.p) return auth.p;
+  auth.p = (IS_EXT ? googleLogin(false, true).catch(() => googleLogin(true, true)) : googleLogin(true, true))
+    .then(t => { real.token = t; real.expired = false; auth.needClick = false; auth.waiters.splice(0).forEach(w => w(t)); renderTop(); return t; })
+    .finally(() => { auth.p = null; });
+  return auth.p;
+}
+// 401(만료)을 받았을 때: 연장해 보고, 안 되면 다음 클릭까지 기다렸다가 이어서 진행
+function tokenAfter401() {
+  tokCache.clear();
+  return renewToken().catch(e => {
+    auth.needClick = true; real.expired = true; renderTop();
+    if (e.type !== 'popup_closed') toast('로그인을 이어가려면 화면 아무 곳이나 한 번 눌러 주세요');
+    return new Promise(res => auth.waiters.push(res));
+  });
+}
+const authGesture = () => { if (auth.needClick && !auth.p) renewToken().catch(() => {}); };
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, authGesture, true));
+setInterval(() => {
+  if (!real.on || auth.p || auth.needClick) return;
+  if (tokCache.left() < 6 * 60000) renewToken().catch(e => { if (e.type === 'popup_failed_to_open' || /막혔/.test(e.message)) { auth.needClick = true; renderTop(); } });
+}, 60000);
 /* ───────── 실제 Gmail 메일 불러오기 · 바뀐 내용 Gmail에 반영 ───────── */
 const real = { on: false, token: null };
 // Gmail 사용량 한도(사용자당 1분 15,000) 안에서 천천히: 뒤에서 받아 오기는 1초 100까지, 사용자가 누른 동작은 바로
@@ -2051,7 +2078,8 @@ async function gapi(path, opt, tries) {
   opt = opt || {}; tries = tries || 0;
   await takeQuota(unitsOf(path, opt.method), opt.bg);
   const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/' + path, { method: opt.method || 'GET', headers: Object.assign({ Authorization: 'Bearer ' + real.token }, opt.body ? { 'Content-Type': 'application/json' } : {}), body: opt.body ? JSON.stringify(opt.body) : undefined });
-  if (r.status === 401) { tokCache.clear(); real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요. 위쪽 초록 표시를 눌러 다시 연결해 주세요'); }
+  if (r.status === 401 && !opt.reauth) { await tokenAfter401(); return gapi(path, Object.assign({}, opt, { reauth: true }), tries); }
+  if (r.status === 401) { real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요. 위쪽 표시를 눌러 다시 연결해 주세요'); }
   if (r.status === 429) quota.cool = Date.now() + 30000;
   if ((r.status === 429 || r.status >= 500) && tries < 4) { await new Promise(z => setTimeout(z, 800 * 2 ** tries + Math.random() * 400)); return gapi(path, opt, tries + 1); }
   if (!r.ok) {
@@ -2113,10 +2141,11 @@ function parseMsg(g, full) {
    저장: 내 Google 드라이브의 숨은 앱 공간(jin-mail.json) + 이 PC 사본 */
 const J = { data: null, fileId: null, t: null };
 const DRIVE = 'https://www.googleapis.com/drive/v3', DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3';
-async function dfetch(url, opt) {
+async function dfetch(url, opt, again) {
   opt = opt || {};
   const r = await fetch(url, Object.assign({}, opt, { headers: Object.assign({ Authorization: 'Bearer ' + real.token }, opt.headers || {}) }));
-  if (r.status === 401) { tokCache.clear(); real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요'); }
+  if (r.status === 401 && !again) { await tokenAfter401(); return dfetch(url, opt, true); }
+  if (r.status === 401) { real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요'); }
   if (!r.ok) { let msg = 'Drive ' + r.status; try { msg += ': ' + (await r.json()).error.message; } catch (e) { /* */ } const e = new Error(msg); e.status = r.status; throw e; }
   return r;
 }
@@ -2402,7 +2431,7 @@ function xhrUpload(url, ctype, body, onProg) {
     const x = new XMLHttpRequest(); x.open('POST', url); x.setRequestHeader('Authorization', 'Bearer ' + real.token); x.setRequestHeader('Content-Type', ctype);
     x.upload.onprogress = e => { if (e.lengthComputable) onProg(e.loaded / e.total); };
     x.onload = () => {
-      if (x.status === 401) { tokCache.clear(); real.expired = true; renderTop(); return rej(new Error('로그인이 만료됐어요')); }
+      if (x.status === 401) { tokenAfter401(); return rej(new Error('로그인을 연장하는 중이에요. 잠시 뒤 다시 눌러 주세요')); }
       if (x.status < 200 || x.status >= 300) { let msg = 'Drive ' + x.status; try { msg += ': ' + JSON.parse(x.responseText).error.message; } catch (e) { /* */ } return rej(new Error(msg)); }
       try { res(JSON.parse(x.responseText)); } catch (e) { res({}); }
     };
@@ -2436,7 +2465,7 @@ async function attBlob(m, a, onProg) {
     else {
       await takeQuota(5, false);
       const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.gid || meta.msg}/attachments/${meta.id}`, { headers: { Authorization: 'Bearer ' + real.token } });
-      if (r.status === 401) { tokCache.clear(); real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요'); }
+      if (r.status === 401) { await tokenAfter401(); return attBlob(m, a, onProg); }
       if (!r.ok || !r.body) data = (await gapi(`messages/${m.gid || meta.msg}/attachments/${meta.id}`)).data;
       else {
         const total = sizeOf(a) * 4 / 3 + 200, rd = r.body.getReader(), chunks = []; let got = 0;
@@ -2753,7 +2782,8 @@ if (hash === '#compose') {
 } else if (store.get('connected', null)) {
   // 연결해 둔 계정이면 예시 메일을 잠깐이라도 보여 주지 않고 로딩 화면 → 실제 메일
   MAILS = []; BOXES = []; renderNav(); renderList(); renderRead();
-  if (IS_EXT || tokCache.get()) { bootScreen('loading'); loadReal(false); } else { real.expired = true; renderTop(); bootScreen('login'); }
+  if (IS_EXT || tokCache.get()) { bootScreen('loading'); loadReal(false); }
+  else { bootScreen('loading'); googleLogin(true, true).then(t => loadReal(false, t)).catch(() => { real.expired = true; renderTop(); bootScreen('login'); }); }
 } else {
   renderList();
   const first = visible()[0]; if (first) openMail(first.id); else renderRead();
