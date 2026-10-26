@@ -377,6 +377,11 @@ body.resizing{cursor:col-resize;user-select:none}
 @keyframes envf2{0%,18%{transform:scaleY(0)}30%,70%{transform:scaleY(-1)}84%,100%{transform:scaleY(0)}}
 @keyframes envletter{0%,28%{transform:translateY(8px)}48%,62%{transform:translateY(-24px)}80%,100%{transform:translateY(8px)}}
 .menu .boxlist{max-height:min(52vh,440px);overflow:auto;min-width:260px}
+.afile{cursor:grab;gap:4px}
+.afile.dragging{opacity:.4}
+.afile.drop-l{box-shadow:-3px 0 0 var(--blue)}
+.afile.drop-r{box-shadow:3px 0 0 var(--blue)}
+.afile .fwdtag{font-size:10.5px;color:var(--mute);border:1px solid #dfe3ea;border-radius:4px;padding:0 4px}
 </style>
 </head>
 <body>
@@ -430,6 +435,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793002997"></script>
+<script src="mail-c.js?v=1793003317"></script>
 </body>
 </html>

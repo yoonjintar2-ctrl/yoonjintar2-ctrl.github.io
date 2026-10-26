@@ -711,7 +711,8 @@ function buildDraft(kind, m) {
     if (kind === 'draft') text = m.draft + '\n';
   }
   const f = pickFooter(kind, m);
-  return { kind, mailId: m && kind !== 'new' ? m.id : null, to, cc, subj, html: composeHtml(text, f, quote), footer: f ? f.id : null, files: [] };
+  const files = m && kind === 'fwd' ? attsOf(m).map(([a]) => ({ name: a[1], size: (a[3] && a[3].bytes) || parseSize(a[2]), fwd: { gid: m.gid || null, id: a[3] && a[3].id, mime: a[3] && a[3].mime } })) : [];
+  return { kind, mailId: m && kind !== 'new' ? m.id : null, to, cc, subj, html: composeHtml(text, f, quote), footer: f ? f.id : null, files };
 }
 function loadDraft(d) {
   cs.kind = d.kind; cs.mailId = d.mailId; cs.footer = d.footer; cs.files = (d.files || []).slice(); cs.sched = null;
@@ -731,7 +732,7 @@ function caretAt(mk) {
   if (mk) { r.setStartBefore(mk); mk.remove(); } else { r.selectNodeContents(b); r.collapse(false); }
   r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
 }
-const draftNow = () => ({ kind: cs.kind, mailId: cs.mailId, to: chipsOf($('#toBox')), cc: chipsOf($('#ccBox')), subj: $('#subj').value, html: $('#cbody').innerHTML, footer: cs.footer, files: cs.files.map(f => ({ name: f.name, size: f.size })) });
+const draftNow = () => ({ kind: cs.kind, mailId: cs.mailId, to: chipsOf($('#toBox')), cc: chipsOf($('#ccBox')), subj: $('#subj').value, html: $('#cbody').innerHTML, footer: cs.footer, files: cs.files.map(f => Object.assign({}, f)) });
 /* 자동 임시저장: 입력이 멈추면 1.2초 뒤 저장. 저장 전에 떠나려 하면 알림 */
 function setSave(s) { const el = $('#saveState'); el.textContent = s; el.classList.toggle('busy', /중/.test(s)); }
 function dirty() {
@@ -782,15 +783,27 @@ function addFiles(list) {
   renderFiles(); dirty();
   if (list.length) toast(`${list.length}개 파일을 첨부했어요`);
 }
+const parseSize = t => { const m = /([\d.]+)\s*(B|KB|MB|GB)/i.exec(t || ''); return m ? Math.round(+m[1] * ({ B: 1, KB: 1024, MB: 1048576, GB: 1073741824 })[m[2].toUpperCase()]) : 0; };
+let fileDrag = null;
 function renderFiles() {
   const box = $('#attBox');
   $$('.afile', box).forEach(x => x.remove());
   const total = cs.files.reduce((a, f) => a + f.size, 0);
   $('#attHint').textContent = cs.files.length ? `총 ${fmtSize(total)} · 클릭해서 더 첨부` : '클릭해서 파일 고르기 · 작성 화면 어디에든 끌어다 놓기';
   cs.files.forEach((f, i) => {
-    const el = document.createElement('span'); el.className = 'afile';
-    el.innerHTML = `${esc(f.name)} <small>${fmtSize(f.size)}</small><button title="빼기">✕</button>`;
+    const el = document.createElement('span'); el.className = 'afile'; el.draggable = true; el.title = '끌어서 순서 바꾸기';
+    el.innerHTML = `${ftIcon(FT_OF[extOf(f.name)] || 'FILE', 15, f.name)}${esc(f.name)} <small>${fmtSize(f.size)}</small>${f.fwd ? '<small class="fwdtag">원본 첨부</small>' : ''}<button title="빼기">✕</button>`;
     $('button', el).addEventListener('click', e => { e.stopPropagation(); cs.files.splice(i, 1); renderFiles(); dirty(); });
+    el.addEventListener('click', e => e.stopPropagation());
+    // 끌어서 순서 바꾸기
+    el.addEventListener('dragstart', e => { fileDrag = i; el.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/x-jin-file', String(i)); });
+    el.addEventListener('dragend', () => { fileDrag = null; $$('.afile', box).forEach(x => x.classList.remove('dragging', 'drop-l', 'drop-r')); });
+    el.addEventListener('dragover', e => { if (fileDrag == null) return; e.preventDefault(); e.stopPropagation(); const r = el.getBoundingClientRect(), right = e.clientX > r.left + r.width / 2; $$('.afile', box).forEach(x => x.classList.remove('drop-l', 'drop-r')); el.classList.add(right ? 'drop-r' : 'drop-l'); });
+    el.addEventListener('drop', e => {
+      if (fileDrag == null) return; e.preventDefault(); e.stopPropagation();
+      const r = el.getBoundingClientRect(); let to = i + (e.clientX > r.left + r.width / 2 ? 1 : 0);
+      const [mv] = cs.files.splice(fileDrag, 1); if (fileDrag < to) to--; cs.files.splice(to, 0, mv); fileDrag = null; renderFiles(); dirty();
+    });
     box.insertBefore(el, $('#attHint'));
   });
 }
@@ -1408,7 +1421,7 @@ function parseMsg(g, full) {
     const ext = (p.filename.split('.').pop() || '').toLowerCase();
     const img = /^image\//.test(p.mimeType);
     const inline = full && html ? (!!cid && html.includes('cid:' + cid)) || (img && /^\s*inline/i.test(disp)) : img && (/^\s*inline/i.test(disp) || (!!cid && related));
-    return [FT_OF[ext] || 'FILE', p.filename, fmtSize(p.body.size || 0), { id: p.body.attachmentId, data: p.body.data, mime: p.mimeType, msg: g.id, cid, inline }];
+    return [FT_OF[ext] || 'FILE', p.filename, fmtSize(p.body.size || 0), { id: p.body.attachmentId, data: p.body.data, mime: p.mimeType, msg: g.id, cid, inline, bytes: p.body.size || 0 }];
   });
   if (!plain && html) plain = new DOMParser().parseFromString(html, 'text/html').body.innerText || '';
   const when = new Date(+g.internalDate);
@@ -1522,13 +1535,31 @@ async function resolveInline(m) {
 
 async function openRealAtt(m, a) {
   const meta = a[3];
-  if (!/^(PDF|IMG)$/.test(a[0])) { toast('엑셀·PPT·워드 실제 미리보기는 다음 단계에서 연결할게요 (지금은 PDF·이미지)'); return; }
+  if (!/^(PDF|IMG)$/.test(a[0])) { downloadAtt(m, a); return; }
   const w = window.open('', '_blank', 'popup,width=1100,height=820'); if (w) w.document.title = a[1];
   try {
     const data = meta.data || (await gapi(`messages/${m.gid || meta.msg}/attachments/${meta.id}`)).data;
     const url = URL.createObjectURL(new Blob([b64bytes(data)], { type: meta.mime }));
     if (w) w.location.href = url;
   } catch (e) { if (w) w.close(); toast('첨부를 열지 못했어요'); }
+}
+async function attBlob(m, a) { const meta = a[3]; const data = meta.data || (await gapi(`messages/${m.gid || meta.msg}/attachments/${meta.id}`)).data; return new Blob([b64bytes(data)], { type: meta.mime || 'application/octet-stream' }); }
+async function downloadAtt(m, a) {
+  toast(`'${a[1]}' 내려받는 중…`);
+  try {
+    const blob = await attBlob(m, a);
+    // 설정에서 정한 저장 폴더가 있고 쓰기 허락이 남아 있으면 그 폴더에 저장
+    const dir = await idb('get');
+    if (dir && dir.queryPermission && (await dir.queryPermission({ mode: 'readwrite' })) === 'granted') {
+      let name = a[1], k = 1; const dot = name.lastIndexOf('.');
+      while (true) { try { await dir.getFileHandle(name); name = dot > 0 ? `${a[1].slice(0, dot)} (${k})${a[1].slice(dot)}` : `${a[1]} (${k})`; k++; } catch (e) { break; } }
+      const fh = await dir.getFileHandle(name, { create: true }); const w = await fh.createWritable(); await w.write(blob); await w.close();
+      toast(`'${dir.name}' 폴더에 '${name}'(으)로 저장했어요`); return;
+    }
+    const url = URL.createObjectURL(blob), ln = document.createElement('a'); ln.href = url; ln.download = a[1]; document.body.append(ln); ln.click(); ln.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    toast(`'${a[1]}' 내려받았어요`);
+  } catch (e) { toast('내려받지 못했어요: ' + e.message); }
 }
 // 로딩·다시 로그인 화면 (예시 메일이 잠깐 보였다 바뀌는 것 방지)
 function bootScreen(mode, msg) {
