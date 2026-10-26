@@ -248,7 +248,7 @@ const ruleText = r => [r.from && `보낸사람에 '${r.from}'`, r.to && `받는�
 async function withScope(job) {
   try { return await job(); }
   catch (e) {
-    if (!/403|insufficient|scope/i.test(e.message)) throw e;
+    if (!(e.status === 403 && /insufficient|scope|PERMISSION_DENIED/i.test(e.message + ' ' + (e.reason || '')) && !/quota|rate/i.test(e.message))) throw e;
     toast('자동 분류 권한이 필요해요 — Google 창에서 허용해 주세요');
     tokCache.clear(); real.token = await googleLogin(true); return job();
   }
@@ -292,10 +292,10 @@ async function runRules(box) {
   } catch (e) { toast('분류 실행 실패: ' + e.message); }
 }
 async function openRules(box) {
-  closeMenus(); $$('.modal-bg').forEach(x => x.remove());
-  const bg = document.createElement('div'); bg.className = 'modal-bg';
+  closeMenus();
+  const bg = document.createElement('div'); bg.className = 'modal-bg stack';
   bg.innerHTML = `<div class="modal set"><h3>${ico('where', 18)} '${esc(boxPath(box))}' 자동 분류</h3><div class="mbody" id="rb"><p class="desc">불러오는 중…</p></div>
-    <div class="mfoot"><button class="btn" id="runNow">${ico('where', 15)} 지금 바로 실행 (받은편지함 메일에 적용)</button><button class="btn pri" data-x>닫기</button></div></div>`;
+    <div class="mfoot"><button class="btn" id="runNow">${ico('where', 15)} 지금 바로 실행 (받은편지함 메일에 적용)</button><button class="btn" data-x>취소</button><button class="btn pri" id="ruleOk">확인</button></div></div>`;
   document.body.append(bg);
   const body = $('#rb', bg);
   const draw = async () => {
@@ -312,7 +312,13 @@ async function openRules(box) {
       <div class="opt"><button class="btn pri" id="addRule">${ico('plus', 15)} 조건 추가</button></div>`;
   };
   bg.addEventListener('click', async e => {
-    if (e.target.closest('[data-x]') || e.target === bg) { bg.remove(); return; }
+    if (e.target.closest('[data-x]')) { bg.remove(); return; }
+    // 확인: 입력해 둔 조건이 있으면 추가하고 닫기 → 설정 창(열려 있었다면)으로 돌아감
+    if (e.target.closest('#ruleOk')) {
+      const r = { box, skipInbox: !$('#skipIn', bg) || $('#skipIn', bg).checked }; $$('[data-f]', bg).forEach(i => { r[i.dataset.f] = i.value.trim(); });
+      if (r.from || r.to || r.subject || r.query) { try { await addRule(r); toast('조건을 추가했어요 — 이미 받은 메일에 적용하려면 지금 바로 실행'); } catch (er) { toast('추가하지 못했어요: ' + er.message); return; } }
+      bg.remove(); return;
+    }
     const d = e.target.closest('[data-del]'); if (d) { try { await delRule(d.dataset.del); toast('조건을 지웠어요'); draw(); } catch (er) { toast('지우지 못했어요: ' + er.message); } return; }
     if (e.target.closest('#runNow')) { runRules(box); return; }
     if (e.target.closest('#addRule')) {
@@ -1460,12 +1466,30 @@ function googleLogin(interactive = true) {
 }
 /* ───────── 실제 Gmail 메일 불러오기 · 바뀐 내용 Gmail에 반영 ───────── */
 const real = { on: false, token: null };
+// Gmail 사용량 한도(사용자당 1분 15,000) 안에서 천천히: 뒤에서 받아 오기는 1초 100까지, 사용자가 누른 동작은 바로
+const quota = { win: [] };
+const unitsOf = (path, method) => /batchModify/.test(path) ? 50 : /^settings\/filters/.test(path) ? (method && method !== 'GET' ? 5 : 1) : /^labels/.test(path) ? 1 : 5;
+async function takeQuota(units, bg) {
+  for (;;) {
+    const now = Date.now(); quota.win = quota.win.filter(x => now - x[0] < 1000);
+    const used = quota.win.reduce((a, x) => a + x[1], 0), cap = bg ? 100 : 220;
+    if (used + units <= cap) { quota.win.push([now, units]); return; }
+    await new Promise(z => setTimeout(z, 120));
+  }
+}
 async function gapi(path, opt, tries) {
   opt = opt || {}; tries = tries || 0;
+  await takeQuota(unitsOf(path, opt.method), opt.bg);
   const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/' + path, { method: opt.method || 'GET', headers: Object.assign({ Authorization: 'Bearer ' + real.token }, opt.body ? { 'Content-Type': 'application/json' } : {}), body: opt.body ? JSON.stringify(opt.body) : undefined });
   if (r.status === 401) { tokCache.clear(); real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요. 위쪽 초록 표시를 눌러 다시 연결해 주세요'); }
   if ((r.status === 429 || r.status >= 500) && tries < 4) { await new Promise(z => setTimeout(z, 800 * 2 ** tries + Math.random() * 400)); return gapi(path, opt, tries + 1); }
-  if (!r.ok) { let msg = 'Gmail ' + r.status; try { msg += ': ' + (await r.json()).error.message; } catch (e) { /* */ } throw new Error(msg); }
+  if (!r.ok) {
+    let msg = 'Gmail ' + r.status, reason = '';
+    try { const j = (await r.json()).error; msg += ': ' + j.message; reason = ((j.errors || [])[0] || {}).reason || j.status || ''; } catch (e) { /* */ }
+    // 403 사용량 초과 → 잠깐 쉬었다 다시 (최대 약 1분)
+    if (r.status === 403 && /quota|rate ?limit|RESOURCE_EXHAUSTED/i.test(msg + reason) && tries < 6) { real.prog = real.prog || ''; await new Promise(z => setTimeout(z, 4000 * (tries + 1))); return gapi(path, opt, tries + 1); }
+    const err = new Error(msg); err.status = r.status; err.reason = reason; throw err;
+  }
   return r.status === 204 ? {} : r.json().catch(() => ({}));
 }
 // 화면에서 바꾼 것을 Gmail에도 반영 (실패하면 알림)
@@ -1535,7 +1559,7 @@ const cacheAll = db => new Promise(res => { if (!db) return res([]); try { const
 const cachePut = (db, list) => { if (!db || !list.length) return; try { const tx = db.transaction('meta', 'readwrite'); const os = tx.objectStore('meta'); list.forEach(x => os.put(Object.assign({}, x, { body: '', html: '', full: false, att: x.att.map(a => [a[0], a[1], a[2], Object.assign({}, a[3], { data: undefined })]) }))); } catch (e) { /* 저장 실패는 무시 */ } };
 async function listIds(q, label) {
   const out = []; let tok = '';
-  do { const r = await gapi(`messages?maxResults=500&q=${encodeURIComponent(q)}${label ? '&labelIds=' + label : ''}${tok ? '&pageToken=' + tok : ''}`); (r.messages || []).forEach(x => out.push(x.id)); tok = r.nextPageToken || ''; } while (tok);
+  do { const r = await gapi(`messages?maxResults=500&q=${encodeURIComponent(q)}${label ? '&labelIds=' + label : ''}${tok ? '&pageToken=' + tok : ''}`, { bg: true }); (r.messages || []).forEach(x => out.push(x.id)); tok = r.nextPageToken || ''; } while (tok);
   return out;
 }
 const META_FIELDS = 'id,internalDate,snippet,payload(mimeType,headers,parts(mimeType,filename,headers,body(attachmentId,size),parts(mimeType,filename,headers,body(attachmentId,size),parts(mimeType,filename,headers,body(attachmentId,size),parts(mimeType,filename,headers,body(attachmentId,size))))))';
@@ -1573,7 +1597,7 @@ async function loadReal(interactive, token) {
       await Promise.all(Array.from({ length: 8 }, async () => {
         while (i < todo.length) {
           const g = todo[i++];
-          try { const x = parseMsg(await gapi(`messages/${g}?format=full&fields=${encodeURIComponent(META_FIELDS)}`), false); metas.set(g, x); buf.push(x); } catch (e) { /* 한 통 실패는 건너뜀 */ }
+          try { const x = parseMsg(await gapi(`messages/${g}?format=full&fields=${encodeURIComponent(META_FIELDS)}`, { bg: true }), false); metas.set(g, x); buf.push(x); } catch (e) { /* 한 통 실패는 건너뜀 */ }
           done++;
           if (done % 50 === 0) { cachePut(db, buf); buf = []; prog(`${label} ${done}/${todo.length}`); show(); }
         }
