@@ -136,6 +136,12 @@ input.ck{width:15px;height:15px;margin:0;accent-color:var(--blue);cursor:pointer
 .attbar b{font-size:12.5px;color:var(--sub);margin-right:4px;display:flex;align-items:center;gap:4px}
 .att{display:inline-flex;align-items:center;gap:5px;border:1px solid #dadce0;border-radius:7px;padding:5px 9px;background:#fff;font-size:13px;white-space:nowrap;cursor:pointer}
 .att:hover{border-color:var(--blue);color:var(--blue)}
+.attw{display:inline-flex;align-items:stretch}
+.attw .att{border-radius:7px 0 0 7px}
+.attdrv{display:flex;align-items:center;justify-content:center;width:30px;border:1px solid #dadce0;border-left:none;border-radius:0 7px 7px 0;background:#fff;color:var(--sub);cursor:pointer;padding:0}
+.attdrv:hover{color:var(--blue);border-color:var(--blue);background:#f4f8ff}
+.attdrv.busy{opacity:.5;cursor:wait}
+.attdrv.done{color:#1e8e3e}
 .att small{color:var(--sub)}
 .dbanner{flex:none;margin:12px 22px 0;padding:9px 10px 9px 16px;border-radius:9px;background:var(--blue);color:#fff;font-weight:600;display:flex;gap:8px;align-items:center}
 .dbanner span{flex:1}
@@ -382,7 +388,6 @@ body.resizing{cursor:col-resize;user-select:none}
 .afile.drop-l{box-shadow:-3px 0 0 var(--blue)}
 .afile.drop-r{box-shadow:3px 0 0 var(--blue)}
 .afile .fwdtag{font-size:10.5px;color:var(--mute);border:1px solid #dfe3ea;border-radius:4px;padding:0 4px}
-.nsep{height:1px;background:var(--line);margin:6px 14px}
 /* 읽은 메일 제목도 살짝 굵게 */
 .row .subj{font-weight:500}
 .row.unread .subj{font-weight:700}
@@ -467,6 +472,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793009472"></script>
+<script src="mail-c.js?v=1793009792"></script>
 </body>
 </html>

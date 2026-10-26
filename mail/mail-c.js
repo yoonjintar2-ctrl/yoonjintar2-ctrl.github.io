@@ -12,6 +12,7 @@ const IP = {
   all: 'M4 7h16M4 12h16M4 17h16',
   folder: 'M3 6h6l2 2h10v11H3z',
   right: 'M9 6l6 6-6 6', down: 'M6 9l6 6 6-6',
+  drive: 'M8.5 3h7l6.5 11.5-3.5 6h-13L2 14.5zM8.5 3l6.6 11.5H22M15.5 3L8.8 14.5 5.5 20.5',
   clip: 'M20 11l-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L14 7',
   cal: 'M4 6h16v14H4zM4 10h16M9 3v4M15 3v4',
   eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
@@ -134,9 +135,9 @@ const nl = s => esc(s).replace(/\n/g, '<br>');
 const isMe = p => p && p.email === ME.email;
 const nameOf = p => isMe(p) ? '나' : p.name;
 const fmtD = d => (d.getMonth() + 1) + '/' + d.getDate();
-function toast(t, undo) {
+function toast(t, undo, label) {
   $('#toastT').textContent = t;
-  const u = $('#toastUndo'); u.hidden = !undo; u.onclick = () => { undo(); $('#toast').classList.remove('on'); };
+  const u = $('#toastUndo'); u.hidden = !undo; u.textContent = label || '되돌리기'; u.onclick = () => { undo(); $('#toast').classList.remove('on'); };
   $('#toast').classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => $('#toast').classList.remove('on'), undo ? 5000 : 2400);
 }
 const childrenOf = id => BOXES.filter(b => b.parent === id);
@@ -661,7 +662,7 @@ function renderRead(force) {
         </div>
       </div>
     </div>
-    ${attsOf(m).length ? `<div class="attbar"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b>${attsOf(m).map(([[t, n, s], i]) => `<span class="att" data-ai="${i}" title="${esc(n)} · 누르면 다운로드">${ftIcon(t, 17, n)}${esc(n)} <small>${s}</small></span>`).join('')}</div>` : ''}
+    ${attsOf(m).length ? `<div class="attbar"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b>${attsOf(m).map(([[t, n, s], i]) => `<span class="attw"><span class="att" data-ai="${i}" title="${esc(n)} · 누르면 다운로드">${ftIcon(t, 17, n)}${esc(n)} <small>${s}</small></span><button class="attdrv${m.real && (store.get('drive-saved', {}))[m.gid + ':' + n] ? ' done' : ''}" data-drv="${i}" title="${m.real && (store.get('drive-saved', {}))[m.gid + ':' + n] ? '드라이브에 추가됨 · 누르면 드라이브에서 열기' : '내 드라이브에 추가'}">${ico('drive', 15)}</button></span>`).join('')}</div>` : ''}
     ${m.deleted ? `<div class="dbanner delb"><span>${ico('trash', 16)} 삭제한 메일이에요</span><button data-act="restore">되살리기</button></div>` : ''}
     ${m.draft ? `<div class="dbanner"><span>${ico('pen', 16)} 이 대화에 작성 중이던 답장이 있어요</span><button data-act="draft">이어서 쓰기</button><button class="ib" data-act="deldraft" title="작성 중이던 메일 삭제">${ico('trash', 17)}</button></div>` : ''}
     <div class="rbody">${m.real && !m.full ? '<div class="blank" style="padding:40px 0">본문 불러오는 중…</div>' : m.html ? '<iframe class="mailhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>' : `<div class="txt">${esc(m.body)}</div>${prevHtml(m.prev, 0)}`}</div>`;
@@ -1523,7 +1524,7 @@ function openSettings(tab) {
 
 /* ───────── 첫 접속: Gmail 계정 연결 ───────── */
 const CLIENT_ID = '94151073420-uuu2lscanfblmr7f7ghllcpe90e7c2uv.apps.googleusercontent.com';
-const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive.appdata';  // Gmail은 읽기·보내기만, JIN-mail 편지함 정보는 드라이브 숨은 앱 공간  // + 자동 분류(필터)  // 읽기 + 읽음표시·라벨(편지함)·휴지통 이동
+const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file';  // Gmail은 읽기·보내기만, JIN-mail 편지함 정보는 드라이브 숨은 앱 공간  // + 자동 분류(필터)  // 읽기 + 읽음표시·라벨(편지함)·휴지통 이동
 const IS_EXT = !!(window.chrome && chrome.identity && chrome.identity.launchWebAuthFlow);
 // 로그인 토큰(1시간)은 이 브라우저에만 잠깐 보관 → 새로고침해도 다시 로그인하지 않음
 const tokCache = { get() { const t = store.get('tok', null); return t && t.exp > Date.now() + 60000 ? t.t : null; }, set(t, sec) { store.set('tok', { t, exp: Date.now() + (sec || 3500) * 1000 }); }, clear() { store.set('tok', null); } };
@@ -1840,6 +1841,38 @@ async function resolveInline(m) {
 
 // 첨부 누르기 = 크롬 일반 다운로드 (다운로드 폴더에 저장, 크롬 우상단 다운로드 아이콘에 표시)
 function openRealAtt(m, a) { downloadAtt(m, a); }
+// 첨부 → 내 드라이브 'JIN-mail 첨부' 폴더에 저장 (드라이브 권한은 JIN-mail이 만든 파일만 다루는 drive.file)
+async function driveFolder() {
+  const k = 'drive-folder-' + ME.email, id = store.get(k, null);
+  if (id) { try { const f = await (await dfetch(`${DRIVE}/files/${id}?fields=id,trashed`)).json(); if (!f.trashed) return id; } catch (e) { if (e.status !== 404) throw e; } }
+  const l = await (await dfetch(`${DRIVE}/files?fields=files(id)&q=${encodeURIComponent("name='JIN-mail 첨부' and mimeType='application/vnd.google-apps.folder' and trashed=false")}`)).json();
+  let fid = l.files && l.files[0] && l.files[0].id;
+  if (!fid) fid = (await (await dfetch(`${DRIVE}/files?fields=id`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'JIN-mail 첨부', mimeType: 'application/vnd.google-apps.folder' }) })).json()).id;
+  store.set(k, fid); return fid;
+}
+async function saveAttToDrive(m, i, btn) {
+  if (!m) return; const a = m.att[i];
+  if (!m.real) { toast(`'${a[1]}' 드라이브에 추가했어요 (예시 화면이라 실제로 올리지는 않아요)`); return; }
+  if (btn.classList.contains('busy')) return;
+  const sk = 'drive-saved', saved = store.get(sk, {}), key = m.gid + ':' + a[1];
+  const openLink = url => () => window.open(url, '_blank');
+  if (saved[key]) { window.open(saved[key], '_blank'); return; }  // 이미 올린 첨부 → 드라이브에서 열기
+  // 드라이브 권한이 아직 없으면 지금(클릭한 김에) 한 번 더 허락받기
+  const sc = store.get('tok-scope', '') || '';
+  if (!sc.includes('drive.file')) { try { real.token = await googleLogin(true); } catch (e) { toast('드라이브 권한을 받지 못했어요: ' + e.message); return; } }
+  btn.classList.add('busy'); toast(`'${a[1]}' 드라이브에 올리는 중…`);
+  try {
+    const [blob, fid] = await Promise.all([attBlob(m, a), driveFolder()]);
+    const b = boundary(), meta = { name: a[1], parents: [fid], mimeType: blob.type || 'application/octet-stream', description: `JIN-mail · ${m.from.name || m.from.email} · ${m.subj}` };
+    const body = new Blob([`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: ${meta.mimeType}\r\n\r\n`, blob, `\r\n--${b}--`]);
+    const f = await (await dfetch(`${DRIVE_UP}/files?uploadType=multipart&fields=id,webViewLink`, { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${b}` }, body })).json();
+    const url = f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`;
+    saved[key] = url; store.set(sk, saved);
+    btn.classList.add('done'); btn.title = '드라이브에 추가됨 · 누르면 드라이브에서 열기';
+    toast(`'${a[1]}' 내 드라이브 > JIN-mail 첨부 폴더에 추가했어요`, openLink(url), '열기');
+  } catch (e) { toast('드라이브에 올리지 못했어요: ' + e.message); }
+  finally { btn.classList.remove('busy'); }
+}
 async function attBlob(m, a) { const meta = a[3]; const data = meta.data || (await gapi(`messages/${m.gid || meta.msg}/attachments/${meta.id}`)).data; return new Blob([b64bytes(data)], { type: meta.mime || 'application/octet-stream' }); }
 async function downloadAtt(m, a) {
   toast(`'${a[1]}' 받는 중…`);
@@ -1993,6 +2026,7 @@ function wire() {
   });
   // 읽기
   $('#view').addEventListener('click', e => {
+    const drv = e.target.closest('[data-drv]'); if (drv) { saveAttToDrive(MAILS.find(x => x.id === st.open), +drv.dataset.drv, drv); return; }
     const att = e.target.closest('.att[data-ai]'); if (att) { previewAtt(MAILS.find(x => x.id === st.open), +att.dataset.ai); return; }
     const b = e.target.closest('[data-act]'); if (!b) return;
     const act = b.dataset.act, m = MAILS.find(x => x.id === st.open);
