@@ -766,6 +766,7 @@ function prevHtml(prev, i) {
 function renderRead(force) {
   const m = MAILS.find(x => x.id === st.open);
   if (!m) { $('#view').innerHTML = '<div class="blank">목록에서 메일을 고르세요</div>'; $('#view').dataset.key = ''; return; }
+  if (m.real && !m.full && !m._loading) fetchFull(m);  // 새로 고침 직후 열려 있던 메일도 본문 받기
   // 뒤에서 메일을 받아 오며 화면을 다시 그릴 때, 보고 있는 메일이 그대로면 본문을 새로 그리지 않음 (깜빡임 방지)
   const key = [m.id, m.full ? 1 : 0, m.box, boxPath(m.box), m.draft ? 1 : 0, m.deleted ? 1 : 0, attsOf(m).length, m.subj].join('|');
   if (!force && $('#view').dataset.key === key && $('#view').firstElementChild) return;
@@ -789,7 +790,7 @@ function renderRead(force) {
         </div>
       </div>
     </div>
-    ${attsOf(m).length ? `<div class="attbar${st.attFull === m.id ? ' full' : ''}"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b><div class="attgrid">${attsOf(m).map(([[t, n, s], i]) => `<span class="attw"><span class="att" data-ai="${i}" title="${esc(n)} · 누르면 다운로드">${ftIcon(t, 17, n)}<span class="an">${esc(n)}</span> <small>${s}</small></span>${attBtns(m, i, n)}</span>`).join('')}</div><button class="attmore" data-act="attfull" hidden>${st.attFull === m.id ? '접기' : '펼치기'}</button></div>` : ''}
+    ${attsOf(m).length ? `<div class="attbar${st.attFull === m.id ? ' full' : ''}"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b><div class="attgrid n${Math.min(3, attsOf(m).length)}">${attsOf(m).map(([[t, n, s], i]) => `<span class="attw"><span class="att" data-ai="${i}" title="${esc(n)} · 누르면 다운로드">${ftIcon(t, 17, n)}<span class="an">${esc(n)}</span> <small>${s}</small></span>${attBtns(m, i, n)}</span>`).join('')}</div><button class="attmore" data-act="attfull" hidden>${st.attFull === m.id ? '접기' : '펼치기'}</button></div>` : ''}
     ${m.deleted ? `<div class="dbanner delb"><span>${ico('trash', 16)} 삭제한 메일이에요</span><button data-act="restore">되살리기</button></div>` : ''}
     ${m.draft ? `<div class="dbanner"><span>${ico('pen', 16)} 이 대화에 작성 중이던 답장이 있어요</span><button data-act="draft">이어서 쓰기</button><button class="ib" data-act="deldraft" title="작성 중이던 메일 삭제">${ico('trash', 17)}</button></div>` : ''}
     <div class="rbody">${m.real && !m.full ? '<div class="blank" style="padding:40px 0">본문 불러오는 중…</div>' : m.html ? '<iframe class="mailhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>' : `<div class="txt">${esc(m.body)}</div>${prevHtml(m.prev, 0)}`}</div>`;
@@ -1080,6 +1081,7 @@ function outgoingHtml() {
   const d = document.createElement('div'); d.innerHTML = $('#cbody').innerHTML;
   $$('.gp-pm, #gpCaret', d).forEach(x => x.remove());
   $$('.hrsel, .tdsel', d).forEach(x => { x.classList.remove('hrsel', 'tdsel'); if (!x.className) x.removeAttribute('class'); });
+  $$('[data-tsbg]', d).forEach(x => x.removeAttribute('data-tsbg'));
   $$('[contenteditable], [spellcheck]', d).forEach(x => { x.removeAttribute('contenteditable'); x.removeAttribute('spellcheck'); });
   const inl = [];
   $$('img[src^="data:"]', d).forEach((img, i) => {
@@ -1626,12 +1628,22 @@ function tdSel(cells, multi) {
 }
 const selCells = () => { const c = TS.cells.filter(x => x.isConnected); if (c.length) return c; const td = cellAtCaret(); return td ? [td] : []; };
 // 두 칸을 꼭짓점으로 하는 사각형 안의 칸들 (엑셀처럼)
+function tableGrid(t) {
+  const pos = new Map(), taken = [];
+  [...t.rows].forEach((r, ri) => { let ci = 0; taken[ri] = taken[ri] || [];
+    [...r.cells].forEach(c => { while (taken[ri][ci]) ci++; const rs = c.rowSpan || 1, cs = c.colSpan || 1;
+      for (let y = 0; y < rs; y++) for (let x = 0; x < cs; x++) { (taken[ri + y] = taken[ri + y] || [])[ci + x] = 1; }
+      pos.set(c, { r: ri, c: ci, r2: ri + rs - 1, c2: ci + cs - 1 }); ci += cs; }); });
+  return pos;
+}
 function rectCells(a, b) {
   const t = a.closest('table'); if (t !== b.closest('table')) return [a];
-  const r0 = Math.min(a.parentElement.rowIndex, b.parentElement.rowIndex), r1 = Math.max(a.parentElement.rowIndex, b.parentElement.rowIndex);
-  const c0 = Math.min(a.cellIndex, b.cellIndex), c1 = Math.max(a.cellIndex, b.cellIndex);
-  const out = []; [...t.rows].slice(r0, r1 + 1).forEach(r => [...r.cells].forEach(c => { if (c.cellIndex >= c0 && c.cellIndex <= c1) out.push(c); }));
-  return out;
+  const g = tableGrid(t), A = g.get(a), B = g.get(b); if (!A || !B) return [a];
+  let r0 = Math.min(A.r, B.r), r1 = Math.max(A.r2, B.r2), c0 = Math.min(A.c, B.c), c1 = Math.max(A.c2, B.c2);
+  // 합친 칸이 걸치면 사각형을 넓힘 (엑셀처럼)
+  for (let grow = true; grow;) { grow = false; g.forEach(p => { if (p.r <= r1 && p.r2 >= r0 && p.c <= c1 && p.c2 >= c0) { if (p.r < r0) { r0 = p.r; grow = true; } if (p.r2 > r1) { r1 = p.r2; grow = true; } if (p.c < c0) { c0 = p.c; grow = true; } if (p.c2 > c1) { c1 = p.c2; grow = true; } } }); }
+  const out = []; g.forEach((p, c) => { if (p.r <= r1 && p.r2 >= r0 && p.c <= c1 && p.c2 >= c0) out.push(c); });
+  return out.sort((x, y) => (g.get(x).r - g.get(y).r) || (g.get(x).c - g.get(y).c));
 }
 // 커서가 칸 안에 있으면 그 칸에 옅은 음영 (여러 칸을 끌어서 골랐을 땐 그대로 유지)
 function syncTdSel() {
@@ -1666,16 +1678,18 @@ function tableBar() {
   const tr = td.closest('table').getBoundingClientRect(), cr = $('#cbody').getBoundingClientRect();
   bar.style.maxWidth = Math.max(320, cr.width - 8) + 'px';  // 작성 칸보다 넓으면 두 줄로
   bar.style.left = Math.max(cr.left + 4, Math.min(tr.left, cr.right - bar.offsetWidth - 4)) + 'px';
-  bar.style.top = (tr.bottom + 6 + bar.offsetHeight > innerHeight ? Math.max(8, tr.top - bar.offsetHeight - 6) : tr.bottom + 6) + 'px';
+  const h = bar.offsetHeight, vb = Math.min(innerHeight, cr.bottom) - 4;
+  bar.style.top = (tr.bottom + 6 + h <= vb ? tr.bottom + 6 : vb - h) + 'px';
 }
 // 칸 합치기: 고른 사각형의 왼쪽 위 칸에 내용을 모으고 rowspan/colspan
 function mergeCells(cells) {
   const rows = [...new Set(cells.map(c => c.parentElement))];
-  const first = cells[0], firstRow = rows[0];
-  const cs = cells.filter(c => c.parentElement === firstRow).reduce((a, c) => a + (c.colSpan || 1), 0);
+  const g = tableGrid(cells[0].closest('table')), P = cells.map(c => g.get(c));
+  const first = cells[0];
+  const cs = Math.max(...P.map(p => p.c2)) - Math.min(...P.map(p => p.c)) + 1, rsN = Math.max(...P.map(p => p.r2)) - Math.min(...P.map(p => p.r)) + 1;
   const html = cells.map(c => c.innerHTML.replace(/^(\s|&nbsp;)+/i, '').replace(/^(\s|<br>)+$/i, '')).filter(Boolean).join('<br>');
   cells.slice(1).forEach(c => c.remove());
-  first.colSpan = cs; first.rowSpan = rows.length; first.innerHTML = html || '<br>';
+  first.colSpan = cs; first.rowSpan = rsN; first.innerHTML = html || '<br>';
   rows.slice(1).forEach(r => { if (!r.cells.length) r.remove(); });
   tdSel([first], false);
   const r = document.createRange(); r.selectNodeContents(first); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
@@ -1700,15 +1714,23 @@ const TSTYLES = [
 ];
 function applyTStyle(t, k) {
   const rows = [...t.rows], all = rows.flatMap(r => [...r.cells]);
-  const set = (c, o) => Object.assign(c.style, o);
+  const set = (c, o) => { if (o.backgroundColor) c.dataset.tsbg = '1'; Object.assign(c.style, o); };
   if (k === 'total') { const last = rows[rows.length - 1]; if (last) [...last.cells].forEach(c => set(c, { backgroundColor: '#fff2cc', fontWeight: '700', borderTop: '2px solid #000' })); return; }
   t.style.borderCollapse = 'collapse';
-  all.forEach(c => set(c, { border: '1px solid #000', backgroundColor: '', color: '', fontWeight: '' }));
+  // 앞서 스타일이 칠한 색만 지우고, 직접 칠한 음영은 그대로
+  all.forEach(c => { c.style.border = '1px solid #000'; if (c.dataset.tsbg) { c.style.backgroundColor = ''; c.style.color = ''; c.style.fontWeight = ''; delete c.dataset.tsbg; } });
+  const mine = c => c.style.backgroundColor && !c.dataset.tsbg;  // 직접 칠한 칸
   const head = rows[0] ? [...rows[0].cells] : [];
   if (k === 'gray') head.forEach(c => set(c, { backgroundColor: '#d9d9d9', fontWeight: '700', textAlign: 'center' }));
   if (k === 'navy') { all.forEach(c => set(c, { border: '1px solid #8ea9c8' })); head.forEach(c => set(c, { backgroundColor: '#1f3864', color: '#ffffff', fontWeight: '700', textAlign: 'center' })); }
-  if (k === 'stripe') { all.forEach(c => set(c, { border: '1px solid #b4c6e7' })); head.forEach(c => set(c, { backgroundColor: '#b4c6e7', fontWeight: '700', textAlign: 'center' })); rows.slice(1).forEach((r, i) => { if (i % 2) [...r.cells].forEach(c => set(c, { backgroundColor: '#eef3fb' })); }); }
+  if (k === 'stripe') { all.forEach(c => set(c, { border: '1px solid #b4c6e7' })); head.forEach(c => set(c, { backgroundColor: '#b4c6e7', fontWeight: '700', textAlign: 'center' })); rows.slice(1).forEach((r, i) => { if (i % 2) [...r.cells].forEach(c => { if (!mine(c)) set(c, { backgroundColor: '#eef3fb' }); }); }); }
   if (k === 'lines') { all.forEach(c => set(c, { border: 'none', borderBottom: '1px solid #bfbfbf' })); head.forEach(c => set(c, { borderTop: '2px solid #000', borderBottom: '1px solid #000', fontWeight: '700', textAlign: 'center' })); if (rows.length > 1) [...rows[rows.length - 1].cells].forEach(c => set(c, { borderBottom: '2px solid #000' })); }
+}
+function keepIn(cells) {
+  cells = cells.filter(c => c.isConnected); if (!cells.length) return;
+  const b = $('#cbody'); b.focus(); const r = document.createRange(); r.selectNodeContents(cells[0]); r.collapse(false);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r); savedRange = r.cloneRange();
+  tdSel(cells, cells.length > 1); tableBar();
 }
 // 작은 확인 창 (표 삭제 등)
 function askConfirm(msg, ok) {
@@ -1735,12 +1757,12 @@ async function tblAct(a, btn) {
   if (a === 'hl' || a === 'hc' || a === 'hr') cells.forEach(c => { c.style.textAlign = { hl: 'left', hc: 'center', hr: 'right' }[a]; });
   if (a === 'merge') { if (!(TS.multi && cells.length > 1)) return; mergeCells(cells); }
   if (a === 'split') splitCell(td);
-  if (a === 'tstyle') { menuAt(btn, TSTYLES.map(([k, l, sw]) => ({ html: `<span class="tsw">${sw}</span>${l}`, act: () => { applyTStyle(table, k); dirty(); tableBar(); } }))); return; }
+  if (a === 'tstyle') { menuAt(btn, TSTYLES.map(([k, l, sw]) => ({ html: `<span class="tsw">${sw}</span>${l}`, act: () => { applyTStyle(table, k); dirty(); keepIn([td]); } }))); return; }
   if (a === 'selall') { tdSel($$('td,th', table).filter(c => c.closest('table') === table), true); }
-  if (a === 'fill') { paletteMenu(btn, PALETTE, null, c => { cells.forEach(x => { x.style.backgroundColor = c || ''; }); if (c) $('#tbFill').style.background = c; dirty(); }, '음영 없음'); return; }
-  if (a === 'bcolor') { paletteMenu(btn, PALETTE, TBS.color, c => { TBS.color = c || '#000000'; $('#tbBc').style.background = TBS.color; if (TBS.style === 'none') { TBS.style = 'solid'; TBS.w = '1px'; } setBorder(cells, TBS); }, '기본 (검정)'); return; }
+  if (a === 'fill') { paletteMenu(btn, PALETTE, null, c => { cells.forEach(x => { x.style.backgroundColor = c || ''; delete x.dataset.tsbg; }); keepIn(cells); if (c) $('#tbFill').style.background = c; dirty(); }, '음영 없음'); return; }
+  if (a === 'bcolor') { paletteMenu(btn, PALETTE, TBS.color, c => { TBS.color = c || '#000000'; $('#tbBc').style.background = TBS.color; if (TBS.style === 'none') { TBS.style = 'solid'; TBS.w = '1px'; } setBorder(cells, TBS); keepIn(cells); }, '기본 (검정)'); return; }
   if (a === 'bstyle') {
-    menuAt(btn, BSTYLES.map(([st2, w, l]) => ({ on: TBS.style === st2 && TBS.w === w, html: `<span class="bsamp" style="border-top:${st2 === 'none' ? '1px dashed #dadce0' : `${w === '1px' && st2 !== 'solid' ? '2px' : w} ${st2} #202124`}"></span>${l}`, act: () => { TBS.style = st2; TBS.w = w; setBorder(cells, TBS); } })));
+    menuAt(btn, BSTYLES.map(([st2, w, l]) => ({ on: TBS.style === st2 && TBS.w === w, html: `<span class="bsamp" style="border-top:${st2 === 'none' ? '1px dashed #dadce0' : `${w === '1px' && st2 !== 'solid' ? '2px' : w} ${st2} #202124`}"></span>${l}`, act: () => { TBS.style = st2; TBS.w = w; setBorder(cells, TBS); keepIn(cells); } })));
     return;
   }
   if (a === 'tblX') { if (!(await askConfirm('이 표를 삭제할까요?', '삭제'))) return; table.remove(); tdSel([]); }
@@ -2714,3 +2736,19 @@ if (hash === '#compose') {
   const first = visible()[0]; if (first) openMail(first.id); else renderRead();
   openWelcome(false);
 }
+// 새 버전이 올라오면 알아서 적용 (홈페이지 캐시 때문에 옛 화면이 10분쯤 남는 것 방지). 메일을 쓰는 중이면 묻기
+(function verCheck() {
+  if (IS_EXT || location.protocol !== 'https:') return;
+  const cur = ([...document.scripts].map(s => /mail-c\.js\?v=(\d+)/.exec(s.src)).find(Boolean) || [])[1];
+  if (!cur) return;
+  const check = async () => {
+    try {
+      const v = ((await (await fetch(location.pathname + '?vchk=' + Date.now(), { cache: 'no-store' })).text()).match(/mail-c\.js\?v=(\d+)/) || [])[1];
+      if (!v || v === cur) return;
+      const go = () => { flushCompose(); location.replace(location.pathname + '?v=' + v); };
+      if ($('#read').classList.contains('composing') || cs.saving) toast('JIN-mail 새 버전이 있어요', go, '지금 적용');
+      else go();
+    } catch (e) { /* 다음에 다시 */ }
+  };
+  setTimeout(check, 4000); setInterval(check, 10 * 60000);
+})();
