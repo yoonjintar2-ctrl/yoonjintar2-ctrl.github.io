@@ -158,7 +158,7 @@ const SYS = {
   inbox: { name: '받은편지함', ic: 'inbox', f: m => m.inbox },
   tome: { name: '나에게 온 메일', ic: 'me', f: m => !m.sent && m.to.some(isMe), parent: 'inbox' },
   sent: { name: '보낸편지함', ic: 'sent', f: m => m.sent },
-  draft: { name: '작성 중', ic: 'draft', f: m => !!m.draft },
+  draft: { name: '작성 중인 메일', ic: 'draft', f: m => !!m.draft },
   all: { name: '모든 메일', ic: 'all', f: () => true, hideNav: true }
 };
 const folderFn = k => SYS[k] ? SYS[k].f : (m => descIds(k).includes(m.box));
@@ -168,7 +168,7 @@ const folderName = k => SYS[k] ? SYS[k].name : boxPath(k);
 function renderNav() {
   const unread = f => MAILS.filter(m => f(m) && m.unread).length || '';
   const sysItem = (k, depth) => { const v = SYS[k]; const n = k === 'draft' ? (MAILS.filter(m => m.draft).length || '') : unread(v.f);
-    return `<div class="ni${st.folder === k ? ' on' : ''}${n && k !== 'draft' ? ' unread' : ''}" data-f="${k}" data-sys="${k}" style="padding-left:${14 + depth * 22}px"><span class="ic">${ico(v.ic)}</span><span class="nm">${v.name}</span><span class="n">${n}</span></div>`; };
+    return `<div class="ni${k !== 'tome' ? ' top' : ''}${st.folder === k ? ' on' : ''}${n && k !== 'draft' ? ' unread' : ''}" data-f="${k}" data-sys="${k}" style="padding-left:${14 + depth * 22}px"><span class="ic">${ico(v.ic)}</span><span class="nm">${v.name}</span><span class="n">${n}</span></div>`; };
   // 받은편지함 └ 나에게 온 메일 연결선
   let h = sysItem('inbox', 0) + sysItem('tome', 1).replace('<span class="ic">', '<i class="g e" style="left:22px"></i><span class="ic">') + sysItem('sent', 0) + sysItem('draft', 0);
   h += `<div class="nh">메일함<button class="ib" id="addBox" title="메일함 만들기" style="width:26px;height:26px">${ico('plus', 15)}</button></div>`;
@@ -181,7 +181,7 @@ function renderNav() {
     let g = '';
     cont.forEach((c, k) => { if (c) g += `<i class="g v" style="left:${16 + k * 18}px"></i>`; });
     if (depth > 0) g += `<i class="g ${last ? 'e' : 't'}${kids ? '' : ' nk'}" style="left:${16 + (depth - 1) * 18}px"></i>`;
-    h += `<div class="ni${st.folder === b.id ? ' on' : ''}${n ? ' unread' : ''}${b.hidden ? ' hid' : ''}" data-f="${b.id}" data-box="${b.id}" draggable="true" style="padding-left:${8 + depth * 18}px">${g}
+    h += `<div class="ni${depth === 0 ? ' top' : ''}${st.folder === b.id ? ' on' : ''}${n ? ' unread' : ''}${b.hidden ? ' hid' : ''}" data-f="${b.id}" data-box="${b.id}" draggable="true" style="padding-left:${8 + depth * 18}px">${g}
       <span class="tw" data-tw="${b.id}">${kids ? ico(col ? 'right' : 'down') : ''}</span><span class="ic">${ico('folder', 17)}</span>
       <span class="nm">${esc(b.name)}</span><span class="n">${n}</span><button class="ib dots" data-dots="${b.id}" title="메일함 메뉴">${ico('more', 16)}</button></div>`;
     if (kids && !col) walk(b.id, depth + 1, depth > 0 ? [...cont, !last] : []);
@@ -200,7 +200,7 @@ function boxMenu(anchor, id, at) {
       // 화면에 안 불러온 메일까지 Gmail에서 이 메일함의 안 읽은 메일 전부
       sync('모두 읽음', async () => { let total = 0; for (const lid of ids) { const r = await gapi(`messages?labelIds=${lid}&labelIds=UNREAD&maxResults=500`); const g = (r.messages || []).map(x => x.id); if (g.length) { await gapi('messages/batchModify', { method: 'POST', body: { ids: g, removeLabelIds: ['UNREAD'] } }); total += g.length; } } toast(`'${b.name}' 메일 ${total}통을 읽음으로 표시했어요`); }); } },
     { html: ico('rename', 16) + ' 이름 바꾸기', act: () => renameBox(id) },
-    { html: ico('sub', 16) + ' 하위 메일함 만들기', act: () => { const nb = { id: 'b' + Date.now(), name: '새 메일함', parent: id, pending: real.on }; BOXES.push(nb); st.collapsed.delete(id); saveAll(); renderNav(); renameBox(nb.id); } },
+    { html: ico('gear', 16) + ' 메일함 관리', act: () => openSettings('boxes') },
     { html: ico('hide', 16) + (b.hidden ? ' 다시 보이기' : ' 숨기기'), act: () => { const hide = !b.hidden; descIds(id).forEach(x => { boxById(x).hidden = hide; }); if (hide && descIds(id).includes(st.folder)) st.folder = 'inbox'; saveAll(); if (real.on) store.set('real-hidden', BOXES.filter(x => x.hidden).map(x => x.id)); renderNav(); renderTop(); renderList(); toast(hide ? `'${b.name}'을(를) 숨겼어요` : `'${b.name}'이(가) 다시 보여요`); } },
     '-',
     { html: ico('trash', 16) + ' 삭제', act: () => deleteBox(id) }
@@ -475,10 +475,10 @@ function renderList() {
   list.forEach(m => {
     const gn = grpName(m.d, m);
     if (gn !== g) { g = gn; h += `<div class="grp">${gn}</div>`; }
-    const who = m.sent ? '받는사람: ' + m.to.map(nameOf).join(', ') : m.from.name + ' (' + m.from.email.split('@')[1] + ')';
+    const who = m.sent ? esc('받는사람: ' + m.to.map(nameOf).join(', ')) : `${esc(m.from.name)}${m.from.email && m.from.email.includes('@') ? ` <span class="dom">${esc(m.from.email.split('@')[1])}</span>` : ''}`;
     h += `<div class="row${m.unread ? ' unread' : ''}${st.open === m.id ? ' open' : ''}${st.picked.has(m.id) ? ' picked' : ''}" data-id="${m.id}" draggable="true">
       <input type="checkbox" class="ck"${st.picked.has(m.id) ? ' checked' : ''}><div class="mid">
-      <div class="l1"><span class="who">${esc(who)}</span><span class="dt">${dateLabel(m)}</span></div>
+      <div class="l1"><span class="who">${who}</span><span class="dt">${dateLabel(m)}</span></div>
       <div class="subj">${m.draft ? '<span class="draft">작성 중</span> ' : ''}${esc(m.subj)}</div>
       <div class="snip">${esc(snipOf(m)) || '&nbsp;'}</div>
       ${attsOf(m).length ? `<div class="l3">${ftBadges(attsOf(m))}</div>` : ''}
@@ -1499,6 +1499,22 @@ function navDrop(e, el, doIt) {
   }
 }
 /* 영역 너비: 경계선을 끌어서 조절, 다음에도 유지 */
+function setupDragScroll() {
+  let tgt = null, speed = 0, raf = 0;
+  const tick = () => { if (tgt && speed) { tgt.scrollTop += speed; raf = requestAnimationFrame(tick); } else raf = 0; };
+  document.addEventListener('dragover', e => {
+    const el = e.target.closest && e.target.closest('#nav, #rows'); speed = 0; tgt = null;
+    if (el) { const r = el.getBoundingClientRect(), z = 60;
+      if (e.clientY < r.top + z) speed = -Math.ceil((r.top + z - e.clientY) / 4);
+      else if (e.clientY > r.bottom - z) speed = Math.ceil((e.clientY - (r.bottom - z)) / 4);
+      tgt = el; }
+    if (speed && !raf) raf = requestAnimationFrame(tick);
+  });
+  const stop = () => { speed = 0; tgt = null; };
+  document.addEventListener('dragend', stop); document.addEventListener('drop', stop);
+  // 혹시 휠 신호가 오는 환경이면 그대로 스크롤
+  document.addEventListener('wheel', e => { if (!drag) return; const el = e.target.closest && e.target.closest('#nav, #rows'); if (el) el.scrollTop += e.deltaY; }, { passive: true });
+}
 function setupSplits() {
   const Wd = store.get('widths', null);
   if (Wd) { document.documentElement.style.setProperty('--w-nav', Wd.nav + 'px'); document.documentElement.style.setProperty('--w-list', Wd.list + 'px'); }
@@ -1667,7 +1683,7 @@ function wire() {
     else if (e.key === 'c') { e.preventDefault(); openCompose('new'); }
     else if (e.key === '/') { e.preventDefault(); $('#q').focus(); }
   });
-  setupSplits();
+  setupSplits(); setupDragScroll();
 }
 
 /* ───────── 시작 ───────── */
