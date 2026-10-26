@@ -268,6 +268,10 @@
     for (let i = cs.length - 1; enc.encode(body).length > 3800 && i >= 0; i--) { if (cs[i].ln) { cs[i] = Object.assign({}, cs[i], { ln: undefined }); body = mk(); } }
     while (enc.encode(body).length > 3800 && cs.length > 1) { cs.pop(); body = mk(); }
     const tags = [alert.level || 'info'].concat(extraTags || []);
+    // ntfy 무료 한도(하루 메시지 수, 2026-10-27 한도 초과로 업데이트가 멈춤) 아끼기: 정시·V자 검색 결과가 직전 발행과 같으면 60분 동안은 다시 안 보냄(요청 검색은 항상 보냄)
+    const sig = JSON.stringify({ c: (alert.cards || []).map(c => [c.n, c.s, c.g, c.buy, c.tgt, c.stop]), z: (alert.z || []).map(c => c.n), t: alert.title });
+    let lastPub = {}; try { lastPub = JSON.parse(localStorage.getItem('d6lastPub') || '{}'); } catch (e) {}
+    if ((extraTags || []).indexOf('req') < 0 && lastPub.sig === sig && Date.now() - (lastPub.ts || 0) < 3600e3) return 200;
     // 알림 중복 막기(정시·요청 모두): 이미 추천해 계속 남아 있는 카드(같은 종목·같은 규칙)는 다시 울리지 않는다.
     // 새 카드가 있을 때만 울림. 3일 넘게 사라졌다 다시 뜬 카드는 새 신호로 본다.
     const now = Date.now(), key = (c) => c.n + '|' + c.s;
@@ -279,13 +283,17 @@
     alert.fresh = fresh.map(c => c.g + '등급 ' + c.n);
     if (!fresh.length && tags.indexOf('quiet') < 0) tags.push('quiet');
     const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: alert.title, message: body, tags, priority: (alert.sPlus || []).length ? 4 : 2 }) });
+    if (r.status === 200) try { localStorage.setItem('d6lastPub', JSON.stringify({ sig, ts: Date.now() })); } catch (e) {}
+    window.__berryPubStatus = r.status + ' ' + new Date().toISOString();
     // C등급 카드(상시·조건)는 글자 수 제한(3800바이트) 때문에 본문에서 빠질 수 있어 따로 한 번 더 보냄(v 없이 k:'cset' → 웹이 아래쪽에 붙임)
     if ((alert.base || []).length || (alert.cond || []).length) try {
       const sl = c => Object.assign({}, c, { ln: undefined, why: (c.why || '').slice(0, 150) });
       let cb = (alert.base || []).map(sl), cc2 = (alert.cond || []).map(sl), mk2 = () => JSON.stringify({ k: 'cset', time: alert.time, base: cb, cond: cc2 }), b2 = mk2();
       while (enc.encode(b2).length > 3800 && (cb.concat(cc2)).some(c => c.why)) { cb.concat(cc2).forEach(c => { c.why = (c.why || '').slice(0, Math.max(0, (c.why || '').length - 40)); }); b2 = mk2(); }
       while (enc.encode(b2).length > 3800 && cc2.length) { cc2.pop(); b2 = mk2(); }
-      await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: 'C등급 카드', message: b2, tags: ['quiet', 'cset'], priority: 1 }) });
+      let lc = {}; try { lc = JSON.parse(localStorage.getItem('d6lastCset') || '{}'); } catch (e) {}
+      const csig = JSON.stringify({ base: cb.map(c => [c.n, c.g, c.buy]), cond: cc2.map(c => [c.n, c.g, c.buy]) });
+      if (lc.sig !== csig || Date.now() - (lc.ts || 0) > 3 * 3600e3) { const r2 = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: 'C등급 카드', message: b2, tags: ['quiet', 'cset'], priority: 1 }) }); if (r2.status === 200) try { localStorage.setItem('d6lastCset', JSON.stringify({ sig: csig, ts: Date.now() })); } catch (e) {} }
     } catch (e) {}
     if (r.status === 200 && all.length) { all.forEach(c => { seen[key(c)] = now; }); for (const k in seen) if (now - seen[k] > 30 * 86400e3) delete seen[k]; try { localStorage.setItem('d6seen', JSON.stringify(seen)); } catch (e) {} }
     return r.status;
@@ -369,7 +377,7 @@
   // 감시 연결 램프(2026-10-21): 감시가 살아 있으면 10분마다 berry-…-h 토픽에 짧은 신호. 사이트 오른쪽 위 램프가 15분 안 신호면 녹색, 아니면 주황
   if (!window.__berryBeat) { const who = /Mac/i.test(navigator.platform || '') ? '맥' : /Win/i.test(navigator.platform || '') ? '회사 PC' : '클라우드';
     const send = () => { const w = window.__berryWatchState; if (!w || !w.alive) return; const ok = w.es && w.es.readyState !== 2; fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: 'berry-3059012bcc6b7db9-h', message: 'beat ' + who + (ok ? '' : ' 끊김'), tags: ['quiet'], priority: 1 }) }).catch(() => {}); };
-    window.__berryBeat = setInterval(send, 600000); setTimeout(send, 3000); }
+    window.__berryBeat = setInterval(send, 1800000); setTimeout(send, 3000); }
   window.__berryWatch = function () {
     const me = Math.random().toString(36).slice(2), KEY = 'berryWatcher';
     const live = () => { try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); return o.id && o.id !== me && Date.now() - o.ts < 25000; } catch (e) { return false; } };
@@ -394,7 +402,7 @@
       try { if (!/Mac/i.test(navigator.platform || '')) { await new Promise(r => setTimeout(r, /Win/i.test(navigator.platform || '') ? 5000 : 12000)); // 순서: 맥 → 회사 PC(5초) → 클라우드(12초)
           const tx = await (await fetch('https://ntfy.sh/' + window.__BERRY.requests + '/json?poll=1&since=' + Math.max(0, (m.time || 0) - 2))).text();
           if (tx.split('\n').some(l => { try { const q = JSON.parse(l); return (q.message || '').startsWith('claim ' + m.id + ' ') && !(q.message || '').endsWith(' ' + me); } catch (e) { return false; } })) { busy = false; st.skipped = (st.skipped || 0) + 1; return; } }
-        await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.requests, message: 'claim ' + m.id + ' ' + me }) });
+        if (!(/Mac/i.test(navigator.platform || '') && /^scan sched/.test(m.message || ''))) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.requests, message: 'claim ' + m.id + ' ' + me }) }); // 맥의 정시 검색은 표시 생략(ntfy 한도 아끼기)
       } catch (e) {}
       try {
         if (!/^scan sched/.test(m.message || '')) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: (/Mac/i.test(navigator.platform || '') ? '맥' : /Win/i.test(navigator.platform || '') ? '회사 PC' : '클라우드') + '에서 지금 시세로 검색 중이에요 (1~2분)', tags: ['ack'] }) });

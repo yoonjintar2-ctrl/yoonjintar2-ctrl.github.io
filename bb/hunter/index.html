@@ -1526,7 +1526,7 @@ document.addEventListener('click', function(e){ if ($('shm') && !e.target.closes
     for (var i = 0; i < 10; i++) { var d = document.createElement('i'), a = Math.random() * 6.283, r = 30 + Math.random() * 60; d.style.left = e.clientX + 'px'; d.style.top = e.clientY + 'px'; d.style.setProperty('--dx', (Math.cos(a) * r).toFixed(0) + 'px'); d.style.setProperty('--dy', (Math.sin(a) * r - 20).toFixed(0) + 'px'); L.appendChild(d); setTimeout(function(x){ return function(){ x.remove(); }; }(d), 950); } }, { passive: true });
   function lamp(){ fetch(NT + 'berry-3059012bcc6b7db9-h/json?poll=1&since=20m', { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var best = null; t.split('\n').forEach(function(l){ if (!l) return; try { var m = JSON.parse(l); if (m.event === 'message' && /^beat/.test(m.message || '') && (!best || m.time > best.time)) best = m; } catch(e){} });
-      var ok = best && Date.now() / 1000 - best.time < 900 && !/끊김/.test(best.message), el = $('lamp'); el.className = 'lamp' + (ok ? ' on' : ''); el.title = ok ? (best.message.slice(5) + ' 감시 연결됨') : '감시 연결 안 됨'; }).catch(function(){ $('lamp').className = 'lamp'; }); }
+      var ok = best && Date.now() / 1000 - best.time < 2400 && !/끊김/.test(best.message), el = $('lamp'); el.className = 'lamp' + (ok ? ' on' : ''); el.title = ok ? (best.message.slice(5) + ' 감시 연결됨') : '감시 연결 안 됨'; }).catch(function(){ $('lamp').className = 'lamp'; }); }
   lamp(); setInterval(lamp, 60000);
 })();
 window.__hx = { RCARDS: RCARDS, rc: ruleCardObj, sl: shareSlug, card: card, EPI: EPI, RTYPE: RTYPE, tier: tier, badge: badge };
