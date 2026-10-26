@@ -112,6 +112,7 @@ let MAILS = [
   M({ id: 13, d: 20, t: '13:00', from: P.jung_t, box: 'tlj', subj: '[뚜레쥬르] 10월 프로모션 결과 공유', att: [['IMG', '프로모션_현장.jpg', '1.8 MB']], body: '10월 프로모션 결과 공유드립니다.' }),
   M({ id: 14, d: 45, t: '10:10', from: P.kim_b, box: 'bmw-mt', subj: '[Motorrad] 3분기 집행 결과 공유', att: [['XLS', 'Q3_결과.xlsx', '210 KB']], body: '3분기 Motorrad 집행 결과 공유드립니다.' })
 ];
+const SAMPLE_MAILS = MAILS.slice();
 
 /* ───────── 상태 ───────── */
 let BOXES = store.get('boxes', DEFAULT_BOXES);
@@ -867,9 +868,19 @@ const TYPO = [
   ['않하', '안 하'], ['않해', '안 해'], ['조은', '좋은'], ['조아', '좋아'], ['조켔', '좋겠'],
   ['부탁 드립니다', '부탁드립니다'], ['감사 드립니다', '감사드립니다'], ['말씀 드립니다', '말씀드립니다'], ['연락 드리', '연락드리'], ['전달 드리', '전달드리'], ['공유 드리', '공유드리'], ['확인 부탁 드', '확인 부탁드'],
   ['것같', '것 같'], ['할수있', '할 수 있'], ['할수없', '할 수 없'], ['될수있', '될 수 있'], ['할수', '할 수'], ['될수', '될 수'], ['볼수', '볼 수'],
-  ['하는데로', '하는 대로'], ['말한데로', '말한 대로'], ['예기하', '얘기하'], ['애기하', '얘기하'], ['안녕하세여', '안녕하세요'], ['감사함니다', '감사합니다'], ['고맙슴니다', '고맙습니다'], ['함니다', '합니다'], ['슴니다', '습니다']
+  ['하는데로', '하는 대로'], ['말한데로', '말한 대로'], ['예기하', '얘기하'], ['애기하', '얘기하'], ['안녕하세여', '안녕하세요'], ['감사함니다', '감사합니다'], ['고맙슴니다', '고맙습니다'], ['함니다', '합니다'], ['슴니다', '습니다'],
+  ['안녕하새요', '안녕하세요'], ['안녕하셰요', '안녕하세요'], ['안녕하세효', '안녕하세요'], ['안녕하십니가', '안녕하십니까'], ['안녕하싮니까', '안녕하십니까'],
+  ['드림니다', '드립니다'], ['감사드림', '감사드립'], ['부탁드림니', '부탁드립니'], ['갑사합니다', '감사합니다'], ['감사합ㄴ디', '감사합니다'], ['고맙읍니다', '고맙습니다'],
+  ['어떻개', '어떻게'], ['어떡게', '어떻게'], ['어떻계', '어떻게'], ['희얀', '희한'], ['눈쌀', '눈살'], ['바래요', '바라요'], ['바랬', '바랐'],
+  ['거에요', '거예요'], ['꺼에요', '거예요'], ['꺼예요', '거예요'], ['아니예요', '아니에요'], ['할꼐', '할게'], ['드릴꼐', '드릴게'], ['갈꼐', '갈게'],
+  ['하겟', '하겠'], ['되겟', '되겠'], ['있겟', '있겠'], ['없겟', '없겠'], ['드리겟', '드리겠'], ['보겟', '보겠'], ['가겟', '가겠'], ['오겟', '오겠'], ['좋겟', '좋겠'],
+  ['했는대', '했는데'], ['있는대요', '있는데요'], ['없는대요', '없는데요'], ['드렸는대', '드렸는데'], ['부탁드려용', '부탁드려요'],
+  ['확인부탁드', '확인 부탁드'], ['참고부탁드', '참고 부탁드'], ['검토부탁드', '검토 부탁드'], ['공유부탁드', '공유 부탁드'], ['회신부탁드', '회신 부탁드'],
+  ['곰방', '금방'], ['어짜피', '어차피'], ['예정되있', '예정돼 있'], ['되있', '돼 있'], ['되 있', '돼 있'], ['됬', '됐'], ['됫다', '됐다']
 ].map(([w, f]) => [new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + (/[다요]$/.test(w) ? W : ''), 'g'), f, w]);
 TYPO.push([/(?<![가-힣])([가-힣]{2,})\s+\1(?![가-힣])/g, m => m.split(/\s+/)[0], '반복']);
+TYPO.push([/(하|주|보|가|오|계|드|시|으|드시|주시|보시|하시|가시|오시)새(요|용)/g, m => m.replace(/새(요|용)$/, '세요'), '세요']);
+TYPO.push([/(하|주|보|가|오|계|드|시)셰요/g, m => m.replace(/셰요$/, '세요'), '세요']);
 let typoHits = [];
 function runTypo() {
   clearTimeout(runTypo.t);
@@ -884,6 +895,8 @@ function runTypo() {
         re.lastIndex = 0; let mt;
         while ((mt = re.exec(n.nodeValue))) {
           if (IGNORE.has(mt[0])) continue;
+          const st0 = mt.index, en0 = mt.index + mt[0].length;
+          if (typoHits.some(h => h.r.startContainer === n && h.r.startOffset < en0 && st0 < h.r.endOffset)) continue;  // 겹치면 하나만
           const r = document.createRange(); r.setStart(n, mt.index); r.setEnd(n, mt.index + mt[0].length);
           ranges.push(r); typoHits.push({ r, word: mt[0], fix: typeof fix === 'function' ? fix(mt[0]) : fix });
         }
@@ -1364,7 +1377,7 @@ const DAYS = 92;  // 최근 3개월
 // 최신 메일부터 화면에 먼저 보여 주고, 나머지는 뒤에서 차차 받아 옴
 async function loadReal(interactive, token) {
   if (real.loading) return; real.loading = true;
-  const prog = t => { real.prog = t; renderTop(); };
+  const prog = t => { real.prog = t; renderTop(); const bm = $('#bootMsg'); if (bm && t) bm.textContent = t; };
   try {
     real.token = token || await googleLogin(interactive); real.expired = false;
     prog('Gmail 연결 중…');
@@ -1384,7 +1397,7 @@ async function loadReal(interactive, token) {
       const keepFull = new Map(MAILS.filter(m => m.real && m.full).map(m => [m.gid, m]));
       MAILS = [...metas.values()].filter(x => !(real.gone && real.gone.has(x.gid))).map(x => { const k = keepFull.get(x.gid); return toMail(k ? Object.assign({}, x, { body: k.body, html: k.html, htmlReady: k.htmlReady, att: k.att, full: true }) : x, lab); }).sort((a, b) => b.when - a.when);
       if (first && !real.on) { real.on = true; st.folder = 'inbox'; st.open = null; st.picked.clear(); }
-      renderNav(); renderList(); renderTop();
+      bootScreen('off'); renderNav(); renderList(); renderTop();
       if (st.open == null) { const f = visible()[0]; if (f) openMail(f.id); } else renderRead();
     };
     const fetchMetas = async (ids, label) => {
@@ -1418,7 +1431,7 @@ async function loadReal(interactive, token) {
     const [total, fresh] = await stage(`newer_than:${DAYS}d`, '3개월치 메일 받는 중');
     prog('');
     toast(`${prof.emailAddress} · 최근 3개월 메일 ${total}통 준비 완료${fresh ? ` (새로 받은 ${fresh}통)` : ''}`);
-  } catch (err) { real.expired = !real.on; prog(''); renderTop(); toast('실제 메일을 불러오지 못했어요: ' + err.message); }
+  } catch (err) { real.expired = !real.on; prog(''); renderTop(); if (!real.on && $('#boot')) bootScreen('login', '메일을 불러오지 못했어요: ' + err.message); else toast('실제 메일을 불러오지 못했어요: ' + err.message); }
   finally { real.loading = false; }
 }
 // 메일을 열 때 본문 전체 받기
@@ -1453,6 +1466,18 @@ async function openRealAtt(m, a) {
     if (w) w.location.href = url;
   } catch (e) { if (w) w.close(); toast('첨부를 열지 못했어요'); }
 }
+// 로딩·다시 로그인 화면 (예시 메일이 잠깐 보였다 바뀌는 것 방지)
+function bootScreen(mode, msg) {
+  let el = $('#boot');
+  if (mode === 'off') { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'boot'; document.body.append(el); }
+  const c = store.get('connected', null) || {};
+  el.innerHTML = `<div class="bootbox"><div class="logo">${ico('env', 44)}</div><h2>JIN-mail</h2>${mode === 'loading'
+    ? `<div class="spin"></div><p id="bootMsg">${esc(msg || 'Gmail에서 메일을 불러오는 중…')}</p>`
+    : `<p>${esc(msg || (c.email ? c.email + ' 로그인이 만료됐어요' : 'Gmail 계정 연결이 필요해요'))}</p><button class="btn pri gbtn" id="bootGo">${ico('env', 18)} Gmail 다시 연결</button><button class="later" id="bootSample">예시 메일로 둘러보기</button>`}</div>`;
+  const go = $('#bootGo', el); if (go) go.onclick = () => { bootScreen('loading'); loadReal(true); };
+  const sm = $('#bootSample', el); if (sm) sm.onclick = () => { store.set('skip-connect', true); location.hash = ''; MAILS = SAMPLE_MAILS.slice(); BOXES = store.get('boxes', DEFAULT_BOXES); real.expired = false; bootScreen('off'); renderTop(); renderNav(); renderList(); const f = visible()[0]; if (f) openMail(f.id); };
+}
 function openWelcome(force) {
   if (!force && (store.get('connected', null) || store.get('skip-connect', false))) return;
   const bg = document.createElement('div'); bg.className = 'modal-bg';
@@ -1474,7 +1499,7 @@ function openWelcome(force) {
       res.style.color = 'var(--blue)';
       res.innerHTML = `<b>${esc(prof.emailAddress)}</b> 연결 완료 · 라벨 ${user.length}개 확인<br><span style="color:var(--sub)">최근 메일을 불러올게요…</span>`;
       $('#gConn', bg).textContent = '시작하기'; $('#gConn', bg).onclick = () => bg.remove();
-      setTimeout(() => { bg.remove(); loadReal(true, token); }, 1200);
+      setTimeout(() => { bg.remove(); MAILS = []; BOXES = []; st.open = null; renderNav(); renderList(); renderRead(); bootScreen('loading', '최근 메일을 불러오는 중…'); loadReal(true, token); }, 900);
     } catch (err) { res.style.color = '#d93025'; res.textContent = '연결하지 못했어요: ' + err.message; }
   });
 }
@@ -1703,9 +1728,12 @@ if (hash === '#compose') {
   st.open = +hash.split('=')[1];
   const m = MAILS.find(x => x.id === st.open); if (m) { m.unread = 0; document.title = m.subj + ' · JIN-mail'; }
   renderRead();
+} else if (store.get('connected', null)) {
+  // 연결해 둔 계정이면 예시 메일을 잠깐이라도 보여 주지 않고 로딩 화면 → 실제 메일
+  MAILS = []; BOXES = []; renderNav(); renderList(); renderRead();
+  if (IS_EXT || tokCache.get()) { bootScreen('loading'); loadReal(false); } else { real.expired = true; renderTop(); bootScreen('login'); }
 } else {
   renderList();
   const first = visible()[0]; if (first) openMail(first.id); else renderRead();
   openWelcome(false);
-  if (store.get('connected', null)) { if (IS_EXT || tokCache.get()) loadReal(false); else { real.expired = true; renderTop(); } }
 }

@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-cache">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>JIN-mail</title>
@@ -354,6 +355,15 @@ body.resizing{cursor:col-resize;user-select:none}
 .row.unread .subj{font-weight:700}
 .row .dom{display:inline-block;font-size:10.5px;font-weight:500;color:#8a9099;background:#f0f2f5;border:1px solid #e3e6eb;border-radius:6px;padding:0 5px;line-height:15px;vertical-align:1px;margin-left:3px}
 .row.unread .dom{font-weight:500}
+/* 시작 로딩 화면 */
+#boot{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;align-items:center;justify-content:center}
+#boot .bootbox{text-align:center;color:var(--sub)}
+#boot .logo{color:#5f6368;margin-bottom:6px}
+#boot h2{margin:0 0 18px;font-size:22px;color:var(--ink)}
+#boot p{margin:12px 0 18px;font-size:14px}
+#boot .spin{width:28px;height:28px;margin:0 auto;border:3px solid #dfe3ea;border-top-color:var(--blue);border-radius:50%;animation:bootspin .8s linear infinite}
+@keyframes bootspin{to{transform:rotate(360deg)}}
+#boot .later{display:block;margin:12px auto 0;border:0;background:none;color:var(--mute);font-size:12.5px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -400,13 +410,13 @@ body.resizing{cursor:col-resize;user-select:none}
       </div>
       <div class="fmt" id="fmt"></div>
       <div class="foot" id="foot"></div>
-      <div class="cbody" id="cbody" contenteditable="true" spellcheck="false"></div>
+      <div class="cbody" id="cbody" contenteditable="true" spellcheck="true"></div>
       <input type="file" id="filePick" multiple hidden>
       <input type="file" id="imgPick" accept="image/*" hidden>
     </div>
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js"></script>
+<script src="mail-c.js?v=1793002078"></script>
 </body>
 </html>
