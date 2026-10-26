@@ -768,7 +768,7 @@ function chipEl(p) {
 }
 const chipsOf = box => $$('.rc', box).map(c => ({ name: c.dataset.name, email: c.dataset.email }));
 const footerStyle = f => `font-family:'${f.font.family}',Pretendard,sans-serif;font-size:${f.font.size}pt;color:${f.font.color}`;
-const footerHtml = f => f ? `<div class="gp-footer" data-footer="${f.id}" style="${footerStyle(f)}">${f.html}</div>` : '<div class="gp-footer"></div>';
+const footerHtml = f => f ? `<div class="gp-footer" spellcheck="false" data-footer="${f.id}" style="${footerStyle(f)}">${f.html}</div>` : '<div class="gp-footer" spellcheck="false"></div>';
 // 풋터 자동 선택: 조건에 맞는 풋터 중 가장 구체적인 것 (메일 주소 키워드 > 답장/새 메일 > 모든 메일)
 function pickFooter(kind, m) {
   const isReply = kind === 'reply' || kind === 'all' || kind === 'draft';
@@ -786,7 +786,7 @@ function pickFooter(kind, m) {
 }
 function composeHtml(text, footer, quote) {
   return nl(text) + '<br><span id="gpCaret"></span><br>' + footerHtml(footer) +
-    (quote && quote.length ? `<div class="quote" contenteditable="false">${nestQ(quote, 0)}</div>` : '');
+    (quote && quote.length ? `<div class="quote" contenteditable="false" spellcheck="false">${nestQ(quote, 0)}</div>` : '');
 }
 function nestQ(blocks, i) { return i >= blocks.length ? '' : `<div class="qb">${esc(blocks[i])}${nestQ(blocks, i + 1)}</div>`;
 }
@@ -878,7 +878,7 @@ function applyFooter(id) {
   const f = FOOTERS.find(x => x.id === id); if (!f) return;
   const b = $('#cbody');
   let slot = $('.gp-footer', b);
-  if (!slot) { slot = document.createElement('div'); slot.className = 'gp-footer'; const q = $('.quote', b); q ? b.insertBefore(slot, q) : b.append(slot); }
+  if (!slot) { slot = document.createElement('div'); slot.className = 'gp-footer'; slot.spellcheck = false; const q = $('.quote', b); q ? b.insertBefore(slot, q) : b.append(slot); }
   slot.dataset.footer = id; slot.setAttribute('style', footerStyle(f)); slot.innerHTML = f.html;
   cs.footer = id; renderFooterBar(); dirty();
 }
@@ -936,7 +936,7 @@ const boundary = () => '----jin' + Math.random().toString(36).slice(2) + Date.no
 function outgoingHtml() {
   const d = document.createElement('div'); d.innerHTML = $('#cbody').innerHTML;
   $$('.gp-pm, #gpCaret', d).forEach(x => x.remove());
-  $$('[contenteditable]', d).forEach(x => x.removeAttribute('contenteditable'));
+  $$('[contenteditable], [spellcheck]', d).forEach(x => { x.removeAttribute('contenteditable'); x.removeAttribute('spellcheck'); });
   const inl = [];
   $$('img[src^="data:"]', d).forEach((img, i) => {
     const m = /^data:([^;,]+);base64,(.*)$/.exec(img.getAttribute('src')); if (!m) return;
