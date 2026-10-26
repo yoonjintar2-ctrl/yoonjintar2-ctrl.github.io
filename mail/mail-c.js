@@ -295,7 +295,7 @@ function renderTop() {
   pill.title = R.expired ? '로그인이 만료됐어요. 누르면 다시 연결해요' : '';
   pill.onclick = R.expired ? () => loadReal(true) : null;
   const set = (id, ic, on, tip) => { const b = $(id); b.innerHTML = ico(ic); b.classList.toggle('on', !!on); b.title = tip; };
-  set('#fBox', 'folder', st.folder !== 'inbox', '메일함: ' + folderName(st.folder));
+  set('#fBox', 'folder', st.folder !== 'all', st.folder === 'all' ? '메일함: 전체 (필터 없음)' : '메일함: ' + folderName(st.folder));
   set('#fWhere', 'where', f.where !== 'all' || f.exclude || f.exact, '검색 범위: ' + (f.where === 'subj' ? '제목만' : '제목+내용') + (f.exact ? ' · 정확히 일치' : '') + (f.exclude ? ' · 제외: ' + f.exclude : ''));
   const p = f.period.k === 'range' ? fmtD(f.period.from) + '~' + fmtD(f.period.to) : PERIODS.find(x => x[0] === f.period.k)[1];
   set('#fPeriod', 'cal', f.period.k !== 'all', '기간: ' + p);
@@ -312,7 +312,31 @@ function boxPickItems(cur, pick) {
   walk(null, 0);
   return items;
 }
-function boxFilterMenu() { menuAt($('#fBox'), [{ head: '어느 메일함에서 볼까요? (검색도 이 안에서)' }, ...boxPickItems(st.folder, k => { st.folder = k; st.picked.clear(); renderNav(); renderTop(); renderList(); })]); }
+// 메일함 필터: 맨 위 '필터 해제' + 이름 검색 + 스크롤 목록 (메일함이 많아도 빨리 찾기)
+function boxFilterMenu() {
+  const pick = k => { st.folder = k; st.picked.clear(); closeMenus(); renderNav(); renderTop(); renderList(); };
+  const node = document.createElement('div');
+  node.innerHTML = `<div class="mi${st.folder === 'all' ? ' on' : ''}" data-k="all" style="font-weight:700"><span class="chk">${st.folder === 'all' ? '✓' : ''}</span>${ico('close', 16)} 필터 해제 (모든 메일에서 보기)</div>
+    <div class="mrow"><input type="text" placeholder="메일함 이름으로 찾기" autocomplete="off"></div><div class="boxlist"></div>`;
+  const inp = $('input', node), list = $('.boxlist', node);
+  const row = (k, html, dep) => `<div class="mi${st.folder === k ? ' on' : ''}" data-k="${k}"><span class="chk">${st.folder === k ? '✓' : ''}</span><span style="padding-left:${(dep || 0) * 14}px;display:inline-flex;align-items:center;gap:7px">${html}</span></div>`;
+  const draw = () => {
+    const q = inp.value.trim().toLowerCase(); let h = '';
+    const sys = ['inbox', 'tome', 'sent', 'draft'].filter(k => !q || SYS[k].name.includes(q));
+    h += sys.map(k => row(k, ico(SYS[k].ic, 16) + ' ' + SYS[k].name)).join('');
+    let boxes = '';
+    if (q) BOXES.filter(b => boxPath(b.id).toLowerCase().includes(q)).forEach(b => { boxes += row(b.id, ico('folder', 15) + esc(boxPath(b.id)) + (b.hidden ? ' <small style="color:var(--mute)">(숨김)</small>' : '')); });
+    else { const walk = (p, dep) => childrenOf(p).forEach(b => { if (b.hidden && !SET.showHidden) return; boxes += row(b.id, ico('folder', 15) + esc(b.name), dep); walk(b.id, dep + 1); }); walk(null, 0); }
+    if (boxes) h += (h ? '<div class="msep"></div>' : '') + '<div class="mh">메일함</div>' + boxes;
+    list.innerHTML = h || '<div class="mh">맞는 메일함이 없어요</div>';
+  };
+  node.addEventListener('click', e => { const it = e.target.closest('[data-k]'); if (it) pick(it.dataset.k); });
+  inp.addEventListener('input', draw);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { const f = $('.boxlist [data-k]', node); if (f) pick(f.dataset.k); } if (e.key === 'Escape') closeMenus(); e.stopPropagation(); });
+  draw();
+  menuAt($('#fBox'), [{ head: '어느 메일함에서 볼까요? (검색도 이 안에서)' }, { node }], true);
+  setTimeout(() => inp.focus());
+}
 function whereMenu() {
   const f = st.f;
   const node = document.createElement('div');
