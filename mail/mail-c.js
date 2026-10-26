@@ -797,7 +797,12 @@ function renderRead(force) {
   const fr = $('#view iframe.mailhtml');
   attMoreCheck();
   if (fr) {
-    fr.addEventListener('load', () => { try { const d = fr.contentDocument; fr.style.height = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight) + 20 + 'px'; } catch (e) { fr.style.height = '70vh'; } });
+    fr.addEventListener('load', () => { try {
+      const d = fr.contentDocument, W = fr.clientWidth, sw = d.documentElement.scrollWidth;
+      // 화면보다 조금 넓은 메일(서명·표)은 살짝 줄여서 한눈에 (너무 많이 줄여야 하면 그대로 두고 옆으로 스크롤)
+      if (sw > W + 4) { const z = W / sw; if (z >= 0.72) d.body.style.zoom = z.toFixed(3); }
+      fr.style.height = Math.max(d.documentElement.scrollHeight, d.body.getBoundingClientRect().height) + 20 + 'px';
+    } catch (e) { fr.style.height = '70vh'; } });
     const css = '<base target="_blank"><style>html{overflow-x:auto;overflow-y:hidden}body{margin:0;font:14.5px/1.65 Pretendard,"Malgun Gothic",sans-serif;color:#1f1f1f;word-break:break-word}</style>';
     const show = h => { if ($('#view iframe.mailhtml') === fr) fr.srcdoc = css + h; };
     if (m.htmlReady) show(m.htmlReady);
