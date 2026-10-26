@@ -399,6 +399,13 @@ body.resizing{cursor:col-resize;user-select:none}
 .row .l3 > .mini:only-child{max-width:100%}
 .mini .nm{min-width:0}
 .more-rows{padding:14px;text-align:center;font-size:12px;color:var(--mute)}
+.ftr .fgrip{cursor:grab;color:var(--mute);font-size:16px;padding:0 2px;user-select:none}
+.ftr .fno{font-size:12px;font-weight:700;color:var(--sub);min-width:14px;text-align:center}
+.ftr .ib[data-k=up],.ftr .ib[data-k=down]{width:24px;height:24px;font-size:13px}
+.ftr .ib[disabled]{opacity:.3;pointer-events:none}
+.ftr.dragging{opacity:.45}
+.ftr.drop-b{box-shadow:0 -3px 0 var(--blue)}
+.ftr.drop-a{box-shadow:0 3px 0 var(--blue)}
 </style>
 </head>
 <body>
@@ -452,6 +459,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793004611"></script>
+<script src="mail-c.js?v=1793005284"></script>
 </body>
 </html>

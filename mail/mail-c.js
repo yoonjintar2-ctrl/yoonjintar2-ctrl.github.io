@@ -781,9 +781,8 @@ function pickFooter(kind, m) {
     if (r.type === 'all') return 1;
     return 0;
   };
-  let best = null, bs = 0;
-  FOOTERS.forEach(f => { const s = score(f); if (s > bs) { bs = s; best = f; } });
-  return best;
+  // 순서가 위에 있는 풋터일수록 먼저 적용 (조건이 맞는 첫 번째)
+  return FOOTERS.find(f => score(f) > 0) || null;
 }
 function composeHtml(text, footer, quote) {
   return nl(text) + '<br><span id="gpCaret"></span><br>' + footerHtml(footer) +
@@ -1341,9 +1340,9 @@ function openSettings(tab) {
       idb('get').then(h => { const el = $('#dirName', body); if (el) el.textContent = h && h.name ? '현재: ' + h.name : '아직 고르지 않았어요'; });
     }
     if (t === 'footers') {
-      body.innerHTML = '<p class="desc">작성 화면의 풋터 버튼으로 바로 넣을 수 있고, 아래 조건에 맞으면 작성 화면을 열 때 자동으로 들어가요. 여러 개가 맞으면 \'특정 주소\' > \'답장/새 메일\' > \'모든 메일\' 순서로 골라요.</p>' + FOOTERS.map(f => `
+      body.innerHTML = '<p class="desc">작성 화면의 풋터 버튼으로 바로 넣을 수 있고, 아래 조건에 맞으면 작성 화면을 열 때 자동으로 들어가요. 여러 개가 맞으면 <b>위에 있는 풋터가 먼저</b> 적용돼요. 왼쪽 ⠿를 끌거나 ↑↓로 순서를 바꿀 수 있어요.</p>' + FOOTERS.map((f, fi) => `
         <div class="ftr" data-id="${f.id}">
-          <div class="r1"><input type="text" class="nm" value="${esc(f.name)}" data-k="name" placeholder="풋터 이름">
+          <div class="r1"><span class="fgrip" draggable="true" title="끌어서 순서 바꾸기">⠿</span><span class="fno">${fi + 1}</span><button class="ib" data-k="up" title="위로"${fi === 0 ? ' disabled' : ''}>↑</button><button class="ib" data-k="down" title="아래로"${fi === FOOTERS.length - 1 ? ' disabled' : ''}>↓</button><input type="text" class="nm" value="${esc(f.name)}" data-k="name" placeholder="풋터 이름">
             <select data-k="family" title="글꼴">${FONT_LIST.map(x => `<option${x === f.font.family ? ' selected' : ''}>${x}</option>`).join('')}</select>
             <select data-k="size" title="크기">${SIZES.map(s => `<option value="${s}"${s === f.font.size ? ' selected' : ''}>${s}pt</option>`).join('')}</select>
             <button class="btn" data-k="color" title="글자색"><span style="width:14px;height:14px;border-radius:3px;background:${f.font.color};border:1px solid #ccc"></span> 색</button>
@@ -1422,6 +1421,7 @@ function openSettings(tab) {
     if (fr) {
       const f = FOOTERS.find(x => x.id === fr.dataset.id);
       if (t.dataset.k === 'del') { FOOTERS = FOOTERS.filter(x => x !== f); saveAll(); show('footers'); renderFooterBar(); }
+      if (t.dataset.k === 'up' || t.dataset.k === 'down') { const i = FOOTERS.indexOf(f), j = i + (t.dataset.k === 'up' ? -1 : 1); if (j >= 0 && j < FOOTERS.length) { FOOTERS.splice(i, 1); FOOTERS.splice(j, 0, f); saveAll(); show('footers'); renderFooterBar(); } }
       if (t.dataset.k === 'color') paletteMenu(t, PALETTE, f.font.color, c => { f.font.color = c || '#202124'; saveAll(); show('footers'); }, '기본 (검정)');
       if (t.dataset.k === 'img') { imgTarget = fr; $('#ftrImg', body).click(); }
       return;
@@ -1433,7 +1433,19 @@ function openSettings(tab) {
       if (t.dataset.k === 'del') { bg.remove(); deleteBox(b.id); }
     }
   });
-  bg.addEventListener('click', e => { const tb = e.target.closest('[data-tab]'); if (tb) show(tb.dataset.tab); if (e.target.closest('[data-x]') || e.target === bg) { bg.remove(); closeMenus(); } });
+  let fdrag = null;
+  body.addEventListener('dragstart', e => { const g = e.target.closest && e.target.closest('.fgrip'); if (!g) return; fdrag = g.closest('.ftr').dataset.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/x-jin-footer', fdrag); g.closest('.ftr').classList.add('dragging'); });
+  body.addEventListener('dragover', e => { if (!fdrag) return; const t = e.target.closest('.ftr'); if (!t) return; e.preventDefault(); const r = t.getBoundingClientRect(); $$('.ftr', body).forEach(x => x.classList.remove('drop-b', 'drop-a')); t.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-b' : 'drop-a'); });
+  body.addEventListener('drop', e => {
+    if (!fdrag) return; const t = e.target.closest('.ftr'); if (!t) return; e.preventDefault();
+    const mv = FOOTERS.find(x => x.id === fdrag), tgt = FOOTERS.find(x => x.id === t.dataset.id); fdrag = null;
+    if (!mv || mv === tgt) { show('footers'); return; }
+    const r = t.getBoundingClientRect(), after = e.clientY >= r.top + r.height / 2;
+    FOOTERS.splice(FOOTERS.indexOf(mv), 1); FOOTERS.splice(FOOTERS.indexOf(tgt) + (after ? 1 : 0), 0, mv);
+    saveAll(); show('footers'); renderFooterBar();
+  });
+  body.addEventListener('dragend', () => { fdrag = null; $$('.ftr', body).forEach(x => x.classList.remove('dragging', 'drop-b', 'drop-a')); });
+  bg.addEventListener('click', e => { const tb = e.target.closest('.tabs [data-tab]'); if (tb) show(tb.dataset.tab); if (e.target.closest('[data-x]') || e.target === bg) { bg.remove(); closeMenus(); } });
   show(tab || 'general');
 }
 
