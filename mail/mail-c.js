@@ -39,7 +39,7 @@ const IP = {
   rowA: 'M3 11h18v10H3zM3 16h18M9 11v10M15 11v10M12 2v6M9 5h6', rowB: 'M3 3h18v10H3zM3 8h18M9 3v10M15 3v10M12 16v6M9 19h6',
   colL: 'M11 3h10v18H11zM16 3v18M11 9h10M11 15h10M2 12h6M5 9v6', colR: 'M3 3h10v18H3zM8 3v18M3 9h10M3 15h10M16 12h6M19 9v6',
   rowX: 'M3 4h18v6H3zM3 14h18v6H3zM9 4v6M15 4v6M9 14v6M15 14v6M8 12h8', colX: 'M4 3h6v18H4zM14 3h6v18h-6zM4 9h6M4 15h6M14 9h6M14 15h6M12 8v8',
-  minus: 'M6 12h12', tblX: 'M4 5h16v14H4zM9 9l6 6M15 9l-6 6',
+  minus: 'M6 12h12', merge: 'M3 5h18v14H3zM7 12h3M14 12h3M8.5 10l-2 2 2 2M15.5 10l2 2-2 2', split: 'M3 5h18v14H3zM12 5v14M5 12h3M16 12h3M6.5 10l-2 2 2 2M17.5 10l2 2-2 2', tstyle: 'M3 4h18v16H3zM3 9h18M9 9v11', tblX: 'M4 5h16v14H4zM9 9l6 6M15 9l-6 6',
   fill: 'M4 13l8-8 7 7-8 8zM4 13h15M20 16s2 2.4 2 3.8a2 2 0 0 1-4 0c0-1.4 2-3.8 2-3.8z', bcolor: 'M4 4h16v16H4z', bstyle: 'M3 6h18M3 12h4M10 12h4M17 12h4M3 18h1.5M7 18h1.5M11 18h1.5M15 18h1.5M19 18h1.5', selall: 'M4 4h16v16H4zM4 10h16M4 15h16M10 4v16M15 4v16',
   clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2', hide: 'M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6 0 10 6 10 6a17 17 0 0 1-3.2 3.8M6.6 6.6C3.7 8.4 2 12 2 12s4 6 10 6a9 9 0 0 0 4.5-1.2',
   read2: 'M3 8l9 6 9-6M3 8v11h18V8l-9-5z', rename: 'M4 20h4L19 9l-4-4L4 16zM13 7l4 4',
@@ -1116,12 +1116,37 @@ async function buildMime(d) {
 }
 // 큰 첨부도 되게 업로드 방식으로 보냄 (최대 약 35MB)
 async function uploadMime(kind, mime, meta) {
-  const b = boundary();
-  const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta || {})}\r\n--${b}\r\nContent-Type: message/rfc822\r\n\r\n${mime}\r\n--${b}--`;
+  quota.hold = (quota.hold || 0) + 1;  // 보내는 동안 뒤에서 받는 일 멈춤
+  try {
+    const waits = [0, 6, 15, 30];
+    for (let t = 0; ; t++) {
+      if (waits[t]) { toast(`Gmail 사용량이 잠깐 몰렸어요. ${waits[t]}초 뒤에 다시 보낼게요 (작성 내용은 그대로예요)`); await new Promise(z => setTimeout(z, waits[t] * 1000)); }
+      try { return await uploadOnce(kind, mime, meta, t > 0 && mime.length < 3.5 * 1048576); }
+      catch (e) { if (!e.retry || t >= waits.length - 1) throw e; }
+    }
+  } finally { quota.hold--; }
+}
+async function uploadOnce(kind, mime, meta, viaJson) {
   await takeQuota(100, false);
-  const r = await fetch(`https://gmail.googleapis.com/upload/gmail/v1/users/me/${kind}?uploadType=multipart`, { method: 'POST', headers: { Authorization: 'Bearer ' + real.token, 'Content-Type': `multipart/related; boundary=${b}` }, body });
+  let r;
+  try {
+    if (viaJson) {  // 업로드 주소가 막힐 때: 일반 주소로 (오류 이유도 알 수 있음)
+      const raw = u8b64(new TextEncoder().encode(mime)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const body = kind === 'drafts' ? { message: Object.assign({ raw }, (meta && meta.message) || {}) } : Object.assign({ raw }, meta || {});
+      r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/${kind}`, { method: 'POST', headers: { Authorization: 'Bearer ' + real.token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    } else {
+      const b = boundary();
+      const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta || {})}\r\n--${b}\r\nContent-Type: message/rfc822\r\n\r\n${mime}\r\n--${b}--`;
+      r = await fetch(`https://gmail.googleapis.com/upload/gmail/v1/users/me/${kind}?uploadType=multipart`, { method: 'POST', headers: { Authorization: 'Bearer ' + real.token, 'Content-Type': `multipart/related; boundary=${b}` }, body });
+    }
+  } catch (e) { throw Object.assign(new Error('Gmail에 연결하지 못했어요 (사용량 초과 또는 네트워크)'), { retry: true }); }
   if (r.status === 401) { tokCache.clear(); real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요. 다시 연결한 뒤 보내 주세요 (작성한 내용은 남아 있어요)'); }
-  if (!r.ok) { let msg = 'Gmail ' + r.status; try { msg += ': ' + (await r.json()).error.message; } catch (e) { /* */ } throw new Error(msg); }
+  if (!r.ok) {
+    let msg = 'Gmail ' + r.status; try { msg += ': ' + (await r.json()).error.message; } catch (e) { /* */ }
+    const busy = r.status === 429 || r.status >= 500 || (r.status === 403 && /quota|rate/i.test(msg));
+    if (busy) quota.cool = Date.now() + 30000;
+    throw Object.assign(new Error(busy ? 'Gmail 사용량이 잠깐 넘쳤어요. 1분쯤 뒤에 다시 보내 주세요' : msg), { retry: busy });
+  }
   return r.json();
 }
 const sendTotal = d => d.files.reduce((a, f) => a + (f.size || 0), 0);
@@ -1371,11 +1396,30 @@ document.addEventListener('mousedown', e => {
 document.addEventListener('selectionchange', () => { const s = getSelection(); if (s.rangeCount && $('#cbody') && $('#cbody').contains(s.anchorNode)) { savedRange = s.getRangeAt(0).cloneRange(); syncFmt(); tableBar(); } });
 function restoreSel() { const b = $('#cbody'); b.focus(); if (savedRange && b.contains(savedRange.startContainer)) { const s = getSelection(); s.removeAllRanges(); s.addRange(savedRange); } }
 function setSizePt(pt) {
-  restoreSel(); document.execCommand('styleWithCSS', false, false); document.execCommand('fontSize', false, '7');
+  const run = () => { document.execCommand('styleWithCSS', false, false); document.execCommand('fontSize', false, '7'); };
+  if (!cellsDo(run)) { restoreSel(); run(); }
   $$('font[size="7"]', $('#cbody')).forEach(f => { const sp = document.createElement('span'); sp.style.fontSize = pt + 'pt'; while (f.firstChild) sp.append(f.firstChild); f.replaceWith(sp); });
   dirty();
 }
+// 여러 칸을 골랐으면 칸마다 내용 전체를 골라 fn 실행 → 끝나면 다시 그 칸들 선택 상태로
+function cellsDo(fn) {
+  const cells = TS.multi ? TS.cells.filter(c => c.isConnected) : []; if (!cells.length) return false;
+  const b = $('#cbody'); b.focus(); const s = getSelection();
+  cells.forEach((c, i) => { const r = document.createRange(); r.selectNodeContents(c); s.removeAllRanges(); s.addRange(r); fn(c, i); });
+  const r = document.createRange(); r.selectNodeContents(cells[0]); r.collapse(true); s.removeAllRanges(); s.addRange(r); savedRange = r.cloneRange();
+  tdSel(cells, true); dirty(); tableBar(); return true;
+}
+const TOGGLES = /^(bold|italic|underline|strikeThrough)$/;
+function cellsToggle(cmd) {
+  let want = null;
+  return cellsDo((c, i) => { document.execCommand('styleWithCSS', false, true); if (i === 0) want = !document.queryCommandState(cmd); if (document.queryCommandState(cmd) !== want) document.execCommand(cmd, false, null); });
+}
 function fmtCmd(cmd) {
+  if (TS.multi) {
+    if (TOGGLES.test(cmd) && cellsToggle(cmd)) { syncFmt(); return; }
+    if (/^justify(Left|Center|Right)$/.test(cmd)) { TS.cells.forEach(c => { c.style.textAlign = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right' }[cmd]; }); dirty(); return; }
+    if (cmd === 'removeFormat' && cellsDo(() => document.execCommand('removeFormat'))) return;
+  }
   restoreSel(); const b = $('#cbody');
   if (cmd === 'image') { $('#imgPick').click(); return; }
   if (cmd === 'hr') document.execCommand('insertHTML', false, '<hr style="border:0;border-top:1px solid #bfbfbf;margin:8px 0"><br>');
@@ -1557,7 +1601,7 @@ function tablePicker() {
 }
 function insertTable(r, c) {
   restoreSel();
-  const rows = Array.from({ length: r }, () => '<tr>' + Array.from({ length: c }, () => '<td style="border:1px solid #000000;padding:3px 7px;min-width:60px;height:22px;vertical-align:top">&nbsp;</td>').join('') + '</tr>').join('');
+  const rows = Array.from({ length: r }, () => '<tr>' + Array.from({ length: c }, () => '<td style="border:1px solid #000000;padding:3px 7px;min-width:60px;height:22px;vertical-align:top"><br></td>').join('') + '</tr>').join('');
   const s = getSelection(); if (!s.rangeCount) return;
   const rg = s.getRangeAt(0); rg.deleteContents(); rg.collapse(false);
   const tmp = document.createElement('div'); tmp.innerHTML = `<table style="border-collapse:collapse">${rows}</table><br>`;
@@ -1603,20 +1647,68 @@ function tableBar() {
     bar = document.createElement('div'); bar.id = 'tbar'; bar.className = 'tbar';
     const b = (a, ic, t, extra) => `<button class="ib" data-ta="${a}" title="${t}">${ico(ic, 18)}${extra || ''}</button>`;
     const tb = (a, ic, txt, t, cls) => `<button class="tbt${cls ? ' ' + cls : ''}" data-ta="${a}" title="${t}">${ico(ic, 15)}${txt}</button>`;
-    bar.innerHTML = `<span class="lb">정렬</span>${b('vtop', 'vtop', '칸 안에서 위로')}${b('vmid', 'vmid', '칸 안에서 가운데')}${b('vbot', 'vbot', '칸 안에서 아래로')}<span class="sep"></span>`
+    bar.innerHTML = `<span class="lb">정렬</span>${b('hl', 'alL', '칸 안에서 왼쪽')}${b('hc', 'alC', '칸 안에서 가운데')}${b('hr', 'alR', '칸 안에서 오른쪽')}<span class="vsep"></span>${b('vtop', 'vtop', '칸 안에서 위로')}${b('vmid', 'vmid', '칸 안에서 가운데(세로)')}${b('vbot', 'vbot', '칸 안에서 아래로')}<span class="sep"></span>`
+      + `${tb('merge', 'merge', '합치기', '고른 칸 합치기 (여러 칸을 끌어서 고른 뒤)')}${tb('split', 'split', '나누기', '합친 칸 다시 나누기')}<span class="sep"></span>`
       + `<span class="lb">행</span>${tb('rowA', 'rowA', '위', '선택한 칸 위에 행 넣기')}${tb('rowB', 'rowB', '아래', '선택한 칸 아래에 행 넣기')}${tb('rowX', 'minus', '삭제', '선택한 행 지우기', 'del')}<span class="sep"></span>`
       + `<span class="lb">열</span>${tb('colL', 'colL', '왼쪽', '선택한 칸 왼쪽에 열 넣기')}${tb('colR', 'colR', '오른쪽', '선택한 칸 오른쪽에 열 넣기')}${tb('colX', 'minus', '삭제', '선택한 열 지우기', 'del')}<span class="sep"></span>`
       + `${b('fill', 'fill', '칸 음영(배경색)', '<span class="sw" id="tbFill" style="background:#ffff00"></span>')}${b('bcolor', 'bcolor', '테두리 색', `<span class="sw" id="tbBc" style="background:${TBS.color}"></span>`)}${b('bstyle', 'bstyle', '테두리 모양')}<span class="sep"></span>`
-      + `${b('selall', 'selall', '표 전체 선택')}${b('tblX', 'trash', '표 삭제')}<span class="tinfo" id="tbInfo"></span>`;
+      + `${tb('tstyle', 'tstyle', '스타일', '표 스타일 (머리글·줄무늬 등)')}${b('selall', 'selall', '표 전체 선택')}${b('tblX', 'trash', '표 삭제')}<span class="tinfo" id="tbInfo"></span>`;
     bar.addEventListener('mousedown', e => { e.preventDefault(); const x = e.target.closest('[data-ta]'); if (x) tblAct(x.dataset.ta, x); });
     document.body.append(bar);
   }
   const va = td.style.verticalAlign || 'top';
   $$('[data-ta^=v]', bar).forEach(x => x.classList.toggle('on', x.dataset.ta === { top: 'vtop', middle: 'vmid', bottom: 'vbot' }[va]));
+  const ha = td.style.textAlign || 'left';
+  $$('[data-ta=hl],[data-ta=hc],[data-ta=hr]', bar).forEach(x => x.classList.toggle('on', x.dataset.ta === { left: 'hl', start: 'hl', center: 'hc', right: 'hr', end: 'hr' }[ha]));
+  $('[data-ta=merge]', bar).disabled = !(TS.multi && TS.cells.length > 1);
+  $('[data-ta=split]', bar).disabled = !((td.colSpan || 1) > 1 || (td.rowSpan || 1) > 1);
   $('#tbInfo', bar).textContent = TS.multi ? TS.cells.length + '칸 선택됨' : '';
-  const tr = td.closest('table').getBoundingClientRect();
-  bar.style.left = Math.max(8, Math.min(tr.left, innerWidth - bar.offsetWidth - 8)) + 'px';
-  bar.style.top = (tr.bottom + 6 + 46 > innerHeight ? Math.max(8, tr.top - 46) : tr.bottom + 6) + 'px';
+  const tr = td.closest('table').getBoundingClientRect(), cr = $('#cbody').getBoundingClientRect();
+  bar.style.maxWidth = Math.max(320, cr.width - 8) + 'px';  // 작성 칸보다 넓으면 두 줄로
+  bar.style.left = Math.max(cr.left + 4, Math.min(tr.left, cr.right - bar.offsetWidth - 4)) + 'px';
+  bar.style.top = (tr.bottom + 6 + bar.offsetHeight > innerHeight ? Math.max(8, tr.top - bar.offsetHeight - 6) : tr.bottom + 6) + 'px';
+}
+// 칸 합치기: 고른 사각형의 왼쪽 위 칸에 내용을 모으고 rowspan/colspan
+function mergeCells(cells) {
+  const rows = [...new Set(cells.map(c => c.parentElement))];
+  const first = cells[0], firstRow = rows[0];
+  const cs = cells.filter(c => c.parentElement === firstRow).reduce((a, c) => a + (c.colSpan || 1), 0);
+  const html = cells.map(c => c.innerHTML.replace(/^(\s|&nbsp;)+/i, '').replace(/^(\s|<br>)+$/i, '')).filter(Boolean).join('<br>');
+  cells.slice(1).forEach(c => c.remove());
+  first.colSpan = cs; first.rowSpan = rows.length; first.innerHTML = html || '<br>';
+  rows.slice(1).forEach(r => { if (!r.cells.length) r.remove(); });
+  tdSel([first], false);
+  const r = document.createRange(); r.selectNodeContents(first); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+// 칸 나누기: 합친 칸을 원래 칸 수대로 (빈 칸 채우기)
+function splitCell(td) {
+  const cs = td.colSpan || 1, rs = td.rowSpan || 1; if (cs === 1 && rs === 1) return;
+  const mk = () => { const x = td.cloneNode(false); x.removeAttribute('colspan'); x.removeAttribute('rowspan'); x.classList.remove('tdsel'); if (!x.className) x.removeAttribute('class'); x.innerHTML = '<br>'; return x; };
+  const row = td.parentElement, table = td.closest('table'), ci = td.cellIndex;
+  td.removeAttribute('colspan'); td.removeAttribute('rowspan');
+  for (let k = 1; k < cs; k++) td.after(mk());
+  for (let k = 1; k < rs; k++) { const r = table.rows[row.rowIndex + k]; if (!r) break; const ref = r.cells[ci]; for (let j = 0; j < cs; j++) ref ? ref.before(mk()) : r.append(mk()); }
+}
+// 표 스타일: 표 전체에 한 번에
+const TSTYLES = [
+  ['basic', '기본 (검정 테두리)', '<i style="border:1px solid #000;background:#fff"></i>'],
+  ['gray', '머리글 회색', '<i style="border:1px solid #000;background:linear-gradient(#d9d9d9 40%,#fff 40%)"></i>'],
+  ['navy', '머리글 남색', '<i style="border:1px solid #8ea9c8;background:linear-gradient(#1f3864 40%,#fff 40%)"></i>'],
+  ['stripe', '줄무늬', '<i style="border:1px solid #b4c6e7;background:repeating-linear-gradient(#dde6f4 0 4px,#fff 4px 8px)"></i>'],
+  ['lines', '가로선만 (깔끔하게)', '<i style="border-top:2px solid #000;border-bottom:2px solid #000;background:repeating-linear-gradient(#fff 0 5px,#bfbfbf 5px 6px)"></i>'],
+  ['total', '마지막 행 합계 강조', '<i style="border:1px solid #000;background:linear-gradient(#fff 60%,#fff2cc 60%)"></i>']
+];
+function applyTStyle(t, k) {
+  const rows = [...t.rows], all = rows.flatMap(r => [...r.cells]);
+  const set = (c, o) => Object.assign(c.style, o);
+  if (k === 'total') { const last = rows[rows.length - 1]; if (last) [...last.cells].forEach(c => set(c, { backgroundColor: '#fff2cc', fontWeight: '700', borderTop: '2px solid #000' })); return; }
+  t.style.borderCollapse = 'collapse';
+  all.forEach(c => set(c, { border: '1px solid #000', backgroundColor: '', color: '', fontWeight: '' }));
+  const head = rows[0] ? [...rows[0].cells] : [];
+  if (k === 'gray') head.forEach(c => set(c, { backgroundColor: '#d9d9d9', fontWeight: '700', textAlign: 'center' }));
+  if (k === 'navy') { all.forEach(c => set(c, { border: '1px solid #8ea9c8' })); head.forEach(c => set(c, { backgroundColor: '#1f3864', color: '#ffffff', fontWeight: '700', textAlign: 'center' })); }
+  if (k === 'stripe') { all.forEach(c => set(c, { border: '1px solid #b4c6e7' })); head.forEach(c => set(c, { backgroundColor: '#b4c6e7', fontWeight: '700', textAlign: 'center' })); rows.slice(1).forEach((r, i) => { if (i % 2) [...r.cells].forEach(c => set(c, { backgroundColor: '#eef3fb' })); }); }
+  if (k === 'lines') { all.forEach(c => set(c, { border: 'none', borderBottom: '1px solid #bfbfbf' })); head.forEach(c => set(c, { borderTop: '2px solid #000', borderBottom: '1px solid #000', fontWeight: '700', textAlign: 'center' })); if (rows.length > 1) [...rows[rows.length - 1].cells].forEach(c => set(c, { borderBottom: '2px solid #000' })); }
 }
 // 작은 확인 창 (표 삭제 등)
 function askConfirm(msg, ok) {
@@ -1634,12 +1726,16 @@ const setBorder = (cells, o) => { cells.forEach(c => { c.style.border = o.style 
 async function tblAct(a, btn) {
   const cells = selCells(); const td = cells[0]; if (!td) return;
   const tr = td.parentElement, table = td.closest('table'), ci = td.cellIndex;
-  const newTd = ref => { const x = (ref || td).cloneNode(false); x.classList.remove('tdsel'); if (!x.className) x.removeAttribute('class'); x.removeAttribute('rowspan'); x.removeAttribute('colspan'); x.innerHTML = '&nbsp;'; return x; };
+  const newTd = ref => { const x = (ref || td).cloneNode(false); x.classList.remove('tdsel'); if (!x.className) x.removeAttribute('class'); x.removeAttribute('rowspan'); x.removeAttribute('colspan'); x.innerHTML = '<br>'; return x; };
   if (a[0] === 'v' && a.length === 4) cells.forEach(c => { c.style.verticalAlign = { vtop: 'top', vmid: 'middle', vbot: 'bottom' }[a]; });
   if (a === 'rowA' || a === 'rowB') { const nr = document.createElement('tr'); [...tr.cells].forEach(c => nr.append(newTd(c))); a === 'rowA' ? tr.before(nr) : tr.after(nr); }
   if (a === 'colL' || a === 'colR') [...table.rows].forEach(r => { const ref = r.cells[Math.min(ci, r.cells.length - 1)]; if (ref) a === 'colL' && ci < r.cells.length ? ref.before(newTd(ref)) : ref.after(newTd(ref)); });
   if (a === 'rowX') { const rows = [...new Set(cells.map(c => c.parentElement))]; if (rows.length >= table.rows.length) { if (await askConfirm('표의 모든 행이 지워져요. 표를 삭제할까요?', '표 삭제')) table.remove(); else return; } else rows.forEach(r => r.remove()); tdSel([]); }
   if (a === 'colX') { const cols = [...new Set(cells.map(c => c.cellIndex))].sort((x, y) => y - x); const maxC = Math.max(...[...table.rows].map(r => r.cells.length)); if (cols.length >= maxC) { if (await askConfirm('표의 모든 열이 지워져요. 표를 삭제할까요?', '표 삭제')) table.remove(); else return; } else [...table.rows].forEach(r => cols.forEach(k => r.cells[k] && r.cells[k].remove())); tdSel([]); }
+  if (a === 'hl' || a === 'hc' || a === 'hr') cells.forEach(c => { c.style.textAlign = { hl: 'left', hc: 'center', hr: 'right' }[a]; });
+  if (a === 'merge') { if (!(TS.multi && cells.length > 1)) return; mergeCells(cells); }
+  if (a === 'split') splitCell(td);
+  if (a === 'tstyle') { menuAt(btn, TSTYLES.map(([k, l, sw]) => ({ html: `<span class="tsw">${sw}</span>${l}`, act: () => { applyTStyle(table, k); dirty(); tableBar(); } }))); return; }
   if (a === 'selall') { tdSel($$('td,th', table).filter(c => c.closest('table') === table), true); }
   if (a === 'fill') { paletteMenu(btn, PALETTE, null, c => { cells.forEach(x => { x.style.backgroundColor = c || ''; }); if (c) $('#tbFill').style.background = c; dirty(); }, '음영 없음'); return; }
   if (a === 'bcolor') { paletteMenu(btn, PALETTE, TBS.color, c => { TBS.color = c || '#000000'; $('#tbBc').style.background = TBS.color; if (TBS.style === 'none') { TBS.style = 'solid'; TBS.w = '1px'; } setBorder(cells, TBS); }, '기본 (검정)'); return; }
@@ -1668,8 +1764,9 @@ document.addEventListener('mouseover', e => {
 document.addEventListener('mouseup', () => { TS.drag = null; });
 document.addEventListener('keydown', e => {
   if (!TS.multi || !$('#cbody') || document.activeElement !== $('#cbody')) return;
-  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); TS.cells.forEach(c => { c.innerHTML = '&nbsp;'; }); dirty(); return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); TS.cells.forEach(c => { c.innerHTML = '<br>'; }); dirty(); return; }
   if (e.key === 'Escape') { tdSel([]); tableBar(); return; }
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && /^[biu]$/i.test(e.key)) { e.preventDefault(); e.stopPropagation(); cellsToggle({ b: 'bold', i: 'italic', u: 'underline' }[e.key.toLowerCase()]); syncFmt(); return; }
   if (!e.ctrlKey && !e.metaKey && e.key.length === 1 || e.key === 'Enter') { tdSel([TS.cells[0]]); }
 }, true);
 // 표 오른쪽 아래 끝 근처에 마우스를 대면 점이 나오고, 끌면 표 크기 조절
@@ -1899,9 +1996,9 @@ const unitsOf = (path, method) => /batchModify/.test(path) ? 50 : /^settings\/fi
 async function takeQuota(units, bg) {
   if (!bg) quota.fg = (quota.fg || 0) + 1;
   try { for (;;) {
-    if (bg && quota.fg > 0) { await new Promise(z => setTimeout(z, 150)); continue; }
+    if (bg && (quota.fg > 0 || quota.hold || Date.now() < (quota.cool || 0))) { await new Promise(z => setTimeout(z, 300)); continue; }
     const now = Date.now(); quota.win = quota.win.filter(x => now - x[0] < 1000);
-    const used = quota.win.reduce((a, x) => a + x[1], 0), cap = bg ? 70 : 220;
+    const used = quota.win.reduce((a, x) => a + x[1], 0), cap = bg ? 40 : 220;
     if (used + units <= cap) { quota.win.push([now, units]); return; }
     await new Promise(z => setTimeout(z, 120));
   } } finally { if (!bg) setTimeout(() => { quota.fg--; }, 600); }
@@ -1911,11 +2008,13 @@ async function gapi(path, opt, tries) {
   await takeQuota(unitsOf(path, opt.method), opt.bg);
   const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/' + path, { method: opt.method || 'GET', headers: Object.assign({ Authorization: 'Bearer ' + real.token }, opt.body ? { 'Content-Type': 'application/json' } : {}), body: opt.body ? JSON.stringify(opt.body) : undefined });
   if (r.status === 401) { tokCache.clear(); real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요. 위쪽 초록 표시를 눌러 다시 연결해 주세요'); }
+  if (r.status === 429) quota.cool = Date.now() + 30000;
   if ((r.status === 429 || r.status >= 500) && tries < 4) { await new Promise(z => setTimeout(z, 800 * 2 ** tries + Math.random() * 400)); return gapi(path, opt, tries + 1); }
   if (!r.ok) {
     let msg = 'Gmail ' + r.status, reason = '';
     try { const j = (await r.json()).error; msg += ': ' + j.message; reason = ((j.errors || [])[0] || {}).reason || j.status || ''; } catch (e) { /* */ }
     // 403 사용량 초과 → 잠깐 쉬었다 다시 (최대 약 1분)
+    if (r.status === 403 && /quota|rate ?limit|RESOURCE_EXHAUSTED/i.test(msg + reason)) quota.cool = Date.now() + 30000;
     if (r.status === 403 && /quota|rate ?limit|RESOURCE_EXHAUSTED/i.test(msg + reason) && tries < 6) { real.prog = real.prog || ''; await new Promise(z => setTimeout(z, 4000 * (tries + 1))); return gapi(path, opt, tries + 1); }
     const err = new Error(msg); err.status = r.status; err.reason = reason; throw err;
   }
@@ -2102,7 +2201,7 @@ async function loadReal(interactive, token) {
           const g = todo[i++];
           try { const raw = await gapi(`messages/${g}?format=full&fields=${encodeURIComponent(META_FIELDS + (withLabels ? ',labelIds' : ''))}`, { bg: true }); const x = parseMsg(raw, false); if (withLabels) { x.lb = raw.labelIds || []; labFrom(x); } metas.set(g, x); buf.push(x); } catch (e) { if (/로그인이 만료/.test(e.message)) throw e; /* 한 통 실패는 건너뜀 */ }
           done++;
-          if (done % 50 === 0) { cachePut(db, buf); buf = []; prog(`${label} ${done}/${todo.length}`); if (Date.now() - (real.lastShow || 0) > 3000) { real.lastShow = Date.now(); show(); } }
+          if (done % 50 === 0) { cachePut(db, buf); buf = []; prog(/옛날/.test(label) ? `옛날 메일 저장 중 · ${metas.size.toLocaleString()}통` : `${label} ${done}/${todo.length}`); if (Date.now() - (real.lastShow || 0) > 3000) { real.lastShow = Date.now(); show(); } }
         }
       }));
       cachePut(db, buf);
@@ -2126,8 +2225,6 @@ async function loadReal(interactive, token) {
     prog('');
     toast(`${prof.emailAddress} · 최근 3개월 메일 ${total}통 준비 완료${fresh ? ` (새로 받은 ${fresh}통)` : ''}`);
     prefetchBodies();
-    // 3단계: 켜 둔 동안 메모리에 여유가 있으면 3개월 이전 메일도 조금씩 받아 이 PC에 저장
-    loadOlder(fetchMetas, show, metas, gen).catch(() => {});
     // 3단계: 3개월보다 옛날 메일 — 메모리 여유가 있을 때 조금씩 끌어와 이 PC에 저장
     const userIds = new Set(user.map(l => l.id));
     const addLab = x => { if (!x.labels) return; const L = x.labels; if (L.includes('INBOX')) lab.inbox.add(x.gid); if (L.includes('SENT')) lab.sent.add(x.gid); if (L.includes('UNREAD')) lab.unread.add(x.gid); if (!lab.box.has(x.gid)) { const b = L.find(id => userIds.has(id)); if (b) lab.box.set(x.gid, b); } };
@@ -2162,6 +2259,7 @@ function memRoomy() {
 async function loadOlder(step) {
   if (real.oldering) return; real.oldering = true;
   const doneKey = 'older-done-' + ME.email;
+  if (navigator.locks && !loadOlder.locked) { real.oldering = false; return navigator.locks.request('jin-bg-older-' + ME.email, () => { loadOlder.locked = true; return loadOlder(step); }); }
   try {
     while (!store.get(doneKey, false)) {
       await new Promise(z => setTimeout(z, 15000));
@@ -2172,37 +2270,10 @@ async function loadOlder(step) {
     }
   } finally { real.oldering = false; }
 }
-// 브라우저 메모리 여유 확인 (크롬: performance.memory). 모르면 여유 있다고 봄
-function memRoomy() {
-  try { const pm = performance.memory; if (pm && pm.jsHeapSizeLimit && pm.usedJSHeapSize / pm.jsHeapSizeLimit > 0.55) return false; } catch (e) { /* */ }
-  if (navigator.deviceMemory && navigator.deviceMemory < 4) return false;
-  return MAILS.length < 60000;
-}
-async function loadOlder(fetchMetas, show, metas, gen) {
-  if (real.older === gen) return; real.older = gen;
-  const k = 'older-done-' + ME.email;
-  try {
-    if (store.get(k, false)) return;
-    let tok = '', n = 0;
-    do {
-      // 메일을 보고 있는 동안 화면이 느려지지 않게 잠깐씩 쉬어 가며
-      await new Promise(z => setTimeout(z, 4000));
-      while (!memRoomy() || real.loading) { await new Promise(z => setTimeout(z, 60000)); if (real.gen !== gen) return; }
-      if (real.gen !== gen) return;  // 다시 연결해서 새로 불러오기 시작했으면 이전 작업은 멈춤
-      const r = await gapi(`messages?maxResults=200&q=${encodeURIComponent(`older_than:${DAYS}d`)}${tok ? '&pageToken=' + tok : ''}`, { bg: true });
-      const ids = (r.messages || []).map(x => x.id).filter(g => !metas.has(g));
-      tok = r.nextPageToken || '';
-      if (ids.length) { n += await fetchMetas(ids, '지난 메일 저장 중', true); real.prog = ''; show(); }
-      real.prog = tok ? `지난 메일 저장 중 · ${MAILS.length.toLocaleString()}통` : ''; renderTop();
-    } while (tok);
-    store.set(k, true);
-    real.prog = ''; renderTop();
-    if (n) toast(`지난 메일 ${n.toLocaleString()}통까지 이 PC에 저장했어요`);
-    prefetchBodies();
-  } finally { if (real.older === gen) real.older = 0; }
-}
 async function prefetchBodies() {
-  if (real.prefetching || !real.db) return; real.prefetching = true;
+  if (real.prefetching || !real.db) return;
+  if (navigator.locks && !prefetchBodies.locked) { real.prefetching = true; return navigator.locks.request('jin-bg-body-' + ME.email, () => { prefetchBodies.locked = true; real.prefetching = false; return prefetchBodies(); }).finally(() => { prefetchBodies.locked = false; }); }
+  real.prefetching = true;
   try {
     const todo = MAILS.filter(m => m.real && !real.texts.has(m.gid)).sort((a, b) => b.when - a.when).map(m => m.gid);
     let i = 0, done = 0;
@@ -2549,10 +2620,10 @@ function wire() {
   $('#fmt').addEventListener('mousedown', e => {
     const b = e.target.closest('[data-cmd]'); if (b) { e.preventDefault(); fmtCmd(b.dataset.cmd); return; }
     if (e.target.closest('#fTable')) { e.preventDefault(); tablePicker(); return; }
-    if (e.target.closest('#fColor')) { e.preventDefault(); paletteMenu($('#fColor'), PALETTE, null, c => { restoreSel(); document.execCommand('styleWithCSS', false, true); document.execCommand('foreColor', false, c || '#000000'); $('#fColor .sw').style.background = c || '#000'; dirty(); }, '자동 (검정)'); return; }
-    if (e.target.closest('#fHi')) { e.preventDefault(); paletteMenu($('#fHi'), PALETTE, null, c => { restoreSel(); document.execCommand('styleWithCSS', false, true); document.execCommand('hiliteColor', false, c || 'transparent'); $('#fHi .sw').style.background = c || 'transparent'; dirty(); }, '색 없음'); }
+    if (e.target.closest('#fColor')) { e.preventDefault(); paletteMenu($('#fColor'), PALETTE, null, c => { const run = () => { document.execCommand('styleWithCSS', false, true); document.execCommand('foreColor', false, c || '#000000'); }; if (!cellsDo(run)) { restoreSel(); run(); } $('#fColor .sw').style.background = c || '#000'; dirty(); }, '자동 (검정)'); return; }
+    if (e.target.closest('#fHi')) { e.preventDefault(); paletteMenu($('#fHi'), PALETTE, null, c => { const run = () => { document.execCommand('styleWithCSS', false, true); document.execCommand('hiliteColor', false, c || 'transparent'); }; if (!cellsDo(run)) { restoreSel(); run(); } $('#fHi .sw').style.background = c || 'transparent'; dirty(); }, '색 없음'); }
   });
-  $('#fFont').addEventListener('change', e => { restoreSel(); document.execCommand('styleWithCSS', false, true); document.execCommand('fontName', false, e.target.value); dirty(); });
+  $('#fFont').addEventListener('change', e => { const run = () => { document.execCommand('styleWithCSS', false, true); document.execCommand('fontName', false, e.target.value); }; if (!cellsDo(run)) { restoreSel(); run(); } dirty(); });
   $('#fSize').addEventListener('change', e => setSizePt(+e.target.value));
   $('#foot').addEventListener('mousedown', e => { const c = e.target.closest('[data-fid]'); if (c) { e.preventDefault(); applyFooter(c.dataset.fid); } if (e.target.closest('[data-set]')) { e.preventDefault(); openSettings('footers'); } });
   const body = $('#cbody');
