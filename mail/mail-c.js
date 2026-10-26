@@ -174,7 +174,7 @@ function renderNav() {
   const sysItem = (k, depth) => { const v = SYS[k]; const n = k === 'draft' ? (MAILS.filter(m => m.draft).length || '') : unread(v.f);
     return `<div class="ni${k !== 'tome' ? ' ni-top' : ''}${st.folder === k ? ' on' : ''}${n && k !== 'draft' ? ' unread' : ''}" data-f="${k}" data-sys="${k}" style="padding-left:${14 + depth * 22}px"><span class="ic">${ico(v.ic)}</span><span class="nm">${v.name}</span><span class="n">${n}</span></div>`; };
   // 받은편지함 └ 나에게 온 메일 연결선
-  let h = sysItem('inbox', 0) + sysItem('tome', 1).replace('<span class="ic">', '<i class="g e" style="left:22px"></i><span class="ic">') + '<div class="nsep"></div>' + sysItem('sent', 0) + sysItem('draft', 0) + sysItem('all', 0).replace(/<span class="n">\d*<\/span>/, '<span class="n"></span>');
+  let h = sysItem('inbox', 0) + sysItem('tome', 1).replace('<span class="ic">', '<i class="g e" style="left:22px"></i><span class="ic">') + sysItem('sent', 0) + sysItem('draft', 0) + sysItem('all', 0).replace(/<span class="n">\d*<\/span>/, '<span class="n"></span>');
   h += `<div class="nh">편지함<button class="ib" id="addBox" title="편지함 만들기" style="width:26px;height:26px">${ico('plus', 15)}</button></div>`;
   const nHidden = BOXES.filter(b => b.hidden).length;
   const shown = p => childrenOf(p).filter(b => !b.hidden || SET.showHidden);
@@ -661,7 +661,7 @@ function renderRead(force) {
         </div>
       </div>
     </div>
-    ${attsOf(m).length ? `<div class="attbar"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b>${attsOf(m).map(([[t, n, s], i]) => `<span class="att" data-ai="${i}" title="${esc(n)} · 누르면 새 창에서 미리보기">${ftIcon(t, 17, n)}${esc(n)} <small>${s}</small></span>`).join('')}</div>` : ''}
+    ${attsOf(m).length ? `<div class="attbar"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b>${attsOf(m).map(([[t, n, s], i]) => `<span class="att" data-ai="${i}" title="${esc(n)} · 누르면 다운로드">${ftIcon(t, 17, n)}${esc(n)} <small>${s}</small></span>`).join('')}</div>` : ''}
     ${m.deleted ? `<div class="dbanner delb"><span>${ico('trash', 16)} 삭제한 메일이에요</span><button data-act="restore">되살리기</button></div>` : ''}
     ${m.draft ? `<div class="dbanner"><span>${ico('pen', 16)} 이 대화에 작성 중이던 답장이 있어요</span><button data-act="draft">이어서 쓰기</button><button class="ib" data-act="deldraft" title="작성 중이던 메일 삭제">${ico('trash', 17)}</button></div>` : ''}
     <div class="rbody">${m.real && !m.full ? '<div class="blank" style="padding:40px 0">본문 불러오는 중…</div>' : m.html ? '<iframe class="mailhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>' : `<div class="txt">${esc(m.body)}</div>${prevHtml(m.prev, 0)}`}</div>`;
@@ -1399,13 +1399,10 @@ function openSettings(tab) {
       <h5>맞춤법 표시</h5><label class="opt"><input type="checkbox" id="setTypo"${SET.typo ? ' checked' : ''}> 자주 틀리는 한글 표현에 밑줄 표시</label>
       <p class="desc">무시한 단어 ${IGNORE.size}개 ${IGNORE.size ? '<button class="btn" id="clrIgn" style="padding:2px 8px;margin-left:6px">무시 목록 비우기</button>' : ''}</p>
       <h5>이 PC에 저장한 메일</h5><p class="desc">불러온 메일 목록과 본문을 이 PC(브라우저 저장소)에 저장해 두고, 다음부터 바로 열고 본문 전체에서 검색해요. Google 외 다른 곳으로는 보내지 않아요.</p>
-      <div class="opt"><span id="cacheInfo" style="color:var(--sub)">확인 중…</span><button class="btn" id="clrCache" style="padding:3px 10px">저장한 메일 비우기</button></div>
-      <h5>메일 저장 폴더 (내 컴퓨터)</h5><p class="desc">첨부파일 저장과 메일 백업에 쓸 폴더예요. 브라우저 보안상 한 번 골라 주시면 그 폴더만 쓸 수 있어요.</p>
-      <div class="opt"><button class="btn" id="pickDir">${ico('folder', 16)} 폴더 고르기</button><span id="dirName" style="color:var(--sub)">불러오는 중…</span></div>`;
+      <div class="opt"><span id="cacheInfo" style="color:var(--sub)">확인 중…</span><button class="btn" id="clrCache" style="padding:3px 10px">저장한 메일 비우기</button></div>`;
       (async () => { const el = $('#cacheInfo', body); if (!el) return; let n = real.texts ? real.texts.size : 0, sz = '';
         try { const e = await navigator.storage.estimate(); sz = ` · 사용 ${fmtSize(e.usage || 0)}`; } catch (er) { /* */ }
         el.textContent = real.on ? `본문 저장 ${n}통 / 전체 ${MAILS.length}통${sz}` : `예시 메일 사용 중${sz}`; })();
-      idb('get').then(h => { const el = $('#dirName', body); if (el) el.textContent = h && h.name ? '현재: ' + h.name : '아직 고르지 않았어요'; });
     }
     if (t === 'footers') {
       body.innerHTML = '<p class="desc">작성 화면의 풋터 버튼으로 바로 넣을 수 있고, 아래 조건에 맞으면 작성 화면을 열 때 자동으로 들어가요. 여러 개가 맞으면 <b>위에 있는 풋터가 먼저</b> 적용돼요. 왼쪽 ⠿를 끌거나 ↑↓로 순서를 바꿀 수 있어요.</p>' + FOOTERS.map((f, fi) => `
@@ -1841,32 +1838,16 @@ async function resolveInline(m) {
   return h;
 }
 
-async function openRealAtt(m, a) {
-  const meta = a[3];
-  if (!/^(PDF|IMG)$/.test(a[0])) { downloadAtt(m, a); return; }
-  const w = window.open('', '_blank', 'popup,width=1100,height=820'); if (w) w.document.title = a[1];
-  try {
-    const data = meta.data || (await gapi(`messages/${m.gid || meta.msg}/attachments/${meta.id}`)).data;
-    const url = URL.createObjectURL(new Blob([b64bytes(data)], { type: meta.mime }));
-    if (w) w.location.href = url;
-  } catch (e) { if (w) w.close(); toast('첨부를 열지 못했어요'); }
-}
+// 첨부 누르기 = 크롬 일반 다운로드 (다운로드 폴더에 저장, 크롬 우상단 다운로드 아이콘에 표시)
+function openRealAtt(m, a) { downloadAtt(m, a); }
 async function attBlob(m, a) { const meta = a[3]; const data = meta.data || (await gapi(`messages/${m.gid || meta.msg}/attachments/${meta.id}`)).data; return new Blob([b64bytes(data)], { type: meta.mime || 'application/octet-stream' }); }
 async function downloadAtt(m, a) {
-  toast(`'${a[1]}' 내려받는 중…`);
+  toast(`'${a[1]}' 받는 중…`);
   try {
     const blob = await attBlob(m, a);
-    // 설정에서 정한 저장 폴더가 있고 쓰기 허락이 남아 있으면 그 폴더에 저장
-    const dir = await idb('get');
-    if (dir && dir.queryPermission && (await dir.queryPermission({ mode: 'readwrite' })) === 'granted') {
-      let name = a[1], k = 1; const dot = name.lastIndexOf('.');
-      while (true) { try { await dir.getFileHandle(name); name = dot > 0 ? `${a[1].slice(0, dot)} (${k})${a[1].slice(dot)}` : `${a[1]} (${k})`; k++; } catch (e) { break; } }
-      const fh = await dir.getFileHandle(name, { create: true }); const w = await fh.createWritable(); await w.write(blob); await w.close();
-      toast(`'${dir.name}' 폴더에 '${name}'(으)로 저장했어요`); return;
-    }
     const url = URL.createObjectURL(blob), ln = document.createElement('a'); ln.href = url; ln.download = a[1]; document.body.append(ln); ln.click(); ln.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-    toast(`'${a[1]}' 내려받았어요`);
+    toast(`'${a[1]}' 다운로드 폴더에 받았어요`);
   } catch (e) { toast('내려받지 못했어요: ' + e.message); }
 }
 // 로딩·다시 로그인 화면 (예시 메일이 잠깐 보였다 바뀌는 것 방지)
