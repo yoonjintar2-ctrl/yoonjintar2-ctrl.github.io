@@ -117,7 +117,7 @@ const SAMPLE_MAILS = MAILS.slice();
 /* ───────── 상태 ───────── */
 let BOXES = store.get('boxes', DEFAULT_BOXES);
 let FOOTERS = store.get('footers2', DEFAULT_FOOTERS);
-let SET = Object.assign({ composeMode: 'inline', typo: true, showHidden: false }, store.get('settings', {}));
+let SET = Object.assign({ composeMode: 'inline', typo: true, showHidden: false, font: { family: '맑은 고딕', size: 10 } }, store.get('settings', {}));
 let IGNORE = new Set(store.get('typo-ignore', []));
 const st = {
   folder: 'inbox', q: '', open: null, picked: new Set(), anchor: null, collapsed: new Set(store.get('collapsed', [])),
@@ -814,16 +814,23 @@ function buildDraft(kind, m) {
   return { kind, mailId: m && kind !== 'new' ? m.id : null, to, cc, subj, html: composeHtml(text, f, quote), footer: f ? f.id : null, files };
 }
 function loadDraft(d) {
-  cs.kind = d.kind; cs.mailId = d.mailId; cs.footer = d.footer; cs.files = (d.files || []).slice(); cs.sched = null;
+  cs.kind = d.kind; cs.mailId = d.mailId; cs.footer = d.footer; cs.files = (d.files || []).slice();
   setChips($('#toBox'), d.to); setChips($('#ccBox'), d.cc);
   $('#subj').value = d.subj;
   $('#cbody').innerHTML = d.html;
-  renderFooterBar(); renderFiles(); setSave(''); $('#schedState').textContent = ''; $('#send').textContent = '보내기';
+  renderFooterBar(); renderFiles(); setSave('');
   $('#read').classList.add('composing');
+  applyBaseFont();
   const mk = $('#gpCaret');
   cs.initial = null; setTimeout(() => { cs.initial = composeSig(); });
   if (d.kind === 'new' || d.kind === 'fwd' || !d.to.length) { if (mk) mk.remove(); $('#toBox input').focus(); } else caretAt(mk);
   runTypo();
+}
+// 작성 칸 기본 글꼴 (설정 > 일반)
+function applyBaseFont() {
+  const F = SET.font || { family: '맑은 고딕', size: 10 }, b = $('#cbody');
+  b.style.fontFamily = `'${F.family}', sans-serif`; b.style.fontSize = F.size + 'pt';
+  if ($('#fFont')) $('#fFont').value = F.family; if ($('#fSize')) $('#fSize').value = String(F.size);
 }
 function caretAt(mk) {
   const b = $('#cbody'); b.focus();
@@ -878,7 +885,7 @@ function applyFooter(id) {
 /* 첨부: 첨부 칸을 눌러 고르거나, 작성 화면 어디에든 끌어다 놓기 */
 const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
 function addFiles(list) {
-  [...list].forEach(f => cs.files.push({ name: f.name, size: f.size }));
+  [...list].forEach(f => cs.files.push({ name: f.name, size: f.size, file: f }));
   renderFiles(); dirty();
   if (list.length) toast(`${list.length}개 파일을 첨부했어요`);
 }
@@ -906,19 +913,6 @@ function renderFiles() {
     box.insertBefore(el, $('#attHint'));
   });
 }
-/* 예약 전송 */
-function schedMenu() {
-  const at = (days, h) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(h, 0, 0, 0); return d; };
-  const nextMon = () => { const d = new Date(); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); d.setHours(8, 0, 0, 0); return d; };
-  const set = d => { cs.sched = d; $('#schedState').innerHTML = `${ico('clock', 14)} ${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} 예약`; $('#send').textContent = '예약 보내기'; };
-  const items = [{ head: '예약 전송' }, { html: ico('clock', 16) + ' 내일 오전 8:00', act: () => set(at(1, 8)) }, { html: ico('clock', 16) + ' 내일 오후 1:00', act: () => set(at(1, 13)) }, { html: ico('clock', 16) + ' 다음 주 월요일 오전 8:00', act: () => set(nextMon()) }, '-'];
-  const node = document.createElement('div');
-  node.innerHTML = `<div class="mh">날짜·시간 직접 고르기</div><div class="mrow"><input type="datetime-local" style="flex:1;border:1px solid #c4cbd6;border-radius:6px;padding:4px 6px"><button class="btn pri" style="padding:4px 10px">설정</button></div>`;
-  $('button', node).addEventListener('click', () => { const v = $('input', node).value; if (v) { set(new Date(v)); closeMenus(); } });
-  items.push({ node });
-  if (cs.sched) items.push('-', { html: ico('close', 16) + ' 예약 취소', act: () => { cs.sched = null; $('#schedState').textContent = ''; $('#send').textContent = '보내기'; } });
-  menuAt($('#sendMenu'), items, true);
-}
 /* 새 창 */
 const popFeatures = 'popup,width=1000,height=880';
 function popCompose(d) { store.set('pop-draft', d); window.open(location.pathname + '#compose', '_blank', popFeatures); }
@@ -926,6 +920,107 @@ function popView(id) {
   const m = MAILS.find(x => x.id === id);
   if (m && m.real) { try { store.set('pop-view', Object.assign({}, m, { htmlReady: m.htmlReady && m.htmlReady.length < 3e6 ? m.htmlReady : null })); } catch (e) { /* */ } window.open(location.pathname + '#view=real', '_blank', popFeatures); return; }
   window.open(location.pathname + '#view=' + id, '_blank', popFeatures);
+}
+
+/* ───────── 메일 보내기 (Gmail로 실제 발송) ───────── */
+// 글자 → base64 (한글 포함)
+const u8b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const strB64 = t => u8b64(new TextEncoder().encode(t));
+const wrap76 = b => b.replace(/.{1,76}/g, '$&\r\n');
+const encHdr = t => /^[\x20-\x7e]*$/.test(t) ? t : '=?UTF-8?B?' + strB64(t) + '?=';
+const addrHdr = list => list.map(p => p.name && p.name !== p.email ? `${encHdr(p.name)} <${p.email}>` : p.email).join(', ');
+const blobB64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.onerror = rej; r.readAsDataURL(blob); });
+const fileHdrName = n => `filename="${encHdr(n)}"; filename*=UTF-8''${encodeURIComponent(n)}`;
+const boundary = () => '----jin' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+// 작성 칸 내용 → 보낼 HTML (편집용 표시 지우고, 기본 글꼴로 감싸고, 붙여넣은 그림은 cid 그림으로)
+function outgoingHtml() {
+  const d = document.createElement('div'); d.innerHTML = $('#cbody').innerHTML;
+  $$('.gp-pm, #gpCaret', d).forEach(x => x.remove());
+  $$('[contenteditable]', d).forEach(x => x.removeAttribute('contenteditable'));
+  const inl = [];
+  $$('img[src^="data:"]', d).forEach((img, i) => {
+    const m = /^data:([^;,]+);base64,(.*)$/.exec(img.getAttribute('src')); if (!m) return;
+    const cid = `img${i}.${Date.now().toString(36)}@jin-mail`; inl.push({ cid, mime: m[1], b64: m[2] });
+    img.setAttribute('src', 'cid:' + cid);
+  });
+  // 인용(원본 메일) 칸 모양을 받는 쪽에서도 보이게
+  $$('.quote', d).forEach(q => { q.setAttribute('style', 'margin-top:20px;padding-left:12px;border-left:2px solid #c4c9d2;color:#5f6368;white-space:pre-wrap'); q.removeAttribute('class'); });
+  $$('.qb .qb', d).forEach(q => q.setAttribute('style', 'margin-top:16px;padding-left:12px;border-left:2px solid #d5d9e0'));
+  const F = SET.font || { family: '맑은 고딕', size: 10 };
+  const html = `<div style="font-family:'${F.family}',sans-serif;font-size:${F.size}pt">${d.innerHTML}</div>`;
+  return { html, text: $('#cbody').innerText, inl };
+}
+async function buildMime(d) {
+  const { html, text, inl } = outgoingHtml();
+  const alt = boundary(), rel = boundary(), mix = boundary();
+  const hdr = [`From: ${addrHdr([ME])}`, `To: ${addrHdr(d.to)}`];
+  if (d.cc.length) hdr.push(`Cc: ${addrHdr(d.cc)}`);
+  hdr.push(`Subject: ${encHdr(d.subj)}`, 'MIME-Version: 1.0', `Date: ${new Date().toUTCString().replace('GMT', '+0000')}`);
+  if (d.inReplyTo) { hdr.push(`In-Reply-To: ${d.inReplyTo}`, `References: ${[d.refs, d.inReplyTo].filter(Boolean).join(' ')}`); }
+  const altPart = [`Content-Type: multipart/alternative; boundary="${alt}"`, '', `--${alt}`, 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', wrap76(strB64(text)), `--${alt}`, 'Content-Type: text/html; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', wrap76(strB64(html)), `--${alt}--`, ''].join('\r\n');
+  let bodyPart = altPart;
+  if (inl.length) bodyPart = [`Content-Type: multipart/related; boundary="${rel}"`, '', `--${rel}`, altPart, ...inl.flatMap(x => [`--${rel}`, `Content-Type: ${x.mime}`, 'Content-Transfer-Encoding: base64', `Content-ID: <${x.cid}>`, 'Content-Disposition: inline', '', wrap76(x.b64)]), `--${rel}--`, ''].join('\r\n');
+  if (!d.files.length) return hdr.join('\r\n') + '\r\n' + bodyPart;
+  const parts = [];
+  for (const f of d.files) {
+    let blob = f.file || null;
+    if (!blob && f.fwd && f.fwd.id) { const r = await gapi(`messages/${f.fwd.gid}/attachments/${f.fwd.id}`); blob = new Blob([b64bytes(r.data)], { type: f.fwd.mime || 'application/octet-stream' }); }
+    if (!blob) throw new Error(`'${f.name}' 파일 내용을 찾을 수 없어요. 다시 첨부해 주세요`);
+    parts.push([`--${mix}`, `Content-Type: ${blob.type || 'application/octet-stream'}; name="${encHdr(f.name)}"`, 'Content-Transfer-Encoding: base64', `Content-Disposition: attachment; ${fileHdrName(f.name)}`, '', wrap76(await blobB64(blob))].join('\r\n'));
+  }
+  return hdr.join('\r\n') + '\r\n' + [`Content-Type: multipart/mixed; boundary="${mix}"`, '', `--${mix}`, bodyPart, ...parts, `--${mix}--`, ''].join('\r\n');
+}
+// 큰 첨부도 되게 업로드 방식으로 보냄 (최대 약 35MB)
+async function uploadMime(kind, mime, meta) {
+  const b = boundary();
+  const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta || {})}\r\n--${b}\r\nContent-Type: message/rfc822\r\n\r\n${mime}\r\n--${b}--`;
+  await takeQuota(100, false);
+  const r = await fetch(`https://gmail.googleapis.com/upload/gmail/v1/users/me/${kind}?uploadType=multipart`, { method: 'POST', headers: { Authorization: 'Bearer ' + real.token, 'Content-Type': `multipart/related; boundary=${b}` }, body });
+  if (r.status === 401) { tokCache.clear(); real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요. 다시 연결한 뒤 보내 주세요 (작성한 내용은 남아 있어요)'); }
+  if (!r.ok) { let msg = 'Gmail ' + r.status; try { msg += ': ' + (await r.json()).error.message; } catch (e) { /* */ } throw new Error(msg); }
+  return r.json();
+}
+const sendTotal = d => d.files.reduce((a, f) => a + (f.size || 0), 0);
+function composeDraftForSend() {
+  const d = draftNow(); d.files = cs.files.slice();
+  const m = MAILS.find(x => x.id === cs.mailId);
+  if (m && m.real && (cs.kind === 'reply' || cs.kind === 'all' || cs.kind === 'draft')) { d.threadId = m.threadId; d.inReplyTo = m.msgId; d.refs = m.refs; }
+  return d;
+}
+async function sendMail() {
+  const d = composeDraftForSend();
+  if (!d.to.length && !d.cc.length) { toast('받는사람을 넣어 주세요'); $('#toBox input').focus(); return; }
+  const pend = $('#toBox input').value.trim() || $('#ccBox input').value.trim();
+  if (pend) { toast(`'${pend}'이(가) 아직 받는사람 칸에 글자로 남아 있어요. Enter로 넣거나 지워 주세요`); return; }
+  if (!d.subj.trim() && !confirm('제목 없이 보낼까요?')) return;
+  if (sendTotal(d) > 33 * 1048576) { toast('첨부가 너무 커요 (최대 약 33MB). 큰 파일은 드라이브 링크로 보내 주세요'); return; }
+  if (!real.on) {  // 예시 메일 화면
+    clearTimeout(cs.timer); cs.saving = false;
+    toast('예시 화면이라 실제로 보내지는 않아요');
+    const m = MAILS.find(x => x.id === cs.mailId); if (m) m.draft = null;
+    $('#read').classList.remove('composing'); renderList(); renderNav(); renderRead(true); return;
+  }
+  clearTimeout(cs.timer); cs.saving = false;
+  const snap = draftNow(), files = cs.files.slice();
+  const orig = MAILS.find(x => x.id === cs.mailId);
+  $('#read').classList.remove('composing'); renderRead(true);
+  let cancelled = false;
+  // 5초 동안 '보내기 취소' 가능 → 그 뒤 실제 발송
+  toast('보내는 중… (5초 안에 취소할 수 있어요)', () => { cancelled = true; cs.files = files; loadDraft(snap); cs.files = files; renderFiles(); toast('보내기를 취소했어요'); });
+  await new Promise(z => setTimeout(z, 5000));
+  if (cancelled) return;
+  try {
+    const r = await uploadMime('messages/send', await buildMime(d), d.threadId ? { threadId: d.threadId } : {});
+    if (orig) orig.draft = null;
+    store.set('draft-last', null);
+    toast(`보냈어요 — ${d.to.concat(d.cc).map(p => p.name || p.email).slice(0, 3).join(', ')}${d.to.length + d.cc.length > 3 ? ' 외' : ''}`);
+    // 보낸편지함에 바로 보이게
+    try { const g = await gapi(`messages/${r.id}?format=full`); const x = parseMsg(g, true); const mm = toMail(x, real.lab || { inbox: new Set(), sent: new Set([r.id]), unread: new Set(), box: new Map() }); mm.sent = 1; mm.from = ME; MAILS.unshift(mm); saveFull(mm); renderNav(); renderList(); } catch (e) { /* 목록은 다음 새로 고침 때 */ }
+    if (document.body.classList.contains('popmode') && !st.open) setTimeout(() => window.close(), 1200);
+  } catch (e) {
+    toast('보내지 못했어요: ' + e.message + ' — 작성 내용을 다시 열어 둘게요');
+    cs.files = files; loadDraft(snap); cs.files = files; renderFiles();
+  }
 }
 
 /* ───────── 받는사람: 자동완성 · 블록 선택해서 복사/붙여넣기 ───────── */
@@ -1333,6 +1428,10 @@ function openSettings(tab) {
       <h5>메일 작성 방식</h5><p class="desc">답장·새 메일을 누르면 어디서 쓸지 정해요. 작성 화면 위 '새 창' 버튼으로 언제든 옮길 수 있어요.</p>
       <label class="opt"><input type="radio" name="cm" value="inline"${SET.composeMode === 'inline' ? ' checked' : ''}> 이 화면 안에서 쓰기 (읽기 칸 자리)</label>
       <label class="opt"><input type="radio" name="cm" value="popup"${SET.composeMode === 'popup' ? ' checked' : ''}> 새 창(팝업)으로 쓰기</label>
+      <h5>기본 글꼴</h5><p class="desc">새로 쓰는 메일과 답장의 기본 글꼴이에요. 보내는 메일에도 이 글꼴로 들어가요.</p>
+      <div class="opt"><select id="setFont">${FONT_LIST.map(f => `<option${f === SET.font.family ? ' selected' : ''}>${f}</option>`).join('')}</select>
+        <select id="setSize">${SIZES.map(z => `<option value="${z}"${z === SET.font.size ? ' selected' : ''}>${z}pt</option>`).join('')}</select>
+        <span id="fontPrev" style="margin-left:8px;font-family:'${SET.font.family}';font-size:${SET.font.size}pt">가나다 ABC 123</span></div>
       <h5>맞춤법 표시</h5><label class="opt"><input type="checkbox" id="setTypo"${SET.typo ? ' checked' : ''}> 자주 틀리는 한글 표현에 밑줄 표시</label>
       <p class="desc">무시한 단어 ${IGNORE.size}개 ${IGNORE.size ? '<button class="btn" id="clrIgn" style="padding:2px 8px;margin-left:6px">무시 목록 비우기</button>' : ''}</p>
       <h5>이 PC에 저장한 메일</h5><p class="desc">불러온 메일 목록과 본문을 이 PC(브라우저 저장소)에 저장해 두고, 다음부터 바로 열고 본문 전체에서 검색해요. Google 외 다른 곳으로는 보내지 않아요.</p>
@@ -1389,6 +1488,12 @@ function openSettings(tab) {
   body.addEventListener('change', e => {
     const k = e.target.dataset.k, fr = e.target.closest('.ftr'), br = e.target.closest('.bxr');
     if (e.target.name === 'cm') { SET.composeMode = e.target.value; saveAll(); }
+    if (e.target.id === 'setFont' || e.target.id === 'setSize') {
+      SET.font = { family: $('#setFont', body).value, size: +$('#setSize', body).value }; saveAll();
+      const pv = $('#fontPrev', body); pv.style.fontFamily = `'${SET.font.family}'`; pv.style.fontSize = SET.font.size + 'pt';
+      if ($('#read').classList.contains('composing')) applyBaseFont();
+      toast(`기본 글꼴: ${SET.font.family} ${SET.font.size}pt`);
+    }
     if (e.target.id === 'setTypo') { SET.typo = e.target.checked; saveAll(); runTypo(); }
     if (fr) {
       const f = FOOTERS.find(x => x.id === fr.dataset.id);
@@ -1566,7 +1671,7 @@ function parseMsg(g, full) {
   });
   if (!plain && html) plain = new DOMParser().parseFromString(html, 'text/html').body.innerText || '';
   const when = new Date(+g.internalDate);
-  return { gid: g.id, when: +when, from: parsePeople(H.from)[0] || { name: '(알 수 없음)', email: '' }, to: parsePeople(H.to), cc: parsePeople(H.cc),
+  return { gid: g.id, threadId: g.threadId, msgId: H['message-id'] || '', refs: H['references'] || '', when: +when, from: parsePeople(H.from)[0] || { name: '(알 수 없음)', email: '' }, to: parsePeople(H.to), cc: parsePeople(H.cc),
     subj: H.subject || '(제목 없음)', snippet: decodeEnt(g.snippet), body: full ? plain.replace(/\r/g, '').trim() : '', html: full ? html : '', att, full: !!full };
 }
 // 목록용 데이터 → 화면용 메일 (라벨 상태는 따로 매번 새로 받아서 씌움)
@@ -1596,7 +1701,7 @@ const stripAttData = att => att.map(a => [a[0], a[1], a[2], Object.assign({}, a[
 function saveFull(m) {
   if (!real.db || !m.full) return;
   idbPut(real.db, 'text', { gid: m.gid, t: (m.body || '').slice(0, 20000) });
-  idbPut(real.db, 'full', { gid: m.gid, body: m.body, html: (m.html || '').length < 600000 ? m.html : '', htmlReady: m.htmlReady && m.htmlReady.length < 3000000 ? m.htmlReady : null, att: stripAttData(m.att) });
+  idbPut(real.db, 'full', { gid: m.gid, threadId: m.threadId, msgId: m.msgId, refs: m.refs, body: m.body, html: (m.html || '').length < 600000 ? m.html : '', htmlReady: m.htmlReady && m.htmlReady.length < 3000000 ? m.htmlReady : null, att: stripAttData(m.att) });
   if (real.texts) real.texts.set(m.gid, (m.body || '').slice(0, 20000));
 }
 const cacheAll = db => new Promise(res => { if (!db) return res([]); try { const r = db.transaction('meta').objectStore('meta').getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => res([]); } catch (e) { res([]); } });
@@ -1606,7 +1711,7 @@ async function listIds(q, label) {
   do { const r = await gapi(`messages?maxResults=500&q=${encodeURIComponent(q)}${label ? '&labelIds=' + label : ''}${tok ? '&pageToken=' + tok : ''}`, { bg: true }); (r.messages || []).forEach(x => out.push(x.id)); tok = r.nextPageToken || ''; } while (tok);
   return out;
 }
-const META_FIELDS = 'id,internalDate,snippet,payload(mimeType,headers,parts(mimeType,filename,headers,body(attachmentId,size),parts(mimeType,filename,headers,body(attachmentId,size),parts(mimeType,filename,headers,body(attachmentId,size),parts(mimeType,filename,headers,body(attachmentId,size))))))';
+const META_FIELDS = 'id,threadId,internalDate,snippet,payload(mimeType,headers,parts(mimeType,filename,headers,body(attachmentId,size),parts(mimeType,filename,headers,body(attachmentId,size),parts(mimeType,filename,headers,body(attachmentId,size),parts(mimeType,filename,headers,body(attachmentId,size))))))';
 const DAYS = 92;  // 최근 3개월
 // 최신 메일부터 화면에 먼저 보여 주고, 나머지는 뒤에서 차차 받아 옴
 async function loadReal(interactive, token) {
@@ -1695,8 +1800,8 @@ async function fetchFull(m) {
   m._loading = true;
   try {
     const c = await idbGet(real.db, 'full', m.gid);
-    if (c && (c.html || c.body)) Object.assign(m, { body: c.body, html: c.html, htmlReady: c.htmlReady || null, att: c.att, full: true });
-    else { const x = parseMsg(await gapi(`messages/${m.gid}?format=full`), true); Object.assign(m, { body: x.body, html: x.html, att: x.att, full: true }); saveFull(m); }
+    if (c && (c.html || c.body)) Object.assign(m, { body: c.body, html: c.html, htmlReady: c.htmlReady || null, att: c.att, full: true }, c.msgId ? { threadId: c.threadId, msgId: c.msgId, refs: c.refs } : {});
+    else { const x = parseMsg(await gapi(`messages/${m.gid}?format=full`), true); Object.assign(m, { body: x.body, html: x.html, att: x.att, full: true, threadId: x.threadId, msgId: x.msgId, refs: x.refs }); saveFull(m); }
   }
   catch (e) { toast('본문을 불러오지 못했어요: ' + e.message); }
   finally { m._loading = false; if (st.open === m.id) renderRead(); renderList(); }
@@ -1898,23 +2003,21 @@ function wire() {
   });
   // 작성
   fmtToolbar();
-  $('#sendMenu').innerHTML = ico('down', 16);
-  $('#attachBtn').innerHTML = ico('clip', 16) + ' 첨부';
   $('#popBtn').innerHTML = ico('pop', 16) + ' 새 창';
   $('#closeC').innerHTML = ico('close', 16) + ' 닫기';
   $('#discard').innerHTML = ico('trash', 19);
-  $('#send').addEventListener('click', () => {
-    clearTimeout(cs.timer); cs.saving = false;
-    toast(cs.sched ? '예약했어요 (샘플이라 실제로 보내지는 않아요)' : '샘플 화면이라 실제로 보내지는 않아요');
-    const m = MAILS.find(x => x.id === cs.mailId); if (m) m.draft = null;
-    $('#read').classList.remove('composing'); renderList(); renderNav(); renderRead();
-    if (document.body.classList.contains('popmode') && !st.open) setTimeout(() => window.close(), 900);
+  $('#send').addEventListener('click', async () => {
+    const b = $('#send'); if (b.disabled) return; b.disabled = true;
+    try {
+      // 답장 연결 정보가 없으면(저장본에서 연 경우) 잠깐 받아 옴
+      const o = MAILS.find(x => x.id === cs.mailId);
+      if (o && o.real && !o.msgId && /reply|all|draft/.test(cs.kind)) { try { const g = await gapi(`messages/${o.gid}?format=metadata&metadataHeaders=Message-ID&metadataHeaders=References`); const H = {}; (g.payload.headers || []).forEach(h => { H[h.name.toLowerCase()] = h.value; }); Object.assign(o, { threadId: g.threadId, msgId: H['message-id'] || '', refs: H['references'] || '' }); } catch (e) { /* 연결 없이 새 대화로 */ } }
+      await sendMail();
+    } finally { b.disabled = false; }
   });
-  $('#sendMenu').addEventListener('click', () => toggleMenu($('#sendMenu'), schedMenu));
   $('#closeC').addEventListener('click', closeCompose);
   $('#discard').addEventListener('click', discardCompose);
   $('#popBtn').addEventListener('click', () => { flushCompose(); popCompose(draftNow()); $('#read').classList.remove('composing'); renderRead(); });
-  $('#attachBtn').addEventListener('click', () => $('#filePick').click());
   $('#attBox').addEventListener('click', e => { if (!e.target.closest('.afile')) $('#filePick').click(); });
   $('#filePick').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
   $('#imgPick').addEventListener('change', e => {

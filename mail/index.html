@@ -156,7 +156,7 @@ input.ck{width:15px;height:15px;margin:0;accent-color:var(--blue);cursor:pointer
 .read.composing .compose{display:flex}
 .ctool{flex:none;display:flex;gap:6px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--compose-line)}
 .sendgrp{display:inline-flex}
-.sendgrp .btn.pri:first-child{border-radius:7px 0 0 7px;padding:7px 18px}
+.sendgrp .btn.pri:first-child{border-radius:7px;padding:7px 22px}
 .sendgrp .btn.pri.arrow{border-radius:0 7px 7px 0;padding:7px 7px;border-left:1px solid rgba(255,255,255,.35)}
 .ctool .save{font-size:12px;color:var(--mute);margin-left:8px}
 .ctool .save.busy{color:var(--blue)}
@@ -444,9 +444,7 @@ body.resizing{cursor:col-resize;user-select:none}
     <div class="compose" id="compose">
       <div class="dropcover">여기에 놓으면 첨부돼요</div>
       <div class="ctool">
-        <span class="sendgrp"><button class="btn pri" id="send">보내기</button><button class="btn pri arrow" id="sendMenu" title="예약 전송"></button></span>
-        <button class="btn" id="attachBtn"></button>
-        <span class="sched" id="schedState"></span>
+        <span class="sendgrp"><button class="btn pri" id="send">보내기</button></span>
         <span class="save" id="saveState"></span>
         <span style="flex:1"></span>
         <button class="btn" id="popBtn" title="새 창에서 쓰기"></button>
@@ -468,6 +466,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793006437"></script>
+<script src="mail-c.js?v=1793006900"></script>
 </body>
 </html>
