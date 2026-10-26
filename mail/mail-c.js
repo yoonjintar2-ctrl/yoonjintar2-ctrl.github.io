@@ -1128,7 +1128,8 @@ async function uploadMime(kind, mime, meta) {
       if (waits[t]) { toast(`Gmail 사용량이 잠깐 몰렸어요. ${waits[t]}초 뒤에 다시 보낼게요 (작성 내용은 그대로예요)`); await new Promise(z => setTimeout(z, waits[t] * 1000)); }
       // 연결이 끊겨 실패로 보였어도 실제로는 보내졌을 수 있음 → 다시 보내기 전에 보낸편지함 확인 (두 번 가지 않게)
       if (t > 0 && kind === 'messages/send') { const done = await alreadySent(mime); if (done) return done; }
-      try { return await uploadOnce(kind, mime, meta, t > 0 && mime.length < 3.5 * 1048576); }
+      // Gmail 업로드 주소는 브라우저에서 응답을 못 읽음(보내지긴 하는데 실패로 보임) → 일반 주소로 보냄 (약 35MB까지 됨)
+      try { return await uploadOnce(kind, mime, meta, true); }
       catch (e) { if (!e.retry || t >= waits.length - 1) { if (e.retry && kind === 'messages/send') { const done = await alreadySent(mime); if (done) return done; } throw e; } }
     }
   } finally { quota.hold--; }
