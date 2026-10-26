@@ -166,9 +166,10 @@ const SYS = {
   tome: { name: '나에게 온 메일', ic: 'me', f: m => m.inbox && !m.sent && m.to.some(isMe), parent: 'inbox' },
   sent: { name: '보낸편지함', ic: 'sent', f: m => m.sent },
   draft: { name: '작성 중인 메일', ic: 'draft', f: m => !!m.draft },
-  all: { name: '전체 메일', ic: 'all', f: () => true }
+  all: { name: '전체 메일', ic: 'all', f: () => true },
+  trash: { name: '지운 편지함', ic: 'trash', f: m => !!m.deleted }
 };
-const folderFn = k => { if (k === 'conv') return m => !!(st.conv && st.conv.ids.has(m.id)); if (k === 'all') return () => true; if (SYS[k]) { const sf = SYS[k].f; return m => !m.deleted && sf(m); } const ids = new Set(descIds(k)); const f = m => !m.deleted && ids.has(m.box); f.boxId = k; return f; };
+const folderFn = k => { if (k === 'conv') return m => !!(st.conv && st.conv.ids.has(m.id)); if (k === 'all') return () => true; if (k === 'trash') return m => !!m.deleted; if (SYS[k]) { const sf = SYS[k].f; return m => !m.deleted && sf(m); } const ids = new Set(descIds(k)); const f = m => !m.deleted && ids.has(m.box); f.boxId = k; return f; };
 const folderName = k => k === 'conv' ? '대화 보기' + (st.conv ? ' · ' + st.conv.title : '') : SYS[k] ? SYS[k].name : boxPath(k);
 /* ── 대화로 보기 (2026-10-26) ──
    같은 Gmail 대화(threadId) + 제목이 같은 답장·전달(같은 사람들끼리)을 한데 모아 시간 순으로 보여 준다. */
@@ -228,6 +229,8 @@ function renderNav() {
   }); };
   walk(null, 0, []);
   if (nHidden) h += `<button class="hidtoggle" id="hidToggle">${SET.showHidden ? '숨긴 편지함 감추기' : `숨긴 편지함 ${nHidden}개 보기`}</button>`;
+  const nDel = MAILS.filter(m => m.deleted).length;
+  h += `<div class="nsep-trash"></div><div class="ni ni-top ni-trash${st.folder === 'trash' ? ' on' : ''}" data-f="trash" data-sys="trash" style="padding-left:14px"><span class="ic">${ico('trash')}</span><span class="nm">지운 편지함</span><span class="n" style="font-weight:400;color:var(--mute)">${nDel || ''}</span></div>`;
   $('#nav').innerHTML = h;
 }
 /* 편지함 메뉴 (⋮ · 우클릭) */
@@ -413,7 +416,7 @@ function renderTop() {
   const lf = $('#lfilt'); if (lf) { lf.classList.toggle('off', st.folder === 'conv'); lf.title = st.folder === 'conv' ? '대화 보기 중에는 필터가 적용되지 않아요' : ''; }
 }
 function boxPickItems(cur, pick) {
-  const items = ['all', 'inbox', 'tome', 'sent', 'draft'].map(k => ({ html: ico(SYS[k].ic, 16) + ' ' + SYS[k].name, on: cur === k, act: () => pick(k) }));
+  const items = ['all', 'inbox', 'tome', 'sent', 'draft', 'trash'].map(k => ({ html: ico(SYS[k].ic, 16) + ' ' + SYS[k].name, on: cur === k, act: () => pick(k) }));
   items.push('-', { head: '편지함' });
   const walk = (p, dep) => childrenOf(p).forEach(b => { items.push({ on: cur === b.id, html: boxLabel(b, dep), act: () => pick(b.id) }); walk(b.id, dep + 1); });
   walk(null, 0);
@@ -429,7 +432,7 @@ function boxFilterMenu() {
   const row = (k, html, dep) => `<div class="mi${st.folder === k ? ' on' : ''}" data-k="${k}"><span class="chk">${st.folder === k ? '✓' : ''}</span><span style="padding-left:${(dep || 0) * 14}px;display:inline-flex;align-items:center;gap:7px">${html}</span></div>`;
   const draw = () => {
     const q = inp.value.trim().toLowerCase(); let h = '';
-    const sys = ['inbox', 'tome', 'sent', 'draft'].filter(k => !q || SYS[k].name.includes(q));
+    const sys = ['inbox', 'tome', 'sent', 'draft', 'trash'].filter(k => !q || SYS[k].name.includes(q));
     h += sys.map(k => row(k, ico(SYS[k].ic, 16) + ' ' + SYS[k].name)).join('');
     let boxes = '';
     if (q) BOXES.filter(b => boxPath(b.id).toLowerCase().includes(q)).forEach(b => { boxes += row(b.id, ico('folder', 15) + esc(boxPath(b.id)) + (b.hidden ? ' <small style="color:var(--mute)">(숨김)</small>' : '')); });
@@ -698,7 +701,7 @@ function renderHead(list) {
     : `<span class="cnt">${esc(folderName(st.folder))} · ${list.length}통</span>`;
   lh.innerHTML = `<input type="checkbox" class="ck" id="ckAll" title="모두 선택"${all ? ' checked' : ''}>
     ${label}
-    <button class="btn" data-b="move"${dis}>${ico('move', 15)} 이동</button><button class="btn" data-b="read"${dis}>읽음 처리</button><button class="btn" data-b="unread"${dis}>안읽음 처리</button><button class="ib" data-b="del" title="삭제"${dis}>${ico('trash', 17)}</button>`;
+    <button class="btn" data-b="move"${dis}>${ico('move', 15)} 이동</button><button class="btn" data-b="read"${dis}>읽음 처리</button><button class="btn" data-b="unread"${dis}>안읽음 처리</button>${st.folder === 'trash' ? `<button class="btn" data-b="restore"${dis}>되살리기</button>` : `<button class="ib" data-b="del" title="삭제"${dis}>${ico('trash', 17)}</button>`}`;
   const ca = $('#ckAll'); if (ca) ca.indeterminate = n > 0 && !all;
 }
 function pickClick(id, e) {
@@ -714,6 +717,7 @@ function bulk(act, btn) {
   const sel = new Set(ids);
   if (act === 'read' || act === 'unread') { MAILS.forEach(m => { if (sel.has(m.id)) m.unread = act === 'unread' ? 1 : 0; }); toast(`${ids.length}통을 ${act === 'read' ? '읽음' : '안 읽음'}으로 표시했어요`); act === 'read' ? syncLabels(ids, [], ['UNREAD'], '읽음') : syncLabels(ids, ['UNREAD'], [], '안 읽음'); }
   if (act === 'del') trashMails(ids);
+  if (act === 'restore') { st.picked.clear(); restoreMails(ids); if (st.folder === 'trash' && ids.includes(st.open)) { st.open = null; renderRead(); } }
   if (act === 'move') { moveMenu(btn, ids); return; }
   renderNav(); renderList();
 }
@@ -730,18 +734,18 @@ function trashMails(ids) {
   list.forEach(m => { m.deleted = 1; jSet(m, { d: 1 }); });
   if (ids.includes(st.open) && st.folder !== 'all') st.open = null; st.picked.clear();
   renderNav(); renderList(); renderRead(true);
-  toast(`${ids.length}통을 삭제했어요 (전체 메일에서 다시 볼 수 있어요)`, () => restoreMails(list.map(m => m.id)));
+  toast(`${ids.length}통을 지운 편지함으로 옮겼어요`, () => restoreMails(list.map(m => m.id)));
 }
 function restoreMails(ids) { MAILS.forEach(m => { if (ids.includes(m.id)) { m.deleted = 0; jSet(m, { d: 0 }); } }); renderNav(); renderList(); renderRead(true); toast(`${ids.length}통을 되살렸어요`); }
 // 편지함으로 옮기면 받은편지함에서는 빠짐 (Gmail의 '보관처리+라벨'과 같음)
 function moveTo(ids, boxId) {
-  const before = MAILS.map(m => [m.id, m.box, m.inbox]);
+  const before = MAILS.map(m => [m.id, m.box, m.inbox, m.deleted]);
   const olds = [...new Set(MAILS.filter(m => ids.includes(m.id) && m.box && m.box !== boxId).map(m => m.box))];
-  MAILS.forEach(m => { if (ids.includes(m.id)) { m.box = boxId; m.inbox = 0; } });
+  MAILS.forEach(m => { if (ids.includes(m.id)) { m.box = boxId; m.inbox = 0; if (m.deleted) { m.deleted = 0; jSet(m, { d: 0 }); } } });
   st.picked.clear(); renderNav(); renderList(); renderRead();
   syncLabels(ids, [boxId], ['INBOX', ...olds], '편지함 이동');
   toast(`${ids.length}통을 '${boxPath(boxId)}'(으)로 옮겼어요`, () => {
-    before.forEach(([id, b, i]) => { const m = MAILS.find(x => x.id === id); if (m && ids.includes(id)) { m.box = b; m.inbox = i; jSet(m, { b: b || '', i }); } });
+    before.forEach(([id, b, i, d]) => { const m = MAILS.find(x => x.id === id); if (m && ids.includes(id)) { m.box = b; m.inbox = i; m.deleted = d || 0; jSet(m, { b: b || '', i, d: d ? 1 : 0 }); } });
     renderNav(); renderList(); renderRead(); });
 }
 
@@ -2395,7 +2399,7 @@ function openWelcome(force) {
 let drag = null;
 function navDrop(e, el, doIt) {
   const id = el.dataset.box;
-  if (drag.kind === 'mail') { if (!id) return null; return doIt ? moveTo(drag.ids, id) : 'in'; }
+  if (drag.kind === 'mail') { if (el.dataset.sys === 'trash') return doIt ? trashMails(drag.ids) : 'in'; if (!id) return null; return doIt ? moveTo(drag.ids, id) : 'in'; }
   if (drag.kind === 'box') {
     if (!id || descIds(drag.id).includes(id)) return null;
     const r = el.getBoundingClientRect(), y = (e.clientY - r.top) / r.height;
