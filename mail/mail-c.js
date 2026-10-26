@@ -799,7 +799,8 @@ async function openCompose(kind, opts) {
   loadDraft(opts.draft || buildDraft(kind, m));
 }
 function buildDraft(kind, m) {
-  let to = [], cc = [], subj = '', quote = '', text = '안녕하세요,\nSM C&C 윤석진입니다.\n';
+  // 맨 위 인사말: 설정 > 일반에서 정함 (기본은 비움 — 풋터에 인사말이 있으면 겹치지 않게)
+  let to = [], cc = [], subj = '', quote = '', text = SET.greeting ? SET.greeting.replace(/\n*$/, '\n') : '';
   if (m && kind !== 'new') {
     if (kind === 'reply' || kind === 'draft') to = [m.sent ? m.to[0] : m.from];
     if (kind === 'all') { to = m.sent ? m.to : [m.from, ...m.to.filter(p => !isMe(p))]; cc = m.cc.filter(p => !isMe(p)); }
@@ -1428,6 +1429,8 @@ function openSettings(tab) {
       <h5>메일 작성 방식</h5><p class="desc">답장·새 메일을 누르면 어디서 쓸지 정해요. 작성 화면 위 '새 창' 버튼으로 언제든 옮길 수 있어요.</p>
       <label class="opt"><input type="radio" name="cm" value="inline"${SET.composeMode === 'inline' ? ' checked' : ''}> 이 화면 안에서 쓰기 (읽기 칸 자리)</label>
       <label class="opt"><input type="radio" name="cm" value="popup"${SET.composeMode === 'popup' ? ' checked' : ''}> 새 창(팝업)으로 쓰기</label>
+      <h5>작성 칸 맨 위 인사말</h5><p class="desc">새 메일·답장을 열 때 맨 위에 자동으로 넣을 글이에요. 풋터에 인사말이 이미 있으면 비워 두세요.</p>
+      <textarea id="setGreet" rows="2" placeholder="예: 안녕하세요, SM C&C 윤석진입니다." style="width:100%;border:1px solid #c4cbd6;border-radius:6px;padding:7px 9px;font:inherit;resize:vertical">${esc(SET.greeting || '')}</textarea>
       <h5>기본 글꼴</h5><p class="desc">새로 쓰는 메일과 답장의 기본 글꼴이에요. 보내는 메일에도 이 글꼴로 들어가요.</p>
       <div class="opt"><select id="setFont">${FONT_LIST.map(f => `<option${f === SET.font.family ? ' selected' : ''}>${f}</option>`).join('')}</select>
         <select id="setSize">${SIZES.map(z => `<option value="${z}"${z === SET.font.size ? ' selected' : ''}>${z}pt</option>`).join('')}</select>
@@ -1475,6 +1478,7 @@ function openSettings(tab) {
     }
   };
   body.addEventListener('input', e => {
+    if (e.target.id === 'setGreet') { SET.greeting = e.target.value; saveAll(); return; }
     const k = e.target.dataset.k, fr = e.target.closest('.ftr'), br = e.target.closest('.bxr');
     if (fr) {
       const f = FOOTERS.find(x => x.id === fr.dataset.id);
