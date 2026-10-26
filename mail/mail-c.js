@@ -2351,15 +2351,15 @@ function bootScreen(mode, msg) {
     ? `<div class="envani"><svg viewBox="0 0 140 124" width="140" height="124" aria-hidden="true">
       <ellipse class="eshadow" cx="70" cy="114" rx="44" ry="5" fill="#d7dbe2"/>
       <g class="ebody">
-        <path class="bf" d="M20 61Q20 52 29 52H111Q120 52 120 61L76 84Q70 87.5 64 84Z" fill="#dfe3e9" stroke="#5f6368" stroke-width="3.2" stroke-linejoin="round"/>
+        <path class="bf" d="M20 61Q20 52 29 52H111Q120 52 120 61L77 93Q70 97.5 63 93Z" fill="#dfe3e9" stroke="#5f6368" stroke-width="3.2" stroke-linejoin="round"/>
         <rect x="20" y="52" width="100" height="52" rx="8" fill="#e9ecf0" stroke="#5f6368" stroke-width="3.2"/>
         <clipPath id="envclip"><rect x="-40" y="-200" width="220" height="301"/></clipPath><g clip-path="url(#envclip)"><g class="letter"><rect x="37" y="40" width="66" height="56" rx="5" fill="#fff" stroke="#5f6368" stroke-width="3"/>
           <path class="ln l1" d="M47 53h46" stroke="#5f6368" stroke-width="3.2" stroke-linecap="round"/>
           <path class="ln l2" d="M47 63h46" stroke="#5f6368" stroke-width="3.2" stroke-linecap="round"/>
           <path class="ln l3" d="M47 73h28" stroke="#5f6368" stroke-width="3.2" stroke-linecap="round"/></g></g>
-        <path d="M20 64L64 87Q70 90.5 76 87L120 64V96Q120 104 112 104H28Q20 104 20 96Z" fill="#f6f7f9" stroke="#5f6368" stroke-width="3.2" stroke-linejoin="round"/>
-        <path d="M25 101L58 82M115 101L82 82" stroke="#5f6368" stroke-width="2.2" stroke-linecap="round"/>
-        <path class="ff" d="M20 61Q20 52 29 52H111Q120 52 120 61L76 84Q70 87.5 64 84Z" fill="#e4e7ec" stroke="#5f6368" stroke-width="3.2" stroke-linejoin="round"/>
+        <path d="M20 58L64 87Q70 90.5 76 87L120 58V96Q120 104 112 104H28Q20 104 20 96Z" fill="#f6f7f9" stroke="#5f6368" stroke-width="3.2" stroke-linejoin="round"/>
+        <path d="M25 100L55 88M115 100L85 88" stroke="#5f6368" stroke-width="2.2" stroke-linecap="round"/>
+        <path class="ff" d="M20 61Q20 52 29 52H111Q120 52 120 61L77 93Q70 97.5 63 93Z" fill="#e4e7ec" stroke="#5f6368" stroke-width="3.2" stroke-linejoin="round"/>
       </g></svg></div><p id="bootMsg">${esc(msg || 'Gmail에서 메일을 불러오는 중…')}</p>`
     : `<p>${esc(msg || (c.email ? c.email + ' 로그인이 만료됐어요' : 'Gmail 계정 연결이 필요해요'))}</p><button class="btn pri gbtn" id="bootGo">${ico('env', 18)} Gmail 다시 연결</button><button class="later" id="bootSample">예시 메일로 둘러보기</button>`}</div>`;
   const go = $('#bootGo', el); if (go) go.onclick = () => { bootScreen('loading'); loadReal(true); };
