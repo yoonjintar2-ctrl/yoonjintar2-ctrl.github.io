@@ -435,8 +435,9 @@ function visible() {
     if (f.att.k === 'yes' && !A.length) return false;
     if (f.att.k === 'no' && A.length) return false;
     if (f.att.types.length && !A.some(([a]) => f.att.types.includes(a[0]))) return false;
-    if (f.readf === 'unread' && !m.unread) return false;
-    if (f.readf === 'read' && m.unread) return false;
+    // 지금 열어 둔 메일은 읽음 상태가 바뀌어도 목록에 남김 (다른 메일을 누르면 그때 필터 적용)
+    if (f.readf === 'unread' && !m.unread && m.id !== st.open) return false;
+    if (f.readf === 'read' && m.unread && m.id !== st.open) return false;
     if (f.from && m.from.email !== f.from) return false;
     if (f.to && ![...m.to, ...m.cc].some(p => p.email === f.to)) return false;
     return queryMatch(m, st.q);
