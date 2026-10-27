@@ -535,6 +535,13 @@ function peopleFromMails(kind) {
   MAILS.forEach(m => { const w = 1 + (m.d < 7 ? 1 : 0); if (kind !== 'to') add(m.from, w); if (kind !== 'from') { (m.to || []).forEach(pp => add(pp, w)); (m.cc || []).forEach(pp => add(pp, w)); } });
   return [...by.values()].sort((a, b) => b.n - a.n);
 }
+// 작성 화면 받는사람 자동완성·이름 찾기용 주소록: 실제 메일이면 주고받은 사람들(많이 주고받은 순), 예시 화면이면 예시 주소록
+const rcptBook = { n: -1, list: [] };
+function rcptPeople() {
+  if (!real.on) return CONTACTS;
+  if (rcptBook.n !== MAILS.length) { rcptBook.list = peopleFromMails('any'); rcptBook.n = MAILS.length; }
+  return rcptBook.list;
+}
 // 보낸사람·받는사람: 최근 많이 주고받은 사람 순 추천 + 이름·주소 입력 자동완성
 function personMenu(kind) {
   const btn = kind === 'from' ? $('#fFrom') : $('#fTo');
@@ -919,7 +926,15 @@ function foldChips(box, on) {
   if (fold) { if (!b) { b = document.createElement('button'); b.className = 'chipmore'; b.type = 'button'; box.insertBefore(b, $('input', box)); b.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); foldChips(box, false); $('input', box).focus(); }); } b.textContent = `외 ${all.length - PPL_MAX}명 펼치기`; }
   else if (b) b.remove();
 }
+// 이름 없이 주소만 있는 사람(이름이 주소 앞부분)은 아는 이름으로: 나 → 내 이름, 주소록에 있으면 그 이름
+function nicePerson(p) {
+  if (!p || !p.email) return p; if (isMe(p)) return Object.assign({}, p, { name: ME.name || p.name, email: ME.email });
+  const bare = !p.name || p.name === p.email || p.name.toLowerCase() === p.email.split('@')[0].toLowerCase();
+  if (!bare) return p; const k = rcptPeople().find(c => c.email && c.email.toLowerCase() === p.email.toLowerCase() && c.name && c.name !== c.email && c.name.toLowerCase() !== c.email.split('@')[0].toLowerCase());
+  return k ? Object.assign({}, p, { name: k.name }) : p;
+}
 function chipEl(p) {
+  p = nicePerson(p);
   const c = document.createElement('span'); c.className = 'rc'; c.style.cssText = chipStyle(p.email); c.title = p.email; c.dataset.email = p.email; c.dataset.name = p.name;
   c.append(document.createTextNode(p.name === p.email ? p.email : p.name));
   const x = document.createElement('button'); x.textContent = '✕'; x.title = '빼기'; x.addEventListener('click', () => { c.remove(); dirty(); }); c.append(x);
@@ -1441,7 +1456,7 @@ async function runSend(d, snap) {
 }
 
 /* ───────── 받는사람: 자동완성 · 블록 선택해서 복사/붙여넣기 ───────── */
-const parseAddrs = t => { const out = []; const re = /(?:"?([^"<>;,\n]*?)"?\s*<)?([^\s<>;,]+@[^\s<>;,]+\.[^\s<>;,]+)>?/g; let m; while ((m = re.exec(t))) { const email = m[2]; const known = CONTACTS.find(p => p.email.toLowerCase() === email.toLowerCase()); out.push(known || { name: (m[1] || '').trim() || email, email }); } return out; };
+const parseAddrs = t => { const out = []; const re = /(?:"?([^"<>;,\n]*?)"?\s*<)?([^\s<>;,]+@[^\s<>;,]+\.[^\s<>;,]+)>?/g; let m; while ((m = re.exec(t))) { const email = m[2]; const known = rcptPeople().find(p => p.email.toLowerCase() === email.toLowerCase()); out.push(known || { name: (m[1] || '').trim() || email, email }); } return out; };
 const chipText = chips => chips.map(c => c.dataset.name && c.dataset.name !== c.dataset.email ? `${c.dataset.name} <${c.dataset.email}>` : c.dataset.email).join('; ');
 function setupRcpt(box) {
   const inp = $('input', box), ac = box.nextElementSibling;
@@ -1455,7 +1470,7 @@ function setupRcpt(box) {
     const q = inp.value.trim().toLowerCase();
     if (!q) { close(); return; }
     const taken = new Set(chipsOf(box).map(p => p.email));
-    items = CONTACTS.filter(p => !isMe(p) && !taken.has(p.email) && (p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q))).slice(0, 7);
+    items = rcptPeople().filter(p => !isMe(p) && !taken.has(p.email) && personMatch(p, q)).slice(0, 7);
     if (!items.length) { close(); return; }
     idx = Math.min(idx, items.length - 1);
     ac.innerHTML = items.map((p, i) => `<div class="it${i === idx ? ' on' : ''}" data-i="${i}"><i style="background:${dotColor(p.email)}"></i>${esc(p.name)} <small>${esc(p.email)}</small></div>`).join('');
