@@ -2786,6 +2786,7 @@ function cacheDb() {
     const rq = indexedDB.open('jin-cache-' + ME.email, 2);
     rq.onupgradeneeded = () => { const d = rq.result; ['meta', 'text', 'full'].forEach(n => { if (!d.objectStoreNames.contains(n)) d.createObjectStore(n, { keyPath: 'gid' }); }); };
     rq.onsuccess = () => { real.db = rq.result; res(rq.result); }; rq.onerror = () => res(null);
+    rq.onblocked = () => setTimeout(() => res(null), 3000);  // 다른 탭이 붙잡고 있으면 캐시 없이 진행
   } catch (e) { res(null); } });
 }
 const idbAll = (db, store) => new Promise(res => { if (!db) return res([]); try { const r = db.transaction(store).objectStore(store).getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => res([]); } catch (e) { res([]); } });
@@ -2825,7 +2826,9 @@ async function loadReal(interactive, token) {
     real.ids = real.ids || new Map(); real.num = g => { if (!real.ids.has(g)) real.ids.set(g, real.ids.size + 1); return real.ids.get(g); };
     // JIN-mail 편지함·분류 기록 (드라이브 숨은 앱 공간). 처음이면 지금의 Gmail 라벨 구조를 한 번만 복사
     prog('JIN-mail 편지함 불러오는 중…');
-    const dbP = cacheDb(); const cacheP = dbP.then(db => Promise.all([cacheAll(db), idbAll(db, 'text')]));  // 이 PC 캐시도 동시에 읽기
+    // 이 PC 캐시도 동시에 읽기 (목록용 정보만 먼저, 검색용 본문 글자는 화면이 뜬 뒤에)
+    const withTimeout = (p, ms, v) => Promise.race([p, new Promise(z => setTimeout(() => z(v), ms))]);
+    const dbP = withTimeout(cacheDb(), 6000, null); const cacheP = dbP.then(db => withTimeout(cacheAll(db), 15000, []));
     const hasJ = await jLoad();
     const user = (labs.labels || []).filter(l => l.type === 'user').sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
     const byName = new Map(user.map(l => [l.name, l.id]));
@@ -2835,8 +2838,10 @@ async function loadReal(interactive, token) {
     }
     BOXES = J.data.boxes.map(b => Object.assign({}, b));
     real.labReady = false;
-    const db = await dbP; const [cArr, tArr] = await cacheP; const cached = new Map(cArr.map(x => [x.gid, x]));
-    real.texts = new Map(tArr.map(x => [x.gid, x.t]));
+    const db = await dbP; const cArr = await cacheP; const cached = new Map(cArr.map(x => [x.gid, x]));
+    real.texts = real.texts || new Map();
+    // 검색용 본문 글자: 뒤에서 읽어서 이미 화면에 있는 메일에 채워 넣음
+    real.textsP = idbAll(db, 'text').then(tArr => { tArr.forEach(x => { if (!real.texts.has(x.gid)) real.texts.set(x.gid, x.t); }); MAILS.forEach(m => { if (m.real && !m.full && !m.body) { const t = real.texts.get(m.gid); if (t) m.body = t; } }); if (st.q) renderList(); }).catch(() => {});
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* */ }
     const metas = new Map(); const lab = { inbox: new Set(), sent: new Set(), unread: new Set(), box: new Map() };
     real.lab = lab;
@@ -2944,6 +2949,7 @@ async function loadOlder(step) {
 }
 async function prefetchBodies() {
   if (real.prefetching || !real.db) return;
+  if (real.textsP) await real.textsP;  // 이 PC에 받아 둔 본문을 다 읽은 뒤에 (다시 받지 않게)
   if (navigator.locks && !prefetchBodies.locked) { real.prefetching = true; return navigator.locks.request('jin-bg-body-' + ME.email, () => { prefetchBodies.locked = true; real.prefetching = false; return prefetchBodies(); }).finally(() => { prefetchBodies.locked = false; }); }
   real.prefetching = true;
   try {
