@@ -1268,6 +1268,7 @@ function outgoingHtml(src) {
   $$('.gp-pm, #gpCaret', d).forEach(x => x.remove());
   $$('.hrsel, .tdsel', d).forEach(x => { x.classList.remove('hrsel', 'tdsel'); if (!x.className) x.removeAttribute('class'); });
   $$('[data-tsbg]', d).forEach(x => x.removeAttribute('data-tsbg'));
+  $$('.gp-footer', d).forEach(x => { x.classList.remove('gp-footer'); x.removeAttribute('data-footer'); if (!x.className) x.removeAttribute('class'); });  // 받는 쪽에는 편집용 표시 없이
   $$('p', d).forEach(x => { if (!x.style.margin && !x.style.marginTop && !x.style.marginBottom) x.style.margin = '0'; });  // 작성 화면과 같은 줄 간격
   $$('[contenteditable], [spellcheck]', d).forEach(x => { x.removeAttribute('contenteditable'); x.removeAttribute('spellcheck'); });
   const inl = [];
@@ -2489,7 +2490,7 @@ const b64text = s => new TextDecoder().decode(b64bytes(s));
 function parsePeople(str) {
   const out = []; if (!str) return out;
   const re = /(?:"?([^"<,]*?)"?\s*<([^>]+)>)|([^\s,<>"]+@[^\s,<>"]+)/g; let m;
-  while ((m = re.exec(str))) { const email = (m[2] || m[3]).trim().toLowerCase(); const name = (m[1] || '').trim().replace(/^'|'$/g, ''); out.push({ name: name || email.split('@')[0], email }); }
+  while ((m = re.exec(str))) { const email = (m[2] || m[3]).trim().toLowerCase(); const name = (m[1] || '').replace(/[\u200b-\u200f\u2060\ufeff]/g, '').trim().replace(/^'|'$/g, ''); out.push({ name: name || email.split('@')[0], email }); }
   return out;
 }
 const decodeEnt = t => { const d = document.createElement('textarea'); d.innerHTML = t || ''; return d.value; };
