@@ -619,7 +619,7 @@ function renderSugg() {
 /* ───────── 가운데: 목록 ───────── */
 function visible() {
   const f = st.f;
-  if (st.folder === 'conv') return MAILS.filter(folderFn('conv')).sort((a, b) => b.d - a.d || a.t.localeCompare(b.t));
+  if (st.folder === 'conv') return MAILS.filter(folderFn('conv')).sort((a, b) => (b.when || 0) - (a.when || 0) || a.d - b.d || b.t.localeCompare(a.t));  // 대화 보기도 최근 메일이 위
   return (st.folder === 'draft' ? ndMails().concat(MAILS) : MAILS).filter(folderFn(st.folder)).filter(m => {
     const p = f.period, day = dayOf(m);
     if (p.k === 'range') { if (day < p.from || day > p.to) return false; } else if (p.k !== 'all' && m.d > +p.k) return false;
