@@ -424,7 +424,7 @@ function renderTop() {
   const a = f.att.k === 'any' ? '전체' : f.att.k === 'no' ? '없음' : '있음' + (f.att.types.length ? '(' + f.att.types.map(t => ATYPES.find(x => x[0] === t)[1]).join('·') + ')' : '');
   // 목록 위 글자 버튼 (보낸사람·받는사람·첨부파일·읽음/안읽음)
   const pname = e => { if (!e) return ''; const p = peopleFromMails('any').find(x => x.email === e); return p ? p.name : e; };
-  const tf = (id, on, label, tip) => { const b = $(id); b.innerHTML = esc(label) + '<span class="cv">▾</span>'; b.classList.toggle('on', !!on); b.title = tip; };
+  const tf = (id, on, label, tip) => { const b = $(id); b.innerHTML = '<span class="tl">' + esc(label) + '</span><span class="cv">▾</span>'; b.classList.toggle('on', !!on); b.title = tip; };
   tf('#fFrom', f.from, f.from ? '보낸사람: ' + pname(f.from) : '보낸사람', '보낸사람: ' + (f.from || '전체'));
   tf('#fTo', f.to, f.to ? '받는사람: ' + pname(f.to) : '받는사람', '받는사람(참조 포함): ' + (f.to || '전체'));
   tf('#fAtt', f.att.k !== 'any', f.att.k === 'any' ? '첨부파일' : '첨부: ' + a, '첨부: ' + a);
@@ -3439,6 +3439,10 @@ function setupSplits() {
   const Wd = store.get('widths', null);
   if (Wd) { document.documentElement.style.setProperty('--w-nav', Wd.nav + 'px'); document.documentElement.style.setProperty('--w-list', Wd.list + 'px'); }
   narrowCheck(); window.addEventListener('resize', narrowCheck);
+  // 필터 줄은 한 줄로: 넘치면 오른쪽이 흐려지고, 마우스 휠로 옆으로 넘겨 볼 수 있게
+  const lf = $('#lfilt'), lfMore = () => lf.classList.toggle('more', lf.scrollWidth - lf.clientWidth - lf.scrollLeft > 2);
+  lf.addEventListener('wheel', e => { if (lf.scrollWidth > lf.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); lf.scrollLeft += e.deltaY; } }, { passive: false });
+  lf.addEventListener('scroll', lfMore); try { new ResizeObserver(lfMore).observe(lf); } catch (e) { /* */ }
   // 마우스·터치(아이패드)·펜 모두: pointer 이벤트
   $$('.split').forEach(sp => sp.addEventListener('pointerdown', e => {
     if (e.button > 0) return; e.preventDefault(); try { sp.setPointerCapture(e.pointerId); } catch (er) { /* */ } sp.classList.add('drag'); document.body.classList.add('resizing');
