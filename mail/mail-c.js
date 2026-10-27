@@ -1128,12 +1128,55 @@ function discardCompose() {
   if (document.body.classList.contains('popmode') && !st.open) setTimeout(() => window.close(), 1500);
 }
 /* 풋터: 누르면 바로 적용, 다른 풋터를 누르면 그 자리를 바꿔 끼움 (중복 없음) */
+// 글자·그림·표가 있는지
+const nodesText = ns => ns.map(n => n.textContent).join('').replace(/[\s\u00a0\u3000]/g, '');
+const nodesMedia = ns => ns.some(n => n.nodeType === 1 && (n.matches('img,table,hr') || !!n.querySelector('img,table,hr')));
+const nodesHave = ns => !!nodesText(ns) || nodesMedia(ns);
+// 풋터 안에서 사용자가 쓴 부분: 처음 넣은 풋터 모양과 앞·뒤가 같은 부분을 빼고 남은 가운데 (인사말과 맺음말 사이에 쓴 본문)
+function footerUserNodes(slot) {
+  const f = FOOTERS.find(x => x.id === slot.dataset.footer); if (!f) return [];
+  const t = document.createElement('div'); t.innerHTML = fillName(trimLead(f.html));
+  const key = n => { if (n.nodeType === 3) return 't:' + n.nodeValue.replace(/[\s\u00a0]+/g, ' ').trim(); if (n.nodeType !== 1) return ''; const c = n.cloneNode(true); $$('#gpCaret', c).forEach(x => x.remove()); return c.outerHTML.replace(/\s+/g, ' '); };
+  const keep = n => n.nodeType === 1 ? n.id !== 'gpCaret' : n.nodeType === 3 ? !!n.nodeValue.trim() : false;
+  const A = [...slot.childNodes].filter(keep), B = [...t.childNodes].filter(keep);
+  let i = 0; while (i < A.length && i < B.length && key(A[i]) === key(B[i])) i++;
+  let j = 0; while (j < A.length - i && j < B.length - i && key(A[A.length - 1 - j]) === key(B[B.length - 1 - j])) j++;
+  const mid = A.slice(i, A.length - j), tmid = B.slice(i, B.length - j);
+  if (!nodesHave(mid) || mid.map(key).join('|') === tmid.map(key).join('|')) return [];
+  return mid;
+}
+// 풋터 넣기·바꾸기: 이미 쓴 본문은 그대로 살림
+//  - 새 풋터에 인사말과 맺음말 사이 빈 줄이 있으면 → 본문을 그 자리로 옮김
+//  - 없으면 → 본문은 풋터 위에
 function applyFooter(id) {
   const f = FOOTERS.find(x => x.id === id); if (!f) return;
   const b = $('#cbody');
   let slot = $('.gp-footer', b);
-  if (!slot) { slot = document.createElement('div'); slot.className = 'gp-footer'; slot.spellcheck = false; const q = $('.quote', b); q ? b.insertBefore(slot, q) : b.append(slot); }
+  const q = $('.quote', b);
+  // 풋터 위(인용 전까지)에 쓴 글, 예전 풋터 빈 줄에 쓴 글
+  const kids = [...b.childNodes], stop = slot || q;
+  const above = (stop ? kids.slice(0, kids.indexOf(stop)) : kids).filter(n => n.id !== 'gpCaret');
+  const inF = slot && slot.dataset.footer ? footerUserNodes(slot) : [];
+  inF.forEach(n => n.remove());
+  $$('#gpCaret', b).forEach(x => x.remove());
+  if (!slot) { slot = document.createElement('div'); slot.className = 'gp-footer'; slot.spellcheck = false; q ? b.insertBefore(slot, q) : b.append(slot); }
   slot.dataset.footer = id; slot.setAttribute('style', footerStyle(f)); slot.innerHTML = fillName(trimLead(f.html));
+  // 새 풋터의 글 쓰는 자리
+  const mk = caretInFooter(slot), inSlot = slot.contains(mk);
+  // 블록이 아닌 글자·<br>은 한 줄(div)씩 묶어서 옮김
+  const asBlocks = ns => { const out = []; let line = null; ns.forEach(n => { if (n.nodeType === 1 && /^(DIV|P|TABLE|UL|OL|HR|BLOCKQUOTE|H[1-6])$/.test(n.tagName)) { line = null; out.push(n); } else if (n.nodeName === 'BR') { if (!line) { line = document.createElement('div'); out.push(line); } line.append(n); line = null; } else { if (!line) { line = document.createElement('div'); out.push(line); } line.append(n); } }); return out; };
+  const trimEmpty = ns => { ns = ns.slice(); while (ns.length && !nodesHave([ns[0]])) ns.shift(); while (ns.length && !nodesHave([ns[ns.length - 1]])) ns.pop(); return ns; };
+  let moved = [];
+  if (inSlot) {
+    const aboveC = nodesHave(above) ? trimEmpty(asBlocks(above)) : [];
+    above.forEach(n => n.isConnected && n.parentNode === b && n.remove());
+    moved = aboveC.concat(inF);
+    if (moved.length) { const host = mk.parentNode; if (host !== slot && /^(DIV|P)$/.test(host.nodeName) && !nodesHave([host])) host.replaceWith(...moved); else mk.replaceWith(...moved); }
+  } else if (inF.length) { moved = asBlocks(inF); mk.parentNode.replaceWith(...moved); }  // 새 풋터에 빈 줄이 없으면 풋터 위로
+  else if (nodesHave(above)) { mk.parentNode.remove(); const lastC = trimEmpty(above.filter(n => n.isConnected)).pop(); if (lastC) moved = [lastC]; }  // 위에 쓴 글 그대로, 빈 줄 더 만들지 않음
+  // 커서: 옮긴 본문 끝, 없으면 글 쓰는 자리
+  if (moved.length && moved[moved.length - 1].isConnected) { const last = moved[moved.length - 1]; const r = document.createRange(); if (last.nodeType === 3) r.setStartAfter(last); else r.selectNodeContents(last); r.collapse(last.nodeType === 3); if (last.lastChild && last.lastChild.nodeName === 'BR') { r.setStartBefore(last.lastChild); r.collapse(true); } const s = getSelection(); s.removeAllRanges(); s.addRange(r); $$('#gpCaret', b).forEach(x => x.remove()); }
+  else if (mk.isConnected) caretAt(mk);
   cs.footer = id; renderFooterBar(); dirty();
 }
 /* 첨부: 첨부 칸을 눌러 고르거나, 작성 화면 어디에든 끌어다 놓기 */
@@ -1141,7 +1184,10 @@ const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(n < 
 function addFiles(list) {
   [...list].forEach(f => cs.files.push({ name: f.name, size: f.size, file: f }));
   renderFiles(); dirty();
-  if (list.length) toast(`${list.length}개 파일을 첨부했어요`);
+  const tot = cs.files.reduce((x, f) => x + (f.size || 0), 0);
+  if (tot > 25 * 1048576) toast(`첨부 합계가 ${fmtSize(tot)}예요. Gmail 한도(25MB)를 넘어서 이대로는 못 보내요 — 큰 파일은 드라이브 링크로`);
+  else if ([...list].some(f => !f.size)) toast('크기가 0인 파일이 있어요. 폴더나 빈 파일인지 확인해 주세요');
+  else if (list.length) toast(`${list.length}개 파일을 첨부했어요`);
 }
 const parseSize = t => { const m = /([\d.]+)\s*(B|KB|MB|GB)/i.exec(t || ''); return m ? Math.round(+m[1] * ({ B: 1, KB: 1024, MB: 1048576, GB: 1073741824 })[m[2].toUpperCase()]) : 0; };
 let fileDrag = null;
@@ -1220,6 +1266,12 @@ function outgoingHtml(src) {
   // 인용(원본 메일) 칸 모양을 받는 쪽에서도 보이게
   $$('.quote', d).forEach(q => { q.setAttribute('style', q.classList.contains('qhtml') ? 'margin-top:20px;padding-top:10px;border-top:1px solid #e1e3e6' : 'margin-top:20px;padding-left:12px;border-left:2px solid #c4c9d2;color:#5f6368;white-space:pre-wrap'); q.removeAttribute('class'); });
   $$('.qb .qb', d).forEach(q => q.setAttribute('style', 'margin-top:16px;padding-left:12px;border-left:2px solid #d5d9e0'));
+  // 글자로 쓴 주소(https://…, www.…)는 받는 쪽에서 눌러지게 링크로
+  const tw = document.createTreeWalker(d, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement.closest('a, .quote, [contenteditable=false]') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT }), tn = [];
+  for (let n = tw.nextNode(); n; n = tw.nextNode()) if (/(https?:\/\/|www\.)/i.test(n.nodeValue)) tn.push(n);
+  tn.forEach(n => { const frag = document.createDocumentFragment(); let last = 0; const re = /\b(?:https?:\/\/|www\.)[^\s<>"'\u3000]+[^\s<>"'\u3000.,;:!?)\]}]/gi; let mt;
+    while ((mt = re.exec(n.nodeValue))) { frag.append(n.nodeValue.slice(last, mt.index)); const a = document.createElement('a'); a.href = /^www\./i.test(mt[0]) ? 'http://' + mt[0] : mt[0]; a.textContent = mt[0]; frag.append(a); last = mt.index + mt[0].length; }
+    frag.append(n.nodeValue.slice(last)); n.replaceWith(frag); });
   const F = SET.font || { family: '맑은 고딕', size: 10 };
   const html = `<div style="font-family:'${F.family}',sans-serif;font-size:${F.size}pt">${d.innerHTML}</div>`;
   // 글자만 버전: 화면 밖에 잠깐 붙여서 줄바꿈대로 읽음
@@ -1324,7 +1376,7 @@ async function sendMail() {
   // '첨부'라고 썼는데 파일이 없을 때 (원래 메일에 첨부가 있던 답장이면 그 얘기일 수 있으니 묻지 않음)
   const om = MAILS.find(x => x.id === cs.mailId), omAtt = om && (om.att || []).some(a => !(a[3] && a[3].inline));
   if (!d.files.length && !omAtt && /첨부|attach/i.test(mine.text) && !confirm('본문에 \'첨부\'라고 썼는데 첨부 파일이 없어요. 그대로 보낼까요?')) return;
-  if (sendTotal(d) > 33 * 1048576) { toast('첨부가 너무 커요 (최대 약 33MB). 큰 파일은 드라이브 링크로 보내 주세요'); return; }
+  if (sendTotal(d) > 25 * 1048576) { toast(`첨부가 너무 커요 (지금 ${fmtSize(sendTotal(d))}, Gmail 한도 25MB). 큰 파일은 드라이브 링크로 보내 주세요`); return; }
   if (!real.on) {  // 예시 메일 화면
     clearTimeout(cs.timer); cs.saving = false;
     toast('예시 화면이라 실제로 보내지는 않아요');
@@ -1609,8 +1661,11 @@ function keepIndentOnEnter(e) {
   const ml = blkOk ? parseFloat(blk.style.marginLeft) || 0 : 0;
   if (ml > 0) {
     if (!blk.textContent.replace(/[\s\u00a0\u3000]/g, '') && !blk.querySelector('img,table')) { e.preventDefault(); blk.style.marginLeft = ''; dirty(); return; }
-    setTimeout(() => { const s2 = getSelection(); let m = s2.anchorNode; m = m && (m.nodeType === 1 ? m : m.parentElement); while (m && m !== b && !/^(DIV|P)$/.test(m.tagName)) m = m.parentElement; if (m && m !== b && m !== blk && !parseFloat(m.style.marginLeft)) { m.style.marginLeft = ml + 'px'; dirty(); } });
-    return;
+    // 줄 나누기를 직접 해서 바로 들여쓰기 (빨리 Enter를 두 번 쳐도 순서가 꼬이지 않게)
+    e.preventDefault(); document.execCommand('insertParagraph');
+    const s2 = getSelection(); let m = s2.anchorNode; m = m && (m.nodeType === 1 ? m : m.parentElement); while (m && m !== b && !/^(DIV|P)$/.test(m.tagName)) m = m.parentElement;
+    if (m && m !== b && m !== blk && !parseFloat(m.style.marginLeft)) m.style.marginLeft = ml + 'px';
+    dirty(); return;
   }
   // 2) 줄 앞 공백 들여쓰기: 지금 줄(앞쪽 <br> 이후)의 맨 앞 공백
   const root = blkOk ? blk : b, r = document.createRange(); r.setStart(root, 0); r.setEnd(s.anchorNode, s.anchorOffset);
@@ -1621,7 +1676,7 @@ function keepIndentOnEnter(e) {
   if (line === lead) {  // 공백만 있는 줄 → 들여쓰기 지우고 줄은 그대로
     e.preventDefault(); for (let i = 0; i < lead.length; i++) document.execCommand('delete'); dirty(); return;
   }
-  setTimeout(() => { document.execCommand('insertText', false, lead.replace(/ /g, '\u00a0')); dirty(); });
+  e.preventDefault(); document.execCommand('insertParagraph'); document.execCommand('insertText', false, lead.replace(/ /g, '\u00a0')); dirty();
 }
 let savedRange = null;
 // 가로선도 글자처럼: 드래그로 고른 범위 안에 들어오면 파랗게 표시, 누르면 그 가로선을 선택(Delete로 지우기)
@@ -1813,16 +1868,25 @@ function renderPasted(html) {
     f.onload = () => {
       try {
         const d = f.contentDocument, w = f.contentWindow;
+        // 크기·줄 수는 모양을 써넣기 전에 한꺼번에 재 둠 (하나씩 쓰면 표가 다시 계산돼 칸이 좁아짐)
+        const rect = new Map(), oneLine = new Set();
+        $$('*', d.body).forEach(el => rect.set(el, el.getBoundingClientRect()));
+        $$('td, th', d.body).forEach(td => { const rg = d.createRange(); rg.selectNodeContents(td); const tops = new Set([...rg.getClientRects()].filter(r => r.width > 0).map(r => Math.round(r.top / 4))); if (tops.size <= 1 && !td.querySelector('br, div, p, table')) oneLine.add(td); });
         $$('*', d.body).forEach(el => {
           const cs = w.getComputedStyle(el), cell = /^(TD|TH)$/.test(el.tagName), keys = cell ? INLINE_CELL : el.tagName === 'TABLE' ? ['border-collapse', 'width', 'background-color', 'font-family', 'font-size'] : INLINE_TEXT;
           keys.forEach(k => { let v = cs.getPropertyValue(k); if (!v) return;
             if (/border-/.test(k) && /^0px|none/.test(v)) v = 'none';
             if (k === 'background-color' && /rgba\(0, 0, 0, 0\)|transparent/.test(v)) return;
-            if (k === 'width' || k === 'height') { if (!cell && k === 'height') return; v = Math.round(el.getBoundingClientRect()[k]) + 'px'; }
+            if (k === 'width' || k === 'height') { if (!cell && k === 'height') return; v = Math.round(rect.get(el)[k]) + 'px'; }
             el.style.setProperty(k === 'text-decoration-line' ? 'text-decoration' : k, v); });
           el.removeAttribute('class');
         });
         $$('table', d.body).forEach(t => { if (!t.style.borderCollapse) t.style.borderCollapse = 'collapse'; });
+        // 칸 안 글자가 한 줄이었으면 줄바꿈 금지 (작성 화면 글꼴이 조금 넓어도 '네이/버'처럼 깨지지 않게), 안쪽 여백이 0이면 조금 줌
+        $$('td, th', d.body).forEach(td => {
+          if (oneLine.has(td)) td.style.whiteSpace = 'nowrap';
+          if (['top', 'right', 'bottom', 'left'].every(k => !parseFloat(td.style.getPropertyValue('padding-' + k)))) td.style.padding = '1px 5px';
+        });
         // 실제 내용 크기 (iframe 너비가 아니라 표 등 내용이 차지하는 만큼)
         d.body.style.margin = '0'; let W = 0, H = 0; [...d.body.children].forEach(c => { const r = c.getBoundingClientRect(); W = Math.max(W, r.right); H = Math.max(H, r.bottom); });
         const out = { html: d.body.innerHTML, w: Math.ceil(W || d.body.scrollWidth) + 2, h: Math.ceil(H || d.body.scrollHeight) + 2, node: d.body };
@@ -1861,6 +1925,7 @@ function doPaste(cd) {
     const t = document.createElement('template'); t.innerHTML = v[k]; me.before(t.content);
     const c = document.createRange(); c.setStartAfter(me); c.collapse(true); const ss = getSelection(); ss.removeAllRanges(); ss.addRange(c);
     pasteOpt.cur = k; dirty(); runTypo(); $$('#pasteBtn [data-k]').forEach(x => x.classList.toggle('on', x.dataset.k === k));
+    const pb = $('#pasteBtn'); if (pb && pb._place) requestAnimationFrame(() => pb._place());
   };
   const putAsync = async k => { if (k === 'img' && !v.img) { pasteOpt.cur = 'img'; v.img = await v._img(); } put(k); };
   pasteOpt.put = putAsync;
@@ -3017,6 +3082,9 @@ function wire() {
     endPasteOpt();
     const img = [...cd.items].find(i => i.kind === 'file' && i.type.startsWith('image/'));
     const hasText = (cd.getData('text/plain') || '').trim() || cd.getData('text/html');
+    // 탐색기에서 복사한 파일(그림이 아닌 것)을 붙여넣으면 첨부로
+    const docs = [...cd.files].filter(f => !f.type.startsWith('image/'));
+    if (docs.length && !hasText) { e.preventDefault(); addFiles(docs); return; }
     if (img && !hasText) { e.preventDefault(); readImage(img.getAsFile()).then(insertImage); return; }
     if (!hasText) return;
     e.preventDefault(); doPaste(cd);
@@ -3053,9 +3121,15 @@ function wire() {
   setupRcpt($('#toBox')); setupRcpt($('#ccBox')); setupRcpt($('#bccBox'));
   $('#bccTog').addEventListener('click', () => { showBcc(true); $('#bccBox input').focus(); });
   // 제목에서 Tab → 본문으로 (서식 막대를 거치지 않게)
-  $('#subj').addEventListener('keydown', e => { if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); const mk = $('#gpCaret'); if (mk) caretAt(mk); else $('#cbody').focus(); } });
+  $('#subj').addEventListener('keydown', e => { if ((e.key === 'Tab' || (e.key === 'Enter' && !e.ctrlKey && !e.metaKey)) && !e.shiftKey && !e.isComposing) { e.preventDefault(); const mk = $('#gpCaret'); if (mk) caretAt(mk); else $('#cbody').focus(); } });
   document.addEventListener('mousedown', e => { if (!e.target.closest('.typo')) $$('.typo').forEach(x => x.remove()); });
   // 단축키: j/k 다음·이전, a 전체답장, f 전달, c 새 메일, / 검색, Esc 작성 닫기 (답장 r은 Ctrl+R 새로고침과 헷갈려서 없앰)
+  // 작성 중 단축키: Ctrl+Enter 보내기(5초 안에 취소 가능), Ctrl+S 임시저장 (브라우저 '페이지 저장' 창 대신)
+  document.addEventListener('keydown', e => {
+    if (!$('#read').classList.contains('composing') || !(e.ctrlKey || e.metaKey) || e.altKey || e.isComposing) return;
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); $('#send').click(); }
+    else if ((e.key === 's' || e.key === 'S') && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); cs.saving = true; saveDraft(); toast('임시저장했어요'); }
+  }, true);
   document.addEventListener('keydown', e => {
     if (e.target.closest('input, textarea, select, [contenteditable="true"]')) { if (e.key === 'Escape' && $('#read').classList.contains('composing') && !$('.menu')) closeCompose(); return; }
     if ($('.modal-bg')) return;
