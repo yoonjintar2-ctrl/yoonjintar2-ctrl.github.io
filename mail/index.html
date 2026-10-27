@@ -275,6 +275,8 @@ input.ck{width:15px;height:15px;margin:0;accent-color:var(--blue);cursor:pointer
 .cbody .gp-footer img{max-width:100%}
 .cbody img{max-width:100%}
 .cbody .quote{margin-top:24px;padding-left:12px;border-left:2px solid #c4c9d2;color:var(--sub);white-space:pre-wrap}
+.cbody .quote.qhtml{white-space:normal;color:inherit;border-left:0;padding-left:0;padding-top:10px;border-top:1px solid #e1e3e6}
+.cbody .quote.qhtml .qhdr{color:var(--sub)}
 .cbody table{border-collapse:collapse;margin:6px 0}
 .cbody td.csel{background:#e8f0fe}
 ::highlight(gp-typo){text-decoration:underline;text-decoration-color:rgba(217,48,37,.45);text-decoration-thickness:3px;text-underline-offset:3px;text-decoration-skip-ink:none}
@@ -425,6 +427,13 @@ body.resizing{cursor:col-resize;user-select:none}
 .srcpill.warn{background:#fce8e6;color:#c5221f;font-weight:600;cursor:pointer}
 .pastebtn{position:fixed;z-index:44;display:inline-flex;align-items:center;gap:3px;height:24px;padding:0 6px;border:1px solid #c4cbd6;border-radius:5px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.12);color:var(--sub);font-size:11px;cursor:pointer}
 .pastebtn:hover{border-color:var(--blue);color:var(--blue)}
+.pastebar{position:fixed;z-index:44;display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid #c4cbd6;border-radius:8px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.16);font-size:12px}
+.pastebar .pl{color:var(--sub);padding:0 6px 0 4px;font-weight:600}
+.pastebar button{border:1px solid transparent;background:none;border-radius:6px;padding:4px 9px;cursor:pointer;color:#3c4043;font-size:12px}
+.pastebar button:hover{background:#f1f3f4}
+.pastebar button.on{background:var(--blue-l);color:var(--blue);border-color:#c6dafc;font-weight:600}
+.pastebar button.busy{opacity:.5;cursor:progress}
+.pastebar .px{color:var(--mute);padding:4px 7px}
 .cbody .gp-pm{display:inline}
 /* 목록 (아웃룩식): 보낸사람·제목 검게, 본문 첫 줄·첨부는 작은 회색 */
 .row .who{color:#1f1f1f;font-size:13.5px}
@@ -591,6 +600,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793061770"></script>
+<script src="mail-c.js?v=1793062976"></script>
 </body>
 </html>
