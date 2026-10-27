@@ -377,7 +377,7 @@
   // 감시 연결 램프(2026-10-21): 감시가 살아 있으면 10분마다 berry-…-h 토픽에 짧은 신호. 사이트 오른쪽 위 램프가 15분 안 신호면 녹색, 아니면 주황
   if (!window.__berryBeat) { const who = /Mac/i.test(navigator.platform || '') ? '맥' : /Win/i.test(navigator.platform || '') ? '회사 PC' : '클라우드';
     const send = () => { const w = window.__berryWatchState; if (!w || !w.alive) return; const ok = w.es && w.es.readyState !== 2; fetch('https://jipsa-relay.jipsa-e3839b.workers.dev/n/', { method: 'POST', body: JSON.stringify({ topic: 'berry-3059012bcc6b7db9-h', message: 'beat ' + who + (ok ? '' : ' 끊김'), tags: ['quiet'], priority: 1 }) }).catch(() => {}); };
-    window.__berryBeat = setInterval(send, 1800000); setTimeout(send, 3000); }
+    window.__berryBeat = setInterval(send, 600000); setTimeout(send, 3000); }
   window.__berryWatch = function () {
     const me = Math.random().toString(36).slice(2), KEY = 'berryWatcher';
     const live = () => { try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); return o.id && o.id !== me && Date.now() - o.ts < 25000; } catch (e) { return false; } };
