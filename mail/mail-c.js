@@ -1331,11 +1331,11 @@ async function uploadOnce(kind, mime, meta, viaJson) {
     if (viaJson) {  // 업로드 주소가 막힐 때: 일반 주소로 (오류 이유도 알 수 있음)
       const raw = u8b64(new TextEncoder().encode(mime)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
       const body = kind === 'drafts' ? { message: Object.assign({ raw }, (meta && meta.message) || {}) } : Object.assign({ raw }, meta || {});
-      r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/${kind}`, { method: 'POST', headers: { Authorization: 'Bearer ' + real.token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/${kind}`, { method: 'POST', headers: { Authorization: 'Bearer ' + curTok(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     } else {
       const b = boundary();
       const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta || {})}\r\n--${b}\r\nContent-Type: message/rfc822\r\n\r\n${mime}\r\n--${b}--`;
-      r = await fetch(`https://gmail.googleapis.com/upload/gmail/v1/users/me/${kind}?uploadType=multipart`, { method: 'POST', headers: { Authorization: 'Bearer ' + real.token, 'Content-Type': `multipart/related; boundary=${b}` }, body });
+      r = await fetch(`https://gmail.googleapis.com/upload/gmail/v1/users/me/${kind}?uploadType=multipart`, { method: 'POST', headers: { Authorization: 'Bearer ' + curTok(), 'Content-Type': `multipart/related; boundary=${b}` }, body });
     }
   } catch (e) { throw Object.assign(new Error('Gmail에 연결하지 못했어요 (사용량 초과 또는 네트워크)'), { retry: true }); }
   if (r.status === 401) { await tokenAfter401(); throw Object.assign(new Error('로그인을 연장했어요'), { retry: true }); }
@@ -2405,8 +2405,14 @@ function renewToken() {
     .finally(() => { auth.p = null; });
   return auth.p;
 }
+// 지금 쓸 토큰: 같은 브라우저의 다른 JIN-mail 탭이 새로 받아 둔 게 있으면 그것 (탭마다 따로 다시 로그인하지 않게)
+function curTok() { const t = tokCache.get(); if (t && t !== real.token) { real.token = t; if (real.expired || auth.needClick) { real.expired = false; auth.needClick = false; auth.waiters.splice(0).forEach(w => w(t)); renderTop(); } } return real.token; }
+// 다른 탭에서 로그인을 연장하면 이 탭도 바로 이어서 (기다리던 요청 재개)
+window.addEventListener('storage', e => { if (e.key === 'jin-tok' && real.on) curTok(); });
 // 401(만료)을 받았을 때: 연장해 보고, 안 되면 다음 클릭까지 기다렸다가 이어서 진행
 function tokenAfter401() {
+  // 다른 탭이 이미 새 토큰을 받아 뒀으면 지우지 말고 그걸로 (예전엔 오래된 탭 하나가 401을 받으면 모든 탭의 로그인이 풀렸음)
+  const stored = tokCache.get(); if (stored && stored !== real.token) { real.token = stored; return Promise.resolve(stored); }
   tokCache.clear();
   const tryNow = IS_EXT ? renewToken() : Promise.reject(new Error('click'));
   return tryNow.catch(e => {
@@ -2439,7 +2445,7 @@ async function takeQuota(units, bg) {
 async function gapi(path, opt, tries) {
   opt = opt || {}; tries = tries || 0;
   await takeQuota(unitsOf(path, opt.method), opt.bg);
-  const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/' + path, { method: opt.method || 'GET', headers: Object.assign({ Authorization: 'Bearer ' + real.token }, opt.body ? { 'Content-Type': 'application/json' } : {}), body: opt.body ? JSON.stringify(opt.body) : undefined });
+  const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/' + path, { method: opt.method || 'GET', headers: Object.assign({ Authorization: 'Bearer ' + curTok() }, opt.body ? { 'Content-Type': 'application/json' } : {}), body: opt.body ? JSON.stringify(opt.body) : undefined });
   if (r.status === 401 && !opt.reauth) { await tokenAfter401(); return gapi(path, Object.assign({}, opt, { reauth: true }), tries); }
   if (r.status === 401) { real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요. 위쪽 표시를 눌러 다시 연결해 주세요'); }
   if (r.status === 429) quota.cool = Date.now() + 30000;
@@ -2506,7 +2512,7 @@ const J = { data: null, fileId: null, t: null };
 const DRIVE = 'https://www.googleapis.com/drive/v3', DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3';
 async function dfetch(url, opt, again) {
   opt = opt || {};
-  const r = await fetch(url, Object.assign({}, opt, { headers: Object.assign({ Authorization: 'Bearer ' + real.token }, opt.headers || {}) }));
+  const r = await fetch(url, Object.assign({}, opt, { headers: Object.assign({ Authorization: 'Bearer ' + curTok() }, opt.headers || {}) }));
   if (r.status === 401 && !again) { await tokenAfter401(); return dfetch(url, opt, true); }
   if (r.status === 401) { real.expired = true; renderTop(); throw new Error('로그인이 만료됐어요'); }
   if (!r.ok) { let msg = 'Drive ' + r.status; try { msg += ': ' + (await r.json()).error.message; } catch (e) { /* */ } const e = new Error(msg); e.status = r.status; throw e; }
@@ -2798,7 +2804,7 @@ async function saveAttToDrive(m, i, btn) {
 // 올리는 진행률을 알 수 있게 XHR로 업로드
 function xhrUpload(url, ctype, body, onProg) {
   return new Promise((res, rej) => {
-    const x = new XMLHttpRequest(); x.open('POST', url); x.setRequestHeader('Authorization', 'Bearer ' + real.token); x.setRequestHeader('Content-Type', ctype);
+    const x = new XMLHttpRequest(); x.open('POST', url); x.setRequestHeader('Authorization', 'Bearer ' + curTok()); x.setRequestHeader('Content-Type', ctype);
     x.upload.onprogress = e => { if (e.lengthComputable) onProg(e.loaded / e.total); };
     x.onload = () => {
       if (x.status === 401) { tokenAfter401(); return rej(new Error('로그인을 연장하는 중이에요. 잠시 뒤 다시 눌러 주세요')); }
@@ -2834,7 +2840,7 @@ async function attBlob(m, a, onProg) {
     if (!onProg) data = (await gapi(`messages/${m.gid || meta.msg}/attachments/${meta.id}`)).data;
     else {
       await takeQuota(5, false);
-      const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.gid || meta.msg}/attachments/${meta.id}`, { headers: { Authorization: 'Bearer ' + real.token } });
+      const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.gid || meta.msg}/attachments/${meta.id}`, { headers: { Authorization: 'Bearer ' + curTok() } });
       if (r.status === 401) { await tokenAfter401(); return attBlob(m, a, onProg); }
       if (!r.ok || !r.body) data = (await gapi(`messages/${m.gid || meta.msg}/attachments/${meta.id}`)).data;
       else {
