@@ -46,7 +46,14 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 /* 새로 고침 = 램프 문지르기: 램프가 좌우로 문질러지고 반짝임이 깜빡 */
 .refbtn.spin .lamp{animation:lampRub .28s ease-in-out infinite alternate}
 .refbtn{transition:border-radius .3s cubic-bezier(.5,0,.3,1),background .2s,color .2s}
-.refbtn.spin,.refbtn.spin:hover{border-radius:50%;background:#fff;border-color:#c9d6ee;color:var(--blue)}
+.refbtn.spin,.refbtn.spin:hover{background:#fff;border-color:#c9d6ee;color:var(--blue)}
+/* 램프 버튼은 둥근 네모 모양 그대로: 물도 네모 안에서 차오르고, 점은 네모 테두리를 따라 돎 */
+.refbtn .rfr,.refbtn .rfr .dm-fill{border-radius:inherit}
+.refbtn .rfr{border-radius:var(--r-top,10px)}
+.refbtn .rfr .dm-orb{inset:0;border-radius:0;animation:none}
+.refbtn .rfr .dm-orb i{left:0;top:0;margin:-2.5px 0 0 -2.5px;offset-path:path("M21 0H31A11 11 0 0 1 42 11V31A11 11 0 0 1 31 42H11A11 11 0 0 1 0 31V11A11 11 0 0 1 11 0Z");offset-rotate:0deg;animation:dmDrop .45s cubic-bezier(.3,1.6,.5,1) both,rfOrb 1.3s linear infinite}
+@keyframes rfOrb{from{offset-distance:0%}to{offset-distance:100%}}
+.refbtn.ok .rfr .dm-orb{opacity:0;transition:opacity .3s}
 .refbtn.spin.hi{color:#fff}
 .refbtn>svg,.refbtn .f9{position:relative;z-index:1;transition:opacity .2s}
 .refbtn.ok>svg,.refbtn.ok .f9{opacity:0}
@@ -774,6 +781,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793104344"></script>
+<script src="mail-c.js?v=1793104768"></script>
 </body>
 </html>
