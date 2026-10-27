@@ -767,12 +767,24 @@ function moveMenu(btn, ids) {
   menuAt(btn, [{ head: '어느 편지함으로 옮길까요?' }, ...items]);
 }
 // 삭제 = Gmail 휴지통으로 (30일 동안 되살릴 수 있음, 되돌리기 누르면 바로 복구)
+// 열어 둔 메일을 옮기거나 지우면: 목록에서 그 자리에 오는 메일(없으면 바로 위)을 열어 오른쪽에 보여줌 (아웃룩처럼)
+function nextOpenAfter(ids) {
+  if (st.open == null || !ids.includes(st.open)) return () => {};
+  const list = visible(), i = list.findIndex(m => m.id === st.open);
+  const cand = i < 0 ? [] : list.slice(i + 1).concat(list.slice(0, i).reverse());
+  return () => {
+    if ($('#read').classList.contains('composing')) return;  // 답장 쓰는 중이면 작성 화면 유지
+    if (visible().some(m => m.id === st.open)) return;  // 옮겨도 지금 목록에 남아 있으면(전체 메일 등) 그대로
+    const nx = cand.find(m => !ids.includes(m.id) && visible().some(v => v.id === m.id));
+    if (nx) openMail(nx.id); else { st.open = null; renderList(); renderRead(true); }
+  };
+}
 function trashMails(ids) {
   const nds = ids.filter(id => id < 0); if (nds.length) { const xs = nds.map(id => ndRemove(-id)); ids = ids.filter(id => id >= 0); if (!ids.length) { st.picked.clear(); renderNav(); renderList(); toast(`작성 중이던 메일 ${nds.length}통을 삭제했어요`, () => { xs.forEach(ndRestore); renderNav(); renderList(); }); return; } }
-  const list = MAILS.filter(m => ids.includes(m.id));
+  const list = MAILS.filter(m => ids.includes(m.id)), advance = nextOpenAfter(ids);
   list.forEach(m => { m.deleted = 1; jSet(m, { d: 1 }); });
-  if (ids.includes(st.open) && st.folder !== 'all') st.open = null; st.picked.clear();
-  renderNav(); renderList(); renderRead(true);
+  st.picked.clear();
+  renderNav(); renderList(); renderRead(true); advance();
   toast(`${ids.length}통을 지운 편지함으로 옮겼어요`, () => restoreMails(list.map(m => m.id)));
 }
 function restoreMails(ids) { MAILS.forEach(m => { if (ids.includes(m.id)) { m.deleted = 0; jSet(m, { d: 0 }); } }); renderNav(); renderList(); renderRead(true); toast(`${ids.length}통을 되살렸어요`); }
@@ -780,8 +792,9 @@ function restoreMails(ids) { MAILS.forEach(m => { if (ids.includes(m.id)) { m.de
 function moveTo(ids, boxId) {
   const before = MAILS.map(m => [m.id, m.box, m.inbox, m.deleted]);
   const olds = [...new Set(MAILS.filter(m => ids.includes(m.id) && m.box && m.box !== boxId).map(m => m.box))];
+  const advance = nextOpenAfter(ids);
   MAILS.forEach(m => { if (ids.includes(m.id)) { m.box = boxId; m.inbox = 0; if (m.deleted) { m.deleted = 0; jSet(m, { d: 0 }); } } });
-  st.picked.clear(); renderNav(); renderList(); renderRead();
+  st.picked.clear(); renderNav(); renderList(); renderRead(); advance();
   syncLabels(ids, [boxId], ['INBOX', ...olds], '편지함 이동');
   toast(`${ids.length}통을 '${boxPath(boxId)}'(으)로 옮겼어요`, () => {
     before.forEach(([id, b, i, d]) => { const m = MAILS.find(x => x.id === id); if (m && ids.includes(id)) { m.box = b; m.inbox = i; m.deleted = d || 0; jSet(m, { b: b || '', i, d: d ? 1 : 0 }); } });
