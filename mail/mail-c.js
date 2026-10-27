@@ -402,7 +402,7 @@ function renderTop() {
   pill.onclick = R.expired ? () => (R.on ? renewToken().catch(e => toast('연결하지 못했어요: ' + e.message)) : loadReal(true)) : null;
   const set = (id, ic, on, tip) => { const b = $(id); b.innerHTML = ico(ic); b.classList.toggle('on', !!on); b.title = tip; };
   set('#fBox', 'folder', st.folder !== 'all', st.folder === 'all' ? '편지함: 전체 (필터 없음)' : '편지함: ' + folderName(st.folder));
-  set('#fWhere', 'where', f.where !== 'all' || f.exclude || f.exact, '검색 범위: ' + (f.where === 'subj' ? '제목만' : '제목+내용') + (f.exact ? ' · 정확히 일치' : '') + (f.exclude ? ' · 제외: ' + f.exclude : ''));
+  set('#fWhere', 'where', f.where !== 'all' || f.exclude || f.exact, '검색 범위: ' + (f.where === 'subj' ? '제목만' : '제목+내용+첨부파일 이름') + (f.exact ? ' · 정확히 일치' : '') + (f.exclude ? ' · 제외: ' + f.exclude : ''));
   const p = f.period.k === 'range' ? fmtD(f.period.from) + '~' + fmtD(f.period.to) : PERIODS.find(x => x[0] === f.period.k)[1];
   set('#fPeriod', 'cal', f.period.k !== 'all', '기간: ' + p);
   const a = f.att.k === 'any' ? '전체' : f.att.k === 'no' ? '없음' : '있음' + (f.att.types.length ? '(' + f.att.types.map(t => ATYPES.find(x => x[0] === t)[1]).join('·') + ')' : '');
@@ -455,7 +455,7 @@ function whereMenu() {
   node.innerHTML = `<div class="mh">제외할 단어 (쉼표로 여러 개)</div><div class="mrow"><input type="text" id="exIn" placeholder="예: 광고, 뉴스레터" value="${esc(f.exclude)}"></div>`;
   $('input', node).addEventListener('input', e => { f.exclude = e.target.value; renderTop(); renderList(); });
   return menuAt($('#fWhere'), [
-    { label: '제목+내용', on: f.where === 'all', act: () => { f.where = 'all'; renderTop(); renderList(); whereMenu(); } },
+    { label: '제목+내용+첨부파일 이름', on: f.where === 'all', act: () => { f.where = 'all'; renderTop(); renderList(); whereMenu(); } },
     { label: '제목만', on: f.where === 'subj', act: () => { f.where = 'subj'; renderTop(); renderList(); whereMenu(); } },
     '-', { label: '띄어쓰기까지 정확히 일치', check: f.exact, act: () => { f.exact = !f.exact; renderTop(); renderList(); } },
     '-', { node }
@@ -602,13 +602,21 @@ function openCalendar() {
   draw();
 }
 /* 검색: 입력하는 동안 아래 목록이 바로 걸러지고, 검색창 아래엔 추천(사람·메일)이 뜸 */
+// 검색: 메일마다 본문 전체를 소문자로 바꿔 이어 붙이던 방식(1만6천 통이면 글자 한 번 칠 때마다 0.7초)
+// → 대소문자 무시 정규식을 한 번만 만들어 제목·보낸사람·본문에 각각 바로 검사 (약 10배 빠름)
+const reEsc = w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const QRE = new Map();
+function qRegs(key, make) { let r = QRE.get(key); if (!r) { if (QRE.size > 200) QRE.clear(); r = make(); QRE.set(key, r); } return r; }
 function queryMatch(m, raw) {
   const f = st.f; const q = (raw || '').trim();
-  const hay = f.where === 'subj' ? m.subj : [m.subj, m.body || m.snippet || '', m.from.name, m.from.email].join(' ');
-  if (f.exclude) { const ex = f.exclude.split(/[,，]/).map(s => s.trim().toLowerCase()).filter(Boolean); if (ex.some(w => hay.toLowerCase().includes(w))) return false; }
+  // 기본 검색엔 첨부파일 이름도 포함 (본문 속 그림은 제외). 메일마다 한 번만 만들어 둠
+  const attN = m._attN != null && m._attK === m.att ? m._attN : (m._attK = m.att, m._attN = (m.att || []).filter(a => !(a[3] && a[3].inline)).map(a => a[1]).join(' '));
+  const fields = f.where === 'subj' ? [m.subj || ''] : [m.subj || '', m.from.name || '', m.from.email || '', attN, m.body || m.snippet || ''];
+  if (f.exclude) { const ex = qRegs('x|' + f.exclude, () => f.exclude.split(/[,，]/).map(s => s.trim()).filter(Boolean).map(w => new RegExp(reEsc(w), 'i'))); if (ex.some(re => fields.some(x => re.test(x)))) return false; }
   if (!q) return true;
-  if (f.exact) return hay.includes(q);
-  return q.toLowerCase().split(/\s+/).every(w => hay.toLowerCase().includes(w));
+  if (f.exact) return fields.some(x => x.includes(q));
+  const ws = qRegs('q|' + q, () => q.split(/\s+/).filter(Boolean).map(w => new RegExp(reEsc(w), 'i')));
+  return ws.every(re => fields.some(x => re.test(x)));
 }
 function renderSugg() {
   const q = st.q.trim(), box = $('#sugg');
@@ -3074,10 +3082,12 @@ function wire() {
   $('#fClear').addEventListener('click', () => { Object.assign(st.f, { from: null, to: null, att: { k: 'any', types: [] }, readf: 'all' }); renderTop(); renderList(); });
   // 검색
   const q = $('#q');
-  q.addEventListener('input', () => { st.q = q.value; renderList(); });
+  // 글자를 칠 때마다 바로 다시 찾지 않고, 잠깐(0.15초) 멈추면 찾음 — 한글 조합 중 자모마다 검색하던 것도 줄어듦
+  let qT = 0; q.addEventListener('input', () => { clearTimeout(qT); qT = setTimeout(() => { if (st.q !== q.value) { st.q = q.value; renderList(); } }, 150); });
+  q.addEventListener('compositionend', () => { clearTimeout(qT); qT = setTimeout(() => { if (st.q !== q.value) { st.q = q.value; renderList(); } }, 60); });
   q.addEventListener('focus', renderSugg);
   q.addEventListener('blur', () => setTimeout(() => $('#sugg').classList.remove('on'), 150));
-  q.addEventListener('keydown', e => { if (e.key === 'Enter') { $('#sugg').classList.remove('on'); const first = visible()[0]; if (first) openMail(first.id); } if (e.key === 'Escape') { q.value = ''; st.q = ''; renderList(); } });
+  q.addEventListener('keydown', e => { if (e.key === 'Enter' && st.q !== q.value) { clearTimeout(qT); st.q = q.value; renderList(); } if (e.key === 'Enter') { $('#sugg').classList.remove('on'); const first = visible()[0]; if (first) openMail(first.id); } if (e.key === 'Escape') { q.value = ''; st.q = ''; renderList(); } });
   $('#goSearch').addEventListener('click', () => { st.q = q.value; $('#sugg').classList.remove('on'); renderList(); });
   $('#sugg').addEventListener('mousedown', e => { e.preventDefault(); const si = e.target.closest('.si'); if (!si) return; if (si.dataset.id) openMail(+si.dataset.id); if (si.dataset.p) { st.f.from = si.dataset.p; q.value = ''; st.q = ''; renderTop(); renderList(); } $('#sugg').classList.remove('on'); });
   // 왼쪽
