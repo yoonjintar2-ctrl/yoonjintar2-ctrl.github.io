@@ -810,7 +810,7 @@ function renderRead(force) {
       const d = fr.contentDocument, W = fr.clientWidth, sw = d.documentElement.scrollWidth;
       ['pointerdown', 'keydown'].forEach(ev => d.addEventListener(ev, authGesture, true));  // 메일 본문을 눌러도 로그인 연장
       // 화면보다 조금 넓은 메일(서명·표)은 살짝 줄여서 한눈에 (너무 많이 줄여야 하면 그대로 두고 옆으로 스크롤)
-      if (sw > W + 4) { const z = W / sw; if (z >= 0.72) d.body.style.zoom = z.toFixed(3); }
+      if (sw > W + 4) { const z = W / sw; if (z >= 0.9) d.body.style.zoom = z.toFixed(3); }  // 10% 넘게 줄여야 하면 그대로 두고 옆으로 스크롤 (글자가 작아지지 않게)
       fr.style.height = Math.max(d.documentElement.scrollHeight, d.body.getBoundingClientRect().height) + 20 + 'px';
     } catch (e) { fr.style.height = '70vh'; } });
     const css = '<base target="_blank"><style>html{overflow-x:auto;overflow-y:hidden}body{margin:0;font:14.5px/1.65 Pretendard,"Malgun Gothic",sans-serif;color:#1f1f1f;word-break:break-word}</style>';
@@ -1006,7 +1006,7 @@ async function openCompose(kind, opts) {
 }
 async function quoteHtml(m) {
   const src = m.htmlReady || await resolveInline(m) || m.html;
-  const r = await renderPasted(src);  // 메일 안 <style> 모양을 칸·글자마다 직접 입힘 (작성 화면 전체에 번지지 않게)
+  const r = await renderPasted(src, { quote: true });  // 메일 안 <style> 모양을 칸·글자마다 직접 입힘 (작성 화면 전체에 번지지 않게)
   if (!r) return null;
   const who = p => p.name && p.name !== p.email ? `${esc(p.name)} &lt;${esc(p.email)}&gt;` : esc(p.email);
   const hdr = `<div class="qhdr">-----원본 메일-----<br><b>보낸 사람:</b> ${who(m.from)}<br><b>보낸 날짜:</b> ${fmtD(dayOf(m))} ${m.t}<br><b>받는 사람:</b> ${m.to.map(who).join(', ')}${m.cc && m.cc.length ? `<br><b>참조:</b> ${m.cc.map(who).join(', ')}` : ''}<br><b>제목:</b> ${esc(m.subj)}</div><br>`;
@@ -1875,9 +1875,11 @@ const pasteOpt = { on: false };
 // → 보이지 않는 칸에서 실제로 그려 본 뒤, 칸마다 계산된 모양(테두리·배경·글꼴·정렬·너비)을 직접 써넣음
 const INLINE_CELL = ['border-top', 'border-right', 'border-bottom', 'border-left', 'background-color', 'color', 'font-family', 'font-size', 'font-weight', 'font-style', 'text-decoration-line', 'text-align', 'vertical-align', 'white-space', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'width', 'height'];
 const INLINE_TEXT = ['color', 'background-color', 'font-family', 'font-size', 'font-weight', 'font-style', 'text-decoration-line'];
-function renderPasted(html) {
+// opts.quote: 답장·전달에 붙이는 원본 메일 (메일 화면 너비로 그려 보고, 붙여넣기용 손질은 하지 않음)
+function renderPasted(html, opts) {
+  opts = opts || {};
   return new Promise(res => {
-    const f = document.createElement('iframe'); f.setAttribute('sandbox', 'allow-same-origin'); f.style.cssText = 'position:fixed;left:-10000px;top:0;width:1600px;height:400px;border:0;visibility:hidden';
+    const f = document.createElement('iframe'); f.setAttribute('sandbox', 'allow-same-origin'); f.style.cssText = `position:fixed;left:-10000px;top:0;width:${opts.quote ? 860 : 1600}px;height:400px;border:0;visibility:hidden`;
     // 글꼴을 따로 정하지 않은 내용은 작성 칸 기본 글꼴로 (엑셀·워드 자체 서식이 있으면 그게 우선)
     const F = SET.font || { family: '맑은 고딕', size: 10 };
     f.srcdoc = `<style>body{font-family:'${F.family}',sans-serif;font-size:${F.size}pt}</style>` + html.replace(/<script[\s\S]*?<\/script>/gi, '');
@@ -1887,19 +1889,30 @@ function renderPasted(html) {
         // 크기·줄 수는 모양을 써넣기 전에 한꺼번에 재 둠 (하나씩 쓰면 표가 다시 계산돼 칸이 좁아짐)
         const rect = new Map(), oneLine = new Set();
         $$('*', d.body).forEach(el => rect.set(el, el.getBoundingClientRect()));
+        // 너비는 원래 정해져 있던 것만 살림: '100%' 같은 표를 그려 본 화면 너비(px)로 굳히면 받는 쪽에서 아주 넓은 메일이 됨
+        //  - 표: 원래 적힌 너비 그대로 (없으면 안 씀)
+        //  - 칸: 엑셀처럼 열 너비(<col>)나 고정 너비(px·pt) 표일 때만 실제 너비로, 아니면 원래 적힌 너비만
+        const spec = el => (el.getAttribute('width') || el.style.width || '').trim();
+        const fixedTbl = new Set($$('table', d.body).filter(t => t.querySelector('col') || /^\d+(\.\d+)?(px|pt)?$/i.test(spec(t))));
         $$('td, th', d.body).forEach(td => { const rg = d.createRange(); rg.selectNodeContents(td); const tops = new Set([...rg.getClientRects()].filter(r => r.width > 0).map(r => Math.round(r.top / 4))); if (tops.size <= 1 && !td.querySelector('br, div, p, table')) oneLine.add(td); });
         $$('*', d.body).forEach(el => {
           const cs = w.getComputedStyle(el), cell = /^(TD|TH)$/.test(el.tagName), keys = cell ? INLINE_CELL : el.tagName === 'TABLE' ? ['border-collapse', 'width', 'background-color', 'font-family', 'font-size'] : INLINE_TEXT;
           keys.forEach(k => { let v = cs.getPropertyValue(k); if (!v) return;
             if (/border-/.test(k) && /^0px|none/.test(v)) v = 'none';
             if (k === 'background-color' && /rgba\(0, 0, 0, 0\)|transparent/.test(v)) return;
-            if (k === 'width' || k === 'height') { if (!cell && k === 'height') return; v = Math.round(rect.get(el)[k]) + 'px'; }
+            if (k === 'width' || k === 'height') {
+              if (!cell && k === 'height') return;
+              const t = cell && el.closest('table'), fixed = t && fixedTbl.has(t);
+              if (!cell) { const sp = spec(el); if (!sp) return; v = /%$/.test(sp) ? sp : /^\d+(\.\d+)?$/.test(sp) ? sp + 'px' : sp; }  // 표
+              else if (fixed) v = Math.round(rect.get(el)[k]) + 'px';
+              else { if (k === 'height') return; const sp = spec(el); if (!sp) return; v = /^\d+(\.\d+)?$/.test(sp) ? sp + 'px' : sp; }
+            }
             el.style.setProperty(k === 'text-decoration-line' ? 'text-decoration' : k, v); });
           el.removeAttribute('class');
         });
         $$('table', d.body).forEach(t => { if (!t.style.borderCollapse) t.style.borderCollapse = 'collapse'; });
         // 칸 안 글자가 한 줄이었으면 줄바꿈 금지 (작성 화면 글꼴이 조금 넓어도 '네이/버'처럼 깨지지 않게), 안쪽 여백이 0이면 조금 줌
-        $$('td, th', d.body).forEach(td => {
+        if (!opts.quote) $$('td, th', d.body).forEach(td => {
           if (oneLine.has(td)) td.style.whiteSpace = 'nowrap';
           if (['top', 'right', 'bottom', 'left'].every(k => !parseFloat(td.style.getPropertyValue('padding-' + k)))) td.style.padding = '1px 5px';
         });
@@ -2573,14 +2586,15 @@ function toMail(meta, lab) {
   if (isMe(m.from)) m.from = ME;
   let r = J.data && J.data.m[g];
   if (!r) {
-    const isNew = !J.data || meta.when > J.data.initAt, received = !sent || lab.inbox.has(g);
+    // 내가 보낸 메일은 받는사람에 내가 있어도(그룹 주소 포함) 받은 메일로 치지 않음 → 보낸편지함에만
+    const mine = isMe(meta.from), isNew = !J.data || meta.when > J.data.initAt, received = !mine && (!sent || lab.inbox.has(g));
     let b = isNew ? '' : (lab.box.get(g) || ''), i = isNew ? (received ? 1 : 0) : (lab.inbox.has(g) ? 1 : 0);
     // 새로 들어온 메일엔 JIN-mail 자동 분류 규칙 적용
     if (isNew && received && J.data) { const rule = (J.data.rules || []).find(x => ruleHit(m, x)); if (rule) { b = rule.box; if (rule.skipInbox) i = 0; } }
     r = { b, i, u: !sent && lab.unread.has(g) ? 1 : 0, d: 0 };
     if (real.labReady && J.data) { J.data.m[g] = r; J.dirty = true; }
   }
-  return Object.assign(m, { box: r.b || null, inbox: r.i, unread: r.u, deleted: r.d });
+  return Object.assign(m, { box: r.b || null, inbox: isMe(m.from) ? 0 : r.i, unread: isMe(m.from) ? 0 : r.u, deleted: r.d });
 }
 // 이 브라우저 안의 저장소(IndexedDB) — 한 번 받은 목록은 다음부터 다시 안 받음
 function cacheDb() {
