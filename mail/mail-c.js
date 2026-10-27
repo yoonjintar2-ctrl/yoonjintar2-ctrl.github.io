@@ -3571,6 +3571,7 @@ function wire() {
     if (e.target.closest('input, textarea, select, [contenteditable="true"]')) { if (e.key === 'Escape' && $('#read').classList.contains('composing') && !$('.menu')) closeCompose(); return; }
     if ($('.modal-bg')) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;  // Ctrl+R 새로고침 등 브라우저 단축키는 그대로
+    if (e.key === 'Escape') { if ($('.menu')) closeMenus(); else deselect(); return; }
     const list = visible(); const i = list.findIndex(m => m.id === st.open);
     if (e.key === 'j' && list[i + 1]) openMail(list[i + 1].id);
     else if (e.key === 'k' && i > 0) openMail(list[i - 1].id);
@@ -3578,7 +3579,21 @@ function wire() {
     else if (e.key === 'c') { e.preventDefault(); openCompose('new'); }
     else if (e.key === '/') { e.preventDefault(); $('#q').focus(); }
   });
+  // 목록의 빈 곳을 누르면 선택 취소 (끌어서 스크롤한 경우는 제외)
+  let dn = null; document.addEventListener('mousedown', e => { dn = [e.clientX, e.clientY]; }, true);
+  document.addEventListener('click', e => {
+    const t = e.target; if (!dn || Math.abs(e.clientX - dn[0]) + Math.abs(e.clientY - dn[1]) > 5) return;
+    if (!t.closest('.list') || t.closest('.row, button, input, label, select, a, .lfilt, #lhead, #convbar, .menu, .more-rows')) return;
+    deselect();
+  });
   setupSplits(); setupDragScroll();
+}
+// 선택 취소: 열어 둔 메일·체크를 모두 풀기 → 안 읽은 메일함에서 읽은 메일은 이때 목록에서 빠짐
+function deselect() {
+  if ($('#read').classList.contains('composing') || document.body.classList.contains('popmode')) return false;
+  if (st.open == null && !st.picked.size && st.unreadKeep == null) return false;
+  st.open = null; st.unreadKeep = null; st.picked.clear();
+  renderNav(); renderList(); renderRead(true); return true;
 }
 
 /* ───────── 시작 ───────── */
