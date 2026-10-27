@@ -2990,7 +2990,7 @@ const DAYS = 92;  // 최근 3개월
 // 최신 메일부터 화면에 먼저 보여 주고, 나머지는 뒤에서 차차 받아 옴
 async function loadReal(interactive, token) {
   if (real.loading) return; real.loading = true; const gen = real.gen = (real.gen || 0) + 1;
-  const prog = t => { real.prog = t; renderTop(); const bm = $('#bootMsg'); if (bm && t) bm.textContent = t; };
+  const prog = t => { real.prog = t; renderTop(); const bm = $('#bootMsg'); if (bm && t) { if (bm.textContent !== t) { const b = $('#boot'); if (b && b._lv != null) b._lv = Math.min(0.9, b._lv + 0.08); } bm.textContent = t; } };
   try {
     if (!token && !interactive) { const sc = store.get('tok-scope', null); if (sc != null && !sc.includes('drive.appdata')) { tokCache.clear(); throw Object.assign(new Error('지니메일이 Gmail을 바꾸지 않도록 권한을 바꿨어요. 한 번만 다시 연결해 주세요'), { relogin: true }); } }
     real.token = token || await googleLogin(interactive); real.expired = false;
@@ -3333,27 +3333,19 @@ async function downloadAtt(m, a) {
   finally { setAProg(m, i, 'dl', false); }
 }
 // 로딩·다시 로그인 화면 (예시 메일이 잠깐 보였다 바뀌는 것 방지)
+const lampLevel = el => { const g = el && $('.lfill', el); if (g) g.setAttribute('transform', `translate(0 ${(51.5 - el._lv * 33).toFixed(2)})`); };
 function bootScreen(mode, msg) {
   let el = $('#boot');
-  if (mode === 'off') { if (el && !el.classList.contains('out')) { el.classList.add('out'); setTimeout(() => el.remove(), 420); } return; }
+  if (mode === 'off') { if (el && !el.classList.contains('out')) { clearInterval(el._t); const full = el._lv != null; if (full) { el._lv = 1; lampLevel(el); el.classList.add('full'); } setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 420); }, full ? 380 : 0); } return; }
   if (el && el.classList.contains('out')) { el.remove(); el = null; }
   if (!el) { el = document.createElement('div'); el.id = 'boot'; document.body.append(el); }
   const c = store.get('connected', null) || {};
   el.innerHTML = `<div class="bootbox">${mode === 'loading' ? '' : `<div class="brandlogo">${APP_ICON}</div>`}<h2 class="wmh">${LOGO_WM}</h2>${mode === 'loading'
-    ? `<div class="envani"><svg viewBox="0 0 140 124" width="140" height="124" aria-hidden="true">
-      <ellipse class="eshadow" cx="70" cy="114" rx="44" ry="5" fill="#d7dbe2"/>
-      <g class="ebody">
-        <path class="bf" d="M20 61Q20 52 29 52H111Q120 52 120 61L77 93Q70 97.5 63 93Z" fill="#dfe3e9" stroke="#5f6368" stroke-width="3.2" stroke-linejoin="round"/>
-        <rect x="20" y="52" width="100" height="52" rx="8" fill="#e9ecf0" stroke="#5f6368" stroke-width="3.2"/>
-        <clipPath id="envclip"><rect x="-40" y="-200" width="220" height="301"/></clipPath><g clip-path="url(#envclip)"><g class="letter"><rect x="37" y="40" width="66" height="56" rx="5" fill="#fff" stroke="#5f6368" stroke-width="3"/>
-          <path class="ln l1" d="M47 53h46" stroke="#5f6368" stroke-width="3.2" stroke-linecap="round"/>
-          <path class="ln l2" d="M47 63h46" stroke="#5f6368" stroke-width="3.2" stroke-linecap="round"/>
-          <path class="ln l3" d="M47 73h28" stroke="#5f6368" stroke-width="3.2" stroke-linecap="round"/></g></g>
-        <path d="M20 58L64 87Q70 90.5 76 87L120 58V96Q120 104 112 104H28Q20 104 20 96Z" fill="#f6f7f9" stroke="#5f6368" stroke-width="3.2" stroke-linejoin="round"/>
-        <path d="M25 100L55 88M115 100L85 88" stroke="#5f6368" stroke-width="2.2" stroke-linecap="round"/>
-        <path class="ff" d="M20 61Q20 52 29 52H111Q120 52 120 61L77 93Q70 97.5 63 93Z" fill="#e4e7ec" stroke="#5f6368" stroke-width="3.2" stroke-linejoin="round"/>
-      </g></svg></div><p id="bootMsg">${esc(msg || 'Gmail에서 메일을 불러오는 중…')}</p>`
+    ? `<div class="envani lampwrap"><svg class="lampld" viewBox="0 0 64 60" width="132" height="124" aria-hidden="true"><defs><mask id="lampMk" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="60"><path fill="#fff" d="M18.5 35.5Q18.5 46 33.5 46Q48.5 46 48.5 35.5Z"/><path fill="#fff" d="M24 34Q24 26.5 33.5 26.5Q43 26.5 43 34Z"/><circle fill="#fff" cx="33.5" cy="24.2" r="2.4"/><path fill="#fff" d="M20.5 41.5C13 41.5 9.5 36 5.5 30.5Q5 29.5 6.3 29.6L8.6 29.8C12.5 34.5 15.5 36.3 20.5 36.3Z"/><path fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" d="M47.5 33.6C55.5 31.8 57.8 41.8 46.4 41.8"/><path fill="#fff" d="M28.5 45.5H38.5L40.5 50.5Q40.7 51.5 39.6 51.5H27.4Q26.3 51.5 26.5 50.5Z"/></mask></defs><g mask="url(#lampMk)"><rect width="64" height="60" fill="#e3e7ee"/><g class="lfill" transform="translate(0 50)"><path class="lwave" d="M0 3Q4 0.8 8 3Q12 5.2 16 3Q20 0.8 24 3Q28 5.2 32 3Q36 0.8 40 3Q44 5.2 48 3Q52 0.8 56 3Q60 5.2 64 3Q68 0.8 72 3Q76 5.2 80 3Q84 0.8 88 3Q92 5.2 96 3Q100 0.8 104 3Q108 5.2 112 3Q116 0.8 120 3Q124 5.2 128 3V80H0Z" fill="#0b57d0"/></g></g><path class="lsp s1" d="M10.5 10.8Q11.332 15.168 15.7 16Q11.332 16.832 10.5 21.2Q9.668 16.832 5.3 16Q9.668 15.168 10.5 10.8Z"/><path class="lsp s2" d="M18.5 6.7Q18.948 9.052 21.3 9.5Q18.948 9.948 18.5 12.3Q18.052 9.948 15.7 9.5Q18.052 9.052 18.5 6.7Z"/></svg></div><p id="bootMsg">${esc(msg || 'Gmail에서 메일을 불러오는 중…')}</p>`
     : `<p>${esc(msg || (c.email ? c.email + ' 로그인이 만료됐어요' : 'Gmail 계정 연결이 필요해요'))}</p><button class="btn pri gbtn" id="bootGo">${ico('env', 18)} Gmail 다시 연결</button><button class="later" id="bootSample">예시 메일로 둘러보기</button>`}</div>`;
+  // 빈 램프에 색이 서서히 차오름: 시간이 갈수록 천천히 90%까지, 단계가 넘어갈 때마다 조금씩 더 (다 불러오면 꽉 채우고 사라짐)
+  clearInterval(el._t); el._lv = null;
+  if (mode === 'loading') { el._lv = 0.05; lampLevel(el); el._t = setInterval(() => { el._lv += (0.9 - el._lv) * 0.018; lampLevel(el); }, 80); }
   const go = $('#bootGo', el); if (go) go.onclick = () => { bootScreen('loading'); loadReal(true); };
   const sm = $('#bootSample', el); if (sm) sm.onclick = () => { store.set('skip-connect', true); location.hash = ''; MAILS = SAMPLE_MAILS.slice(); BOXES = store.get('sample-boxes', DEFAULT_BOXES); real.expired = false; bootScreen('off'); renderTop(); renderNav(); renderList(); const f = visible()[0]; if (f) openMail(f.id); };
 }

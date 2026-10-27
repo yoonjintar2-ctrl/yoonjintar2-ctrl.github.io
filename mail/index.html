@@ -659,6 +659,14 @@ body.resizing{cursor:col-resize;user-select:none}
 /* 다 불러오면 로딩 화면이 살짝 커지며 사라짐 */
 #boot{transition:opacity .4s ease,transform .4s ease}
 #boot.out{opacity:0;transform:scale(1.03);pointer-events:none}
+#boot .lampwrap{display:flex;align-items:flex-end;justify-content:center;margin:6px auto 4px}
+#boot .lampld .lfill{transition:transform .5s cubic-bezier(.3,.7,.3,1)}
+#boot .lampld .lwave{animation:lampWave 1.6s linear infinite}
+@keyframes lampWave{to{transform:translateX(-16px)}}
+#boot .lampld .lsp{fill:#c9d0db;transform-box:fill-box;transform-origin:center;animation:lampTw 1.8s ease-in-out infinite}
+#boot .lampld .s2{animation-delay:.9s}
+#boot.full .lampld .lsp{fill:#0b57d0}
+@keyframes lampTw{0%,100%{opacity:.35;transform:scale(.7)}50%{opacity:1;transform:scale(1.15)}}
 @media (prefers-reduced-motion:reduce){#boot .envani *{animation:none!important}#boot .envani .bf,#boot .envani .ln{stroke-dashoffset:0}}
 .menu .boxlist{max-height:min(52vh,440px);overflow:auto;min-width:260px}
 .afile{cursor:grab;gap:4px}
@@ -748,6 +756,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793099017"></script>
+<script src="mail-c.js?v=1793099533"></script>
 </body>
 </html>
