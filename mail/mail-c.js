@@ -546,17 +546,34 @@ function rcptPeople() {
 function personMenu(kind) {
   const btn = kind === 'from' ? $('#fFrom') : $('#fTo');
   const people = peopleFromMails(kind === 'from' ? 'from' : 'to');
+  // 지금 보고 있는 편지함·검색어(·다른 필터)에 걸린 메일 속 사람을 위로: 이 필터 자체는 빼고 계산
+  const saved = st.f[kind]; let ctxMails = []; st.f[kind] = null;
+  try { ctxMails = visible().filter(m => !m.nd); } catch (e) { ctxMails = []; } finally { st.f[kind] = saved; }
+  const ctxN = new Map(), bump = pp => { if (!pp || !pp.email || isMe(pp)) return; const e = pp.email.toLowerCase(); ctxN.set(e, (ctxN.get(e) || 0) + 1); };
+  ctxMails.forEach(m => { if (kind === 'from') bump(m.from); else { (m.to || []).forEach(bump); (m.cc || []).forEach(bump); } });
+  const hasCtx = ctxMails.length && ctxMails.length < MAILS.length && ctxN.size;
+  const ctxLabel = st.q.trim() ? `'${st.q.trim()}' 검색 결과` : folderName(st.folder);
+  const cnt = p => ctxN.get(p.email.toLowerCase()) || 0;
+  const ranked = hasCtx ? people.slice().sort((a, b) => cnt(b) - cnt(a) || b.n - a.n) : people;
   const node = document.createElement('div');
   node.innerHTML = `<div class="mrow"><input type="text" placeholder="이름이나 메일 주소" autocomplete="off"></div><div class="list2"></div>`;
   const inp = $('input', node), box = $('.list2', node);
   const cur = st.f[kind]; let hi = -1;  // 방향키로 가리키는 사람 (-1: 없음)
+  const row = (p, i) => `<div class="mi${cur === p.email ? ' on' : ''}${i === hi ? ' kbd' : ''}" data-e="${esc(p.email)}"><span class="chk">${cur === p.email ? '✓' : ''}</span><i style="width:8px;height:8px;border-radius:50%;background:${dotColor(p.email)}"></i>${esc(p.name)} <small style="color:var(--mute)">${esc(p.email)}</small>${hasCtx && cnt(p) ? `<small class="ctxn" title="${esc(ctxLabel)}에 있는 메일 수">${cnt(p)}통</small>` : ''}</div>`;
   const draw = () => {
     const q = inp.value.trim();
-    const list = (q ? people.filter(p => personMatch(p, q)) : people).slice(0, q ? 12 : 8);
-    hi = Math.min(hi, list.length - 1);
-    box.innerHTML = `<div class="mi${!cur ? ' on' : ''}" data-e=""><span class="chk">${!cur ? '✓' : ''}</span>선택 취소</div>` + (q ? '' : '<div class="mh">최근 자주 주고받은 사람</div>') +
-      list.map((p, i) => `<div class="mi${cur === p.email ? ' on' : ''}${i === hi ? ' kbd' : ''}" data-e="${esc(p.email)}"><span class="chk">${cur === p.email ? '✓' : ''}</span><i style="width:8px;height:8px;border-radius:50%;background:${dotColor(p.email)}"></i>${esc(p.name)} <small style="color:var(--mute)">${esc(p.email)}</small></div>`).join('') +
-      (q && !list.length ? '<div class="mh">맞는 사람이 없어요</div>' : '');
+    let h = `<div class="mi${!cur ? ' on' : ''}" data-e=""><span class="chk">${!cur ? '✓' : ''}</span>선택 취소</div>`, i = 0;
+    if (q) {
+      const list = ranked.filter(p => personMatch(p, q)).slice(0, 12); hi = Math.min(hi, list.length - 1);
+      h += list.map(p => row(p, i++)).join('') + (list.length ? '' : '<div class="mh">맞는 사람이 없어요</div>');
+    } else {
+      const top = hasCtx ? ranked.filter(p => cnt(p)).slice(0, 8) : [];
+      const seen = new Set(top.map(p => p.email)), rest = people.filter(p => !seen.has(p.email)).slice(0, top.length ? 5 : 8);
+      hi = Math.min(hi, top.length + rest.length - 1);
+      if (top.length) h += `<div class="mh">${esc(ctxLabel)}에 있는 사람</div>` + top.map(p => row(p, i++)).join('');
+      h += '<div class="mh">최근 자주 주고받은 사람</div>' + rest.map(p => row(p, i++)).join('');
+    }
+    box.innerHTML = h;
   };
   box.addEventListener('click', e => { const it = e.target.closest('[data-e]'); if (!it) return; st.f[kind] = it.dataset.e || null; closeMenus(); renderTop(); renderList(); });
   inp.addEventListener('input', () => { hi = -1; draw(); });
@@ -1544,7 +1561,7 @@ function setupRcpt(box) {
     const c = e.target.closest('.rc');
     if (c && !e.target.closest('button')) {
       if (!(e.ctrlKey || e.shiftKey || e.metaKey)) $$('.rc.sel', box).forEach(x => x !== c && x.classList.remove('sel'));
-      c.classList.add('sel'); dragSel = c; e.preventDefault(); inp.focus(); return;
+      c.classList.add('sel'); dragSel = null; e.preventDefault(); inp.focus(); return;  // 칩을 끌면 순서 바꾸기(아래), 여러 명 고르기는 빈 곳에서 끌기·Ctrl/Shift
     }
     if (e.target === box || (e.target === inp && !inp.value)) {
       $$('.rc.sel', box).forEach(x => x.classList.remove('sel'));
@@ -1583,6 +1600,42 @@ function setupRcpt(box) {
       { label: '빼기  Delete', act: () => { sel().forEach(y => y.remove()); dirty(); } }
     ], false, { x: e.clientX, y: e.clientY });
   });
+}
+/* 받는사람·참조·숨은참조 칩 끌어서 순서 바꾸기 / 칸끼리 옮기기 (고른 칩이 여러 개면 같이) */
+const CD = { s: null, on: false, chips: [], mk: null, ghost: null };
+function chipDropSpot(x, y) {
+  const el = document.elementFromPoint(x, y); const box = el && el.closest && el.closest('.box.rcpt'); if (!box) return null;
+  let before = $('input', box);
+  for (const c of $$('.rc:not(.fhide)', box)) { if (c.classList.contains('cdrag')) continue; const r = c.getBoundingClientRect(); if (y < r.top - 2 || (y <= r.bottom + 2 && x < r.left + r.width / 2)) { before = c; break; } }
+  if (before === CD.mk) return { box, before: CD.mk.nextSibling };
+  return { box, before };
+}
+document.addEventListener('mousedown', e => { const c = e.button === 0 && e.target.closest && e.target.closest('.box.rcpt .rc'); if (!c || e.target.closest('button')) return; CD.s = { x: e.clientX, y: e.clientY, c }; }, true);
+document.addEventListener('mousemove', e => {
+  if (!CD.s) return; if (!(e.buttons & 1)) { chipDragEnd(false); return; }
+  if (!CD.on) {
+    if (Math.abs(e.clientX - CD.s.x) + Math.abs(e.clientY - CD.s.y) < 6) return;
+    const sel = $$('.rc.sel', CD.s.c.closest('.box.rcpt')); CD.chips = sel.includes(CD.s.c) ? sel : [CD.s.c];
+    CD.chips.forEach(c => c.classList.add('cdrag')); CD.on = true; document.body.classList.add('chipdragging');
+    CD.ghost = document.createElement('div'); CD.ghost.className = 'cghost'; CD.ghost.textContent = CD.chips.length > 1 ? `${CD.chips.length}명 옮기기` : CD.s.c.firstChild.textContent; document.body.append(CD.ghost);
+    CD.mk = document.createElement('span'); CD.mk.className = 'cmark';
+  }
+  CD.ghost.style.left = e.clientX + 12 + 'px'; CD.ghost.style.top = e.clientY + 10 + 'px';
+  const sp = chipDropSpot(e.clientX, e.clientY); if (sp) { if (sp.before !== CD.mk) sp.box.insertBefore(CD.mk, sp.before); } else CD.mk.remove();
+  getSelection().removeAllRanges(); e.preventDefault();
+});
+document.addEventListener('mouseup', () => chipDragEnd(true));
+function chipDragEnd(drop) {
+  if (CD.on) {
+    if (drop && CD.mk.isConnected) {
+      const box = CD.mk.parentNode;
+      CD.chips.forEach(c => { const dup = $$('.rc', box).find(x => x !== c && !CD.chips.includes(x) && x.dataset.email.toLowerCase() === c.dataset.email.toLowerCase()); if (dup) dup.remove(); box.insertBefore(c, CD.mk); });
+      if (box.id === 'bccBox') showBcc(true);
+      dirty();
+    }
+    CD.chips.forEach(c => c.classList.remove('cdrag')); if (CD.mk) CD.mk.remove(); if (CD.ghost) CD.ghost.remove(); document.body.classList.remove('chipdragging');
+  }
+  CD.s = null; CD.on = false; CD.chips = [];
 }
 function copyChips(chips) {
   try { navigator.clipboard.writeText(chipText(chips)); } catch (e) { /* */ }
