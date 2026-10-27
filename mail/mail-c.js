@@ -770,7 +770,7 @@ function renderHead(list) {
     : '<span class="cnt"></span>';  // 평소엔 편지함 이름·통수 표시 안 함 (왼쪽에서 이미 보임)
   lh.innerHTML = `<input type="checkbox" class="ck" id="ckAll" title="모두 선택"${all ? ' checked' : ''}>
     ${label}
-    <button class="btn" data-b="move"${dis}>${ico('move', 15)} 이동</button><button class="btn" data-b="read"${dis}>읽음 처리</button><button class="btn" data-b="unread"${dis}>안읽음 처리</button>${st.folder === 'trash' ? `<button class="btn" data-b="restore"${dis}>되살리기</button>` : `<button class="ib" data-b="del" title="삭제"${dis}>${ico('trash', 17)}</button>`}`;
+    <button class="btn" data-b="move" title="편지함으로 이동"${dis}>${ico('move', 15)}<span class="lx2"> 이동</span></button><button class="btn" data-b="read"${dis}>읽음<span class="lx"> 처리</span></button><button class="btn" data-b="unread"${dis}>안읽음<span class="lx"> 처리</span></button>${st.folder === 'trash' ? `<button class="btn" data-b="restore"${dis}>되살리기</button>` : `<button class="ib" data-b="del" title="삭제"${dis}>${ico('trash', 17)}</button>`}`;
   const ca = $('#ckAll'); if (ca) ca.indeterminate = n > 0 && !all;
 }
 function pickClick(id, e) {
@@ -842,7 +842,8 @@ function fitPpl() {
   $$('#view .ppl').forEach(box => {
     const items = $$('.pp', box), btn = $('.pplmore', box); if (!items.length) return;
     items.forEach(x => { x.hidden = false; }); btn.hidden = true;
-    const top0 = items[0].offsetTop, lh = items[0].offsetHeight || 18, maxTop = top0 + lh * (PPL_LINES - 1) + lh / 2;
+    const v = $('#view').getBoundingClientRect(), lines = v.height < 760 || v.width < 620 ? 1 : PPL_LINES;  // 작은 화면(아이패드 등)은 한 줄만
+    const top0 = items[0].offsetTop, lh = items[0].offsetHeight || 18, maxTop = top0 + lh * (lines - 1) + lh / 2;
     let cut = items.findIndex(x => x.offsetTop > maxTop);
     if (box.dataset.open) { if (cut > 0) { btn.textContent = '접기'; btn.hidden = false; } return; }
     if (cut < 0) return;
@@ -3432,14 +3433,17 @@ function setupDragScroll() {
 }
 // 편지함 목록: 굴리는 동안만 스크롤바 보이기 (끝나고 0.9초 뒤 숨김)
 (() => { let t = 0; document.addEventListener('scroll', e => { if (e.target.id !== 'nav') return; const n = e.target; n.classList.add('scrolling'); clearTimeout(t); t = setTimeout(() => n.classList.remove('scrolling'), 900); }, true); })();
+// 좁은 폭: 왼쪽 편지함이 좁으면 '새 메일'은 연필 아이콘만, 읽기 화면이 낮거나 좁으면 받는사람을 한 줄만
+function narrowCheck() { const nv = $('nav'); if (nv) document.body.classList.toggle('navnarrow', nv.getBoundingClientRect().width < 172); }
 function setupSplits() {
   const Wd = store.get('widths', null);
   if (Wd) { document.documentElement.style.setProperty('--w-nav', Wd.nav + 'px'); document.documentElement.style.setProperty('--w-list', Wd.list + 'px'); }
+  narrowCheck(); window.addEventListener('resize', narrowCheck);
   // 마우스·터치(아이패드)·펜 모두: pointer 이벤트
   $$('.split').forEach(sp => sp.addEventListener('pointerdown', e => {
     if (e.button > 0) return; e.preventDefault(); try { sp.setPointerCapture(e.pointerId); } catch (er) { /* */ } sp.classList.add('drag'); document.body.classList.add('resizing');
     const which = sp.dataset.split, el = which === 'nav' ? $('nav') : $('.list'), x0 = e.clientX, w0 = el.getBoundingClientRect().width;
-    const mv = ev => { const w = Math.max(which === 'nav' ? 150 : 260, Math.min(which === 'nav' ? 380 : 760, w0 + ev.clientX - x0)); document.documentElement.style.setProperty(which === 'nav' ? '--w-nav' : '--w-list', w + 'px'); };
+    const mv = ev => { const w = Math.max(which === 'nav' ? 112 : 220, Math.min(which === 'nav' ? 380 : 760, w0 + ev.clientX - x0)); document.documentElement.style.setProperty(which === 'nav' ? '--w-nav' : '--w-list', w + 'px'); narrowCheck(); };
     const up = () => { sp.classList.remove('drag'); document.body.classList.remove('resizing'); document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); fitPpl(); store.set('widths', { nav: $('nav').getBoundingClientRect().width, list: $('.list').getBoundingClientRect().width }); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
   }));
