@@ -44,6 +44,13 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .refbtn .f9{position:absolute;right:3px;bottom:1px;font-size:8px;font-weight:700;line-height:1;opacity:.75;letter-spacing:-.2px}
 /* 새로 고침 = 램프 문지르기: 램프가 좌우로 문질러지고 반짝임이 깜빡 */
 .refbtn.spin .lamp{animation:lampRub .28s ease-in-out infinite alternate}
+.refbtn{transition:border-radius .3s cubic-bezier(.5,0,.3,1),background .2s,color .2s}
+.refbtn.spin,.refbtn.spin:hover{border-radius:50%;background:#fff;border-color:#c9d6ee;color:var(--blue)}
+.refbtn.spin.hi{color:#fff}
+.refbtn>svg,.refbtn .f9{position:relative;z-index:1;transition:opacity .2s}
+.refbtn.ok>svg,.refbtn.ok .f9{opacity:0}
+.refbtn .rfr{position:absolute;inset:-1px;width:auto;height:auto;box-shadow:none;background:transparent;transition:opacity .25s}
+.refbtn .rfr .dm-ok svg{width:18px;height:18px}
 .refbtn.spin .spk path{animation:lampSpk .45s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center}
 .refbtn.spin .spk path:last-child{animation-delay:.22s}
 @keyframes lampRub{from{transform:translateX(-3.5px) rotate(-7deg)}to{transform:translateX(3.5px) rotate(7deg)}}
@@ -741,6 +748,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793098949"></script>
+<script src="mail-c.js?v=1793099017"></script>
 </body>
 </html>

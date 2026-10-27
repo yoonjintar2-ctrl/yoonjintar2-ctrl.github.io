@@ -2666,10 +2666,18 @@ const loadGis = () => gisReady || (gisReady = new Promise((res, rej) => { const 
 /* ───────── 새로 고침 (버튼·F9): 보내기 대기 중인 메일은 바로 보내고, 새 메일 확인 ───────── */
 async function refreshNow() {
   const b = $('#refBtn'); if (b && b.classList.contains('spin')) return; if (b) b.classList.add('spin');
-  const q = [...SENDQ]; q.forEach(x => x.fire());
+  // 램프를 문지르는 동안 버튼이 동그래지고 물이 차오름 → 다 되면 체크 → 다시 램프 버튼으로
+  let ring = null, p = 0.06, tick = null;
+  if (b) { const t = document.createElement('span'); t.innerHTML = dmRing(p, 'dl'); ring = t.firstChild; ring.classList.add('rfr'); $('.dm-ic', ring).remove(); b.append(ring);
+    tick = setInterval(() => { p += (0.86 - p) * 0.12; dmSet(ring, p); b.classList.toggle('hi', p >= 0.55); }, 80); }
+  const q = [...SENDQ]; q.forEach(x => x.fire()); if (q.length) p = Math.max(p, 0.3);
   let n = null; const t0 = Date.now();
   try { n = real.poll ? await real.poll() : null; } catch (e) { /* */ }
-  setTimeout(() => { if (b) b.classList.remove('spin'); }, Math.max(0, 900 - (Date.now() - t0)));
+  setTimeout(async () => {
+    if (!b) return; clearInterval(tick);
+    if (n != null || q.length) { dmSet(ring, 'ok'); b.classList.add('hi', 'ok'); await new Promise(z => setTimeout(z, 700)); }
+    b.classList.remove('spin', 'hi', 'ok'); ring.style.opacity = '0'; setTimeout(() => ring.remove(), 300);
+  }, Math.max(0, 1000 - (Date.now() - t0)));
   if (q.length) return;  // 보낸 메일은 '보냈어요' 안내가 따로 뜸
   if (!real.on) toast(real.loading ? '메일을 불러오는 중이에요' : '예시 화면이에요');
   else if (!real.poll) toast('메일을 아직 불러오는 중이에요');
