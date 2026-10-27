@@ -265,7 +265,9 @@ input.ck{width:15px;height:15px;margin:0;accent-color:var(--blue);cursor:pointer
 .foot .chip.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
 .foot .lnk{border:0;background:none;color:var(--blue);margin-left:auto;font-size:12.5px}
 .cbody{flex:1;overflow:auto;padding:18px 24px;outline:none;background:#fff;margin:10px 14px 14px;border:1px solid var(--compose-line);border-radius:9px;min-height:120px;font-family:"맑은 고딕","Malgun Gothic",sans-serif;font-size:13.3px;line-height:1.6}
-.cbody .gp-footer{margin-top:16px}
+.cbody .gp-footer{margin-top:0}
+/* 문단(p) 기본 여백 없앰: 서명·붙여넣은 글이 줄마다 위아래로 벌어지지 않게 (보낼 때도 같게) */
+.cbody p{margin:0}
 .cbody hr{cursor:pointer}
 .cbody hr:hover{box-shadow:0 0 0 3px rgba(26,115,232,.12)}
 .cbody hr.hrsel{border-top-color:#1a73e8!important;box-shadow:0 0 0 3px rgba(26,115,232,.32);background:rgba(26,115,232,.3)}
@@ -587,6 +589,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793056506"></script>
+<script src="mail-c.js?v=1793061182"></script>
 </body>
 </html>

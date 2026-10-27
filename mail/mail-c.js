@@ -912,7 +912,13 @@ const footerStyle = f => `font-family:'${f.font.family}',Pretendard,sans-serif;f
 function trimLead(html) {
   const d = document.createElement('div'); d.innerHTML = html || '';
   const empty = n => n.nodeType === 3 ? !n.textContent.replace(/[\s\u00a0]/g, '') : n.nodeType === 1 && (n.tagName === 'BR' || (!/^(IMG|TABLE|HR)$/.test(n.tagName) && !n.querySelector('img,table,hr') && !n.textContent.replace(/[\s\u00a0]/g, '')));
-  while (d.firstChild && empty(d.firstChild)) d.firstChild.remove();
+  // 감싼 div·p 안쪽의 맨 앞 빈 줄까지 (예: <div><div><br></div>안녕하세요…</div>), 맨 앞 줄의 위쪽 여백도 없앰
+  let box = d;
+  for (let depth = 0; box && depth < 6; depth++) {
+    while (box.firstChild && empty(box.firstChild)) box.firstChild.remove();
+    const f = box.firstChild; if (!f || f.nodeType !== 1 || !/^(DIV|P|SPAN|FONT|SECTION|BLOCKQUOTE)$/.test(f.tagName)) break;
+    f.style.marginTop = '0'; f.style.paddingTop = '0'; box = f;
+  }
   return d.innerHTML;
 }
 const fillName = h => (h || '').replace(/\{이름\}/g, esc(ME.name || ''));
@@ -1090,6 +1096,7 @@ function outgoingHtml() {
   $$('.gp-pm, #gpCaret', d).forEach(x => x.remove());
   $$('.hrsel, .tdsel', d).forEach(x => { x.classList.remove('hrsel', 'tdsel'); if (!x.className) x.removeAttribute('class'); });
   $$('[data-tsbg]', d).forEach(x => x.removeAttribute('data-tsbg'));
+  $$('p', d).forEach(x => { if (!x.style.margin && !x.style.marginTop && !x.style.marginBottom) x.style.margin = '0'; });  // 작성 화면과 같은 줄 간격
   $$('[contenteditable], [spellcheck]', d).forEach(x => { x.removeAttribute('contenteditable'); x.removeAttribute('spellcheck'); });
   const inl = [];
   const seen = new Map();
