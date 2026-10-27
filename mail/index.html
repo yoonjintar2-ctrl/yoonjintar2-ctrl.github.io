@@ -11,7 +11,7 @@
 @font-face{font-family:"Pretendard";src:url("fonts/PretendardVariable.woff2") format("woff2-variations");font-weight:45 920;font-display:swap}
 :root{
   --ink:#1f1f1f; --sub:#5f6368; --mute:#80868b; --line:#e3e6eb; --line2:#eef0f3;
-  --bg:#f3f5f8; --panel:#fff; --hover:#f2f4f7; --readbg:#f5f6f8;
+  --bg:#f3f5f8; --panel:#fff; --chrome:#eef1f5; --hover:#f2f4f7; --readbg:#f5f6f8;
   --compose:#e9f0fb; --compose-line:#d6e2f3;
   --blue:#0b57d0; --blue-d:#0842a0; --blue-l:#e8f0fe; --blue-m:#d3e3fd;
   --w-nav:220px; --w-list:420px;
@@ -33,7 +33,7 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .ib:disabled{opacity:.35;cursor:default;background:transparent}
 
 /* ── 맨 위 ── */
-.top{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.top{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--chrome)}  /* 위 검색줄 + 왼쪽 편지함 = 같은 회색 틀(고정된 머리 부분) */
 .newbtn{width:calc(var(--w-nav) - 26px);min-width:120px;flex:none;height:40px;justify-content:center;font-size:15px;border-radius:10px}
 .sbwrap{position:relative;flex:0 1 560px;min-width:200px}
 .sbox{display:flex;align-items:center;height:40px;border:1.5px solid #c9ced6;border-radius:10px;background:#fff;overflow:hidden}
@@ -86,14 +86,16 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .l3.compact .mini .nm{display:inline}  /* 종류+개수는 짧아서 항상 보이게 */
 
 /* ── 본문 3칸 + 경계선 끌기 ── */
-.body{flex:1;min-height:0;display:flex}
-nav{width:var(--w-nav);flex:none;background:var(--panel);overflow:auto;padding:8px 0 20px}
+.body{flex:1;min-height:0;display:flex;background:var(--chrome)}
+nav{width:var(--w-nav);flex:none;background:var(--chrome);overflow:auto;padding:8px 0 20px}
+nav + .split::after{background:transparent}
+.list{border-top-left-radius:12px;overflow:hidden}
 .split{width:7px;flex:none;cursor:col-resize;background:transparent;margin:0 -3px;position:relative;z-index:5}
 .split::after{content:"";position:absolute;top:0;bottom:0;left:3px;width:1px;background:var(--line);transition:background .12s}
 .split:hover::after,.split.drag::after{left:2px;width:3px;background:var(--blue)}
 .nh{display:flex;align-items:center;justify-content:space-between;margin:16px 8px 4px 16px;font-size:12px;color:var(--mute)}
 .ni{position:relative;display:flex;align-items:center;gap:9px;height:34px;padding-right:6px;border-left:3px solid transparent;cursor:pointer;user-select:none;color:var(--ink);font-size:14px}
-.ni:hover{background:var(--hover)}
+.ni:hover{background:rgba(31,45,61,.06)}
 .ni.on{background:var(--blue-l);border-left-color:var(--blue);font-weight:600;color:var(--blue)}
 .ni .ic{color:var(--sub);display:flex}
 .ni.on .ic{color:var(--blue)}
@@ -310,6 +312,10 @@ input.ck{width:15px;height:15px;margin:0;accent-color:var(--blue);cursor:pointer
 .menu .mi{display:flex;align-items:center;gap:9px;padding:7px 14px;cursor:pointer;white-space:nowrap}
 .menu .mi:hover{background:var(--hover)}
 .menu .mi.on{color:var(--blue);font-weight:600}
+.menu .mi.kbd{background:var(--blue-l);box-shadow:inset 3px 0 0 var(--blue)}
+.lhead .btn.convclose{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.lhead .btn.convclose:hover{background:var(--blue-d)}
+.lhead .btn.convclose svg{color:#fff}
 .menu .mi .chk{width:14px;color:var(--blue)}
 .menu .mi.dis{opacity:.4;pointer-events:none}
 .menu .msep{height:1px;background:var(--line2);margin:5px 0}
@@ -601,6 +607,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793068186"></script>
+<script src="mail-c.js?v=1793076068"></script>
 </body>
 </html>

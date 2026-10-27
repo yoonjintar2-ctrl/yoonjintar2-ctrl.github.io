@@ -428,7 +428,7 @@ function boxPickItems(cur, pick) {
 function boxFilterMenu() {
   const pick = k => { st.folder = k; st.picked.clear(); closeMenus(); renderNav(); renderTop(); renderList(); };
   const node = document.createElement('div');
-  node.innerHTML = `<div class="mi${st.folder === 'all' ? ' on' : ''}" data-k="all" style="font-weight:700"><span class="chk">${st.folder === 'all' ? '✓' : ''}</span>${ico('close', 16)} 필터 해제 (모든 메일에서 보기)</div>
+  node.innerHTML = `<div class="mi${st.folder === 'all' ? ' on' : ''}" data-k="all" style="font-weight:700"><span class="chk">${st.folder === 'all' ? '✓' : ''}</span>${ico('close', 16)} 선택 취소 (모든 메일에서 보기)</div>
     <div class="mrow"><input type="text" placeholder="편지함 이름으로 찾기" autocomplete="off"></div><div class="boxlist"></div>`;
   const inp = $('input', node), list = $('.boxlist', node);
   const row = (k, html, dep) => `<div class="mi${st.folder === k ? ' on' : ''}" data-k="${k}"><span class="chk">${st.folder === k ? '✓' : ''}</span><span style="padding-left:${(dep || 0) * 14}px;display:inline-flex;align-items:center;gap:7px">${html}</span></div>`;
@@ -464,26 +464,26 @@ function whereMenu() {
 function periodMenu() {
   const f = st.f; const set = k => { f.period = { k }; renderTop(); renderList(); };
   menuAt($('#fPeriod'), [
-    ...PERIODS.map(([k, v]) => ({ label: v, on: f.period.k === k, act: () => set(k) })),
+    ...PERIODS.map(([k, v]) => ({ label: k === 'all' ? '선택 취소' : v, on: f.period.k === k, act: () => set(k) })),
     '-', { label: '선택 기간…', on: f.period.k === 'range', act: () => openCalendar() }
   ]);
 }
 function attMenu() {
   const f = st.f; const re = () => { renderTop(); renderList(); attMenu(); };
   menuAt($('#fAtt'), [
-    { label: '전체', on: f.att.k === 'any', act: () => { f.att = { k: 'any', types: [] }; re(); } },
+    { label: '선택 취소', on: f.att.k === 'any', act: () => { f.att = { k: 'any', types: [] }; re(); } },
     { label: '첨부파일 있음', on: f.att.k === 'yes', act: () => { f.att.k = 'yes'; re(); } },
     { label: '첨부파일 없음', on: f.att.k === 'no', act: () => { f.att = { k: 'no', types: [] }; re(); } },
     '-', { head: '파일 종류 (고르면 자동으로 \'있음\')' },
     ...ATYPES.map(([t, n]) => ({ label: n, check: f.att.types.includes(t), act: () => {
       const s = new Set(f.att.types); s.has(t) ? s.delete(t) : s.add(t);
-      f.att = { k: s.size ? 'yes' : (f.att.k === 'no' ? 'any' : f.att.k), types: [...s] }; renderTop(); renderList();
+      f.att = { k: s.size ? 'yes' : (f.att.k === 'no' ? 'any' : f.att.k), types: [...s] }; re();
     } }))
   ], true);
 }
 function readMenu() {
   const set = k => { st.f.readf = k; renderTop(); renderList(); };
-  menuAt($('#fRead'), [{ label: '전체', on: st.f.readf === 'all', act: () => set('all') }, { label: '안 읽은 메일', on: st.f.readf === 'unread', act: () => set('unread') }, { label: '읽은 메일', on: st.f.readf === 'read', act: () => set('read') }]);
+  menuAt($('#fRead'), [{ label: '선택 취소', on: st.f.readf === 'all', act: () => set('all') }, { label: '안 읽은 메일', on: st.f.readf === 'unread', act: () => set('unread') }, { label: '읽은 메일', on: st.f.readf === 'read', act: () => set('read') }]);
 }
 /* ── 사람 찾기 (2026-10-26) ──
    예전엔 보낸사람 목록을 CONTACTS(샘플 주소록)에서만 골라서, 실제 Gmail로 받은 사람은 하나도 안 잡혔다.
@@ -549,17 +549,22 @@ function personMenu(kind) {
   const node = document.createElement('div');
   node.innerHTML = `<div class="mrow"><input type="text" placeholder="이름이나 메일 주소" autocomplete="off"></div><div class="list2"></div>`;
   const inp = $('input', node), box = $('.list2', node);
-  const cur = st.f[kind];
+  const cur = st.f[kind]; let hi = -1;  // 방향키로 가리키는 사람 (-1: 없음)
   const draw = () => {
     const q = inp.value.trim();
     const list = (q ? people.filter(p => personMatch(p, q)) : people).slice(0, q ? 12 : 8);
-    box.innerHTML = `<div class="mi${!cur ? ' on' : ''}" data-e=""><span class="chk">${!cur ? '✓' : ''}</span>전체</div>` + (q ? '' : '<div class="mh">최근 자주 주고받은 사람</div>') +
-      list.map(p => `<div class="mi${cur === p.email ? ' on' : ''}" data-e="${esc(p.email)}"><span class="chk">${cur === p.email ? '✓' : ''}</span><i style="width:8px;height:8px;border-radius:50%;background:${dotColor(p.email)}"></i>${esc(p.name)} <small style="color:var(--mute)">${esc(p.email)}</small></div>`).join('') +
+    hi = Math.min(hi, list.length - 1);
+    box.innerHTML = `<div class="mi${!cur ? ' on' : ''}" data-e=""><span class="chk">${!cur ? '✓' : ''}</span>선택 취소</div>` + (q ? '' : '<div class="mh">최근 자주 주고받은 사람</div>') +
+      list.map((p, i) => `<div class="mi${cur === p.email ? ' on' : ''}${i === hi ? ' kbd' : ''}" data-e="${esc(p.email)}"><span class="chk">${cur === p.email ? '✓' : ''}</span><i style="width:8px;height:8px;border-radius:50%;background:${dotColor(p.email)}"></i>${esc(p.name)} <small style="color:var(--mute)">${esc(p.email)}</small></div>`).join('') +
       (q && !list.length ? '<div class="mh">맞는 사람이 없어요</div>' : '');
   };
   box.addEventListener('click', e => { const it = e.target.closest('[data-e]'); if (!it) return; st.f[kind] = it.dataset.e || null; closeMenus(); renderTop(); renderList(); });
-  inp.addEventListener('input', draw);
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { const first = $('[data-e]:not([data-e=""])', box); if (first) first.click(); } });
+  inp.addEventListener('input', () => { hi = -1; draw(); });
+  inp.addEventListener('keydown', e => {
+    const items = $$('[data-e]:not([data-e=""])', box);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (!items.length) return; hi = e.key === 'ArrowDown' ? Math.min(items.length - 1, hi + 1) : Math.max(0, hi - 1); draw(); const k = $('.mi.kbd', box); if (k) k.scrollIntoView({ block: 'nearest' }); return; }
+    if (e.key === 'Enter') { e.preventDefault(); const it = items[hi >= 0 ? hi : 0]; if (it) it.click(); }
+  });
   draw();
   menuAt(btn, [{ head: kind === 'from' ? '보낸사람' : '받는사람 (참조 포함)', big: true }, { node }], true);
   setTimeout(() => inp.focus());
@@ -703,10 +708,10 @@ function renderHead(list) {
   let cb = $('#convbar');
   if (conv) {
     if (!cb) { cb = document.createElement('div'); cb.id = 'convbar'; cb.className = 'convbar'; lh.before(cb); cb.addEventListener('click', e => { if (e.target.closest('[data-b="convclose"]')) closeConv(); }); }
-    cb.innerHTML = `${ico('conv', 16)}<span class="k">대화 보기</span><b title="${esc(st.conv.title)}">${esc(st.conv.title)}</b><span class="n">${list.length}통</span><button class="btn" data-b="convclose" title="원래 보던 편지함으로">${ico('close', 14)} 대화 닫기</button>`;
+    cb.innerHTML = `${ico('conv', 16)}<span class="k">대화 보기</span><b title="${esc(st.conv.title)}">${esc(st.conv.title)}</b><span class="n">${list.length}통</span><button class="btn pri convclose" data-b="convclose" title="원래 보던 편지함으로">${ico('close', 14)} 대화 닫기</button>`;
   } else if (cb) cb.remove();
   const label = n ? `<span class="cnt"><b>${n}개 선택</b></span>`
-    : conv ? `<span class="cnt">대화 · ${list.length}통 (오래된 메일부터)</span>`
+    : conv ? `<span class="cnt">대화 · ${list.length}통 (최근 메일부터)</span>`
     : `<span class="cnt">${esc(folderName(st.folder))} · ${list.length}통</span>`;
   lh.innerHTML = `<input type="checkbox" class="ck" id="ckAll" title="모두 선택"${all ? ' checked' : ''}>
     ${label}
