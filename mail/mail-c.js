@@ -9,7 +9,7 @@ const IP = {
   inbox: 'M3 13h5l2 3h4l2-3h5M3 13l2.5-8h13l2.5 8v6H3z',
   sent: 'M4 12L20 4l-6 16-3-7z',
   draft: 'M5 3h9l5 5v13H5zM14 3v5h5M8 13h8M8 17h6',
-  all: 'M4 7h16M4 12h16M4 17h16',
+  all: 'M4 7h16M4 12h16M4 17h16', unreadbox: 'M3 6h12M3 6v12h18v-6M3 6l8 6 3.5-2.2M19 8.5a2.5 2.5 0 1 1 0-.01',
   folder: 'M3 6h6l2 2h10v11H3z',
   right: 'M9 6l6 6-6 6', down: 'M6 9l6 6 6-6',
   drive: 'M8.5 3h7l6.5 11.5-3.5 6h-13L2 14.5zM8.5 3l6.6 11.5H22M15.5 3L8.8 14.5 5.5 20.5',
@@ -167,10 +167,11 @@ const SYS = {
   tome: { name: '나에게 온 메일', ic: 'me', f: m => m.inbox && !m.sent && m.to.some(isMe), parent: 'inbox' },
   sent: { name: '보낸편지함', ic: 'sent', f: m => m.sent },
   draft: { name: '작성 중인 메일', ic: 'draft', f: m => !!m.draft },
+  unread: { name: '안 읽은 메일', ic: 'unreadbox', f: m => !!m.unread && !m.deleted },
   all: { name: '전체 메일', ic: 'all', f: () => true },
   trash: { name: '지운 편지함', ic: 'trash', f: m => !!m.deleted }
 };
-const folderFn = k => { if (k === 'conv') return m => !!(st.conv && st.conv.ids.has(m.id)); if (k === 'all') return () => true; if (k === 'trash') return m => !!m.deleted; if (SYS[k]) { const sf = SYS[k].f; return m => !m.deleted && sf(m); } const ids = new Set(descIds(k)); const f = m => !m.deleted && ids.has(m.box); f.boxId = k; return f; };
+const folderFn = k => { if (k === 'conv') return m => !!(st.conv && st.conv.ids.has(m.id)); if (k === 'all') return () => true; if (k === 'trash') return m => !!m.deleted; if (k === 'unread') return m => !m.deleted && (m.unread || (m.id === st.open && st.unreadKeep === m.id)); if (SYS[k]) { const sf = SYS[k].f; return m => !m.deleted && sf(m); } const ids = new Set(descIds(k)); const f = m => !m.deleted && ids.has(m.box); f.boxId = k; return f; };
 const folderName = k => k === 'conv' ? '대화 보기' + (st.conv ? ' · ' + st.conv.title : '') : SYS[k] ? SYS[k].name : boxPath(k);
 /* ── 대화로 보기 (2026-10-26) ──
    같은 Gmail 대화(threadId) + 제목이 같은 답장·전달(같은 사람들끼리)을 한데 모아 시간 순으로 보여 준다. */
@@ -212,7 +213,7 @@ function renderNav() {
   const sysItem = (k, depth) => { const v = SYS[k]; const n = k === 'draft' ? (MAILS.filter(m => m.draft).length + ndList().length || '') : unread(v.f);
     return `<div class="ni${k !== 'tome' ? ' ni-top' : ''}${st.folder === k ? ' on' : ''}${n && k !== 'draft' ? ' unread' : ''}" data-f="${k}" data-sys="${k}" style="padding-left:${14 + depth * 22}px"><span class="ic">${ico(v.ic)}</span><span class="nm">${v.name}</span><span class="n">${n}</span></div>`; };
   // 받은편지함 └ 나에게 온 메일 연결선
-  let h = sysItem('inbox', 0) + sysItem('tome', 1).replace('<span class="ic">', '<i class="g e" style="left:22px"></i><span class="ic">') + sysItem('sent', 0) + sysItem('draft', 0) + sysItem('all', 0).replace(/<span class="n">\d*<\/span>/, '<span class="n"></span>');
+  let h = sysItem('inbox', 0) + sysItem('tome', 1).replace('<span class="ic">', '<i class="g e" style="left:22px"></i><span class="ic">') + sysItem('sent', 0) + sysItem('draft', 0) + sysItem('unread', 0) + sysItem('all', 0).replace(/<span class="n">\d*<\/span>/, '<span class="n"></span>');
   h += `<div class="nh">편지함<button class="ib" id="addBox" title="편지함 만들기" style="width:26px;height:26px">${ico('plus', 15)}</button></div>`;
   const nHidden = BOXES.filter(b => b.hidden).length;
   const shown = p => childrenOf(p).filter(b => !b.hidden || SET.showHidden);
@@ -417,7 +418,7 @@ function renderTop() {
   const lf = $('#lfilt'); if (lf) { lf.classList.toggle('off', st.folder === 'conv'); lf.title = st.folder === 'conv' ? '대화 보기 중에는 필터가 적용되지 않아요' : ''; }
 }
 function boxPickItems(cur, pick) {
-  const items = ['all', 'inbox', 'tome', 'sent', 'draft', 'trash'].map(k => ({ html: ico(SYS[k].ic, 16) + ' ' + SYS[k].name, on: cur === k, act: () => pick(k) }));
+  const items = ['all', 'unread', 'inbox', 'tome', 'sent', 'draft', 'trash'].map(k => ({ html: ico(SYS[k].ic, 16) + ' ' + SYS[k].name, on: cur === k, act: () => pick(k) }));
   items.push('-', { head: '편지함' });
   const walk = (p, dep) => childrenOf(p).forEach(b => { items.push({ on: cur === b.id, html: boxLabel(b, dep), act: () => pick(b.id) }); walk(b.id, dep + 1); });
   walk(null, 0);
@@ -433,7 +434,7 @@ function boxFilterMenu() {
   const row = (k, html, dep) => `<div class="mi${st.folder === k ? ' on' : ''}" data-k="${k}"><span class="chk">${st.folder === k ? '✓' : ''}</span><span style="padding-left:${(dep || 0) * 14}px;display:inline-flex;align-items:center;gap:7px">${html}</span></div>`;
   const draw = () => {
     const q = inp.value.trim().toLowerCase(); let h = '';
-    const sys = ['inbox', 'tome', 'sent', 'draft', 'trash'].filter(k => !q || SYS[k].name.includes(q));
+    const sys = ['inbox', 'tome', 'unread', 'sent', 'draft', 'trash'].filter(k => !q || SYS[k].name.includes(q));
     h += sys.map(k => row(k, ico(SYS[k].ic, 16) + ' ' + SYS[k].name)).join('');
     let boxes = '';
     if (q) BOXES.filter(b => boxPath(b.id).toLowerCase().includes(q)).forEach(b => { boxes += row(b.id, ico('folder', 15) + esc(boxPath(b.id)) + (b.hidden ? ' <small style="color:var(--mute)">(숨김)</small>' : '')); });
@@ -820,6 +821,7 @@ function attMoreCheck() {
 window.addEventListener('resize', () => { clearTimeout(attMoreCheck.t); attMoreCheck.t = setTimeout(attMoreCheck, 150); });
 function openMail(id) {
   if (id < 0) { openNd(id); return; }
+  st.unreadKeep = st.folder === 'unread' ? id : null;  // 안 읽은 메일에서 연 메일은 다른 메일을 누를 때까지 목록에 남김
   st.ndOpen = null;
   flushCompose();
   if (st.attFull !== id) st.attFull = null;
