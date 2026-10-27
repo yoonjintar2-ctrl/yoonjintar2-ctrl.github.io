@@ -508,7 +508,19 @@ body.chipdragging,body.chipdragging *{cursor:grabbing!important}
 .toast button{border:0;background:none;color:#8ab4f8;font-weight:700}
 .toast.undo{overflow:hidden;padding-bottom:12px}
 .toast.undo::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:#8ab4f8;transform-origin:left}
-.toast.undo.tick::after{animation:toastTick 5s linear forwards}
+.toast.undo.tick::after{animation:toastTick var(--tick,5s) linear forwards}
+/* 보내기 → 종이비행기 */
+#send.fly,#send.fly:disabled{position:relative;overflow:visible;pointer-events:none;background:var(--blue);border-color:var(--blue);opacity:1;color:#fff}
+#send.fly .sok{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.4);animation:dmPop .35s cubic-bezier(.3,1.7,.5,1) .68s forwards}
+#send.fly .sok svg{width:16px;height:16px}
+#send.fly .sl{display:inline-block;animation:sendTxt .35s cubic-bezier(.5,0,.8,.4) forwards}
+#send.fly .plane{position:absolute;left:50%;top:50%;margin:-9px 0 0 -9px;opacity:0;animation:sendPlane .95s cubic-bezier(.4,0,.2,1) forwards}
+#send.fly .sweep{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(100deg,transparent 35%,rgba(255,255,255,.45) 50%,transparent 65%) 130% 0/300% 100% no-repeat;animation:sendSweep .7s .1s ease-in-out forwards}
+@keyframes sendTxt{to{transform:translateY(-16px);opacity:0}}
+@keyframes sendPlane{0%{opacity:0;transform:translate(-22px,10px) scale(.6) rotate(8deg)}25%{opacity:1;transform:translate(-6px,2px) scale(1) rotate(0)}55%{opacity:1;transform:translate(0,0) scale(1.08)}100%{opacity:0;transform:translate(60px,-34px) scale(.7) rotate(-12deg)}}
+@keyframes sendSweep{to{background-position:-30% 0}}
+#compose.sending{pointer-events:none}
+#compose.sending .cbody,#compose.sending .fields{transition:opacity .5s .4s;opacity:.55}
 @keyframes toastTick{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 #bgWork{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;color:#a3a9b3;cursor:default}
 #bgWork[hidden]{display:none}
@@ -781,6 +793,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793104768"></script>
+<script src="mail-c.js?v=1793110047"></script>
 </body>
 </html>
