@@ -2540,13 +2540,36 @@ const IS_EXT = !!(window.chrome && chrome.identity && chrome.identity.launchWebA
 const tokCache = { get() { const t = store.get('tok', null); return t && t.exp > Date.now() + 60000 ? t.t : null; }, left() { const t = store.get('tok', null); return t ? t.exp - Date.now() : 0; }, set(t, sec) { store.set('tok', { t, exp: Date.now() + (sec || 3500) * 1000 }); }, clear() { store.set('tok', null); } };
 let gisReady = null;
 const loadGis = () => gisReady || (gisReady = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.onload = res; sc.onerror = () => rej(new Error('구글 로그인 도구를 불러오지 못했어요')); document.head.append(sc); }));
+/* ───────── 'JIN-mail 로그인 유지' 확장 프로그램 (설치돼 있으면) ─────────
+   웹페이지는 클릭 없이 Google 로그인을 연장할 수 없음 → 작은 확장 프로그램이 창 없이 새 토큰을 받아 넘겨줌.
+   설치 안 돼 있으면 예전처럼 '다음 클릭 때' 연장 */
+const EXT_LOGIN = 'hfjgdhjepedelhgdmdcpljmdjkknjfkh';
+const extAuth = { ok: null, info: null };
+function extSend(msg, ms) {
+  return new Promise(res => {
+    try {
+      if (IS_EXT || !(window.chrome && chrome.runtime && chrome.runtime.sendMessage)) return res(null);
+      const t = setTimeout(() => res(null), ms || 8000);
+      chrome.runtime.sendMessage(EXT_LOGIN, msg, r => { clearTimeout(t); if (chrome.runtime.lastError) return res(null); res(r || null); });
+    } catch (e) { res(null); }
+  });
+}
+async function extAvailable(force) { if (extAuth.ok != null && !force) return extAuth.ok; const r = await extSend({ type: 'ping' }, 1500); extAuth.ok = !!(r && r.ok); extAuth.info = r; return extAuth.ok; }
+async function extToken(interactive) {
+  if (!(await extAvailable())) throw new Error('no-ext');
+  const c = store.get('connected', null);
+  const r = await extSend({ type: 'token', scope: SCOPE, hint: c && c.email, interactive: !!interactive }, interactive ? 180000 : 25000);
+  if (!r || !r.ok) throw Object.assign(new Error((r && r.error) || 'ext-fail'), { ext: true });
+  tokCache.set(r.token, r.expiresIn); store.set('tok-scope', r.scope || '');
+  return r.token;
+}
 // interactive=false: 창을 띄우지 않고 가능한 경우에만 로그인
 function googleLogin(interactive = true, force = false) {
   const c = store.get('connected', null);
   const cached = tokCache.get();
   if (cached && !interactive && !force) return Promise.resolve(cached);
   if (!IS_EXT) {
-    if (!interactive) return Promise.reject(new Error('다시 로그인이 필요해요'));
+    if (!interactive) return extToken(false).catch(() => { throw new Error('다시 로그인이 필요해요'); });  // 확장이 있으면 창 없이
     // Google 로그인은 등록된 https 주소에서만 됨
     const okOrigins = ['https://mail.jintar.co.kr', 'https://yoonjintar2-ctrl.github.io'];
     if (!okOrigins.includes(location.origin)) return Promise.reject(new Error(location.protocol !== 'https:' ? '보안 연결(https)이 아직 준비 중이에요. https://yoonjintar2-ctrl.github.io/mail/ 에서 연결해 주세요' : '이 주소에서는 로그인할 수 없어요 (' + location.origin + ')'));
@@ -2574,7 +2597,7 @@ function googleLogin(interactive = true, force = false) {
 const auth = { p: null, needClick: false, waiters: [] };
 function renewToken() {
   if (auth.p) return auth.p;
-  auth.p = (IS_EXT ? googleLogin(false, true).catch(() => googleLogin(true, true)) : googleLogin(true, true))
+  auth.p = (IS_EXT ? googleLogin(false, true).catch(() => googleLogin(true, true)) : extToken(false).catch(() => googleLogin(true, true)))
     .then(t => { real.token = t; real.expired = false; auth.needClick = false; auth.waiters.splice(0).forEach(w => w(t)); renderTop(); return t; })
     .finally(() => { auth.p = null; });
   return auth.p;
@@ -2588,7 +2611,7 @@ function tokenAfter401() {
   // 다른 탭이 이미 새 토큰을 받아 뒀으면 지우지 말고 그걸로 (예전엔 오래된 탭 하나가 401을 받으면 모든 탭의 로그인이 풀렸음)
   const stored = tokCache.get(); if (stored && stored !== real.token) { real.token = stored; return Promise.resolve(stored); }
   tokCache.clear();
-  const tryNow = IS_EXT ? renewToken() : Promise.reject(new Error('click'));
+  const tryNow = IS_EXT ? renewToken() : extToken(false).then(t => { real.token = t; real.expired = false; auth.needClick = false; auth.waiters.splice(0).forEach(w => w(t)); renderTop(); return t; });
   return tryNow.catch(e => {
     auth.needClick = true; real.expired = true; renderTop();
     toast('로그인을 이어가려면 화면 아무 곳이나 한 번 눌러 주세요');
@@ -2599,7 +2622,11 @@ const authGesture = () => { if (auth.needClick && !auth.p) renewToken().catch(()
 ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, authGesture, true));
 setInterval(() => {
   if (!real.on || auth.p || auth.needClick) return;
-  if (tokCache.left() < 6 * 60000) { if (IS_EXT) renewToken().catch(() => { auth.needClick = true; }); else auth.needClick = true; }  // 웹: 다음 클릭 때 연장 (표시 없이)
+  if (tokCache.left() < 6 * 60000) {
+    if (IS_EXT) renewToken().catch(() => { auth.needClick = true; });
+    else if (extAuth.ok) { auth.p = extToken(false).then(t => { real.token = t; real.expired = false; renderTop(); return t; }).catch(() => { auth.needClick = true; }).finally(() => { auth.p = null; }); }  // 확장: 창 없이 미리 연장
+    else auth.needClick = true;  // 웹: 다음 클릭 때 연장 (표시 없이)
+  }
 }, 60000);
 /* ───────── 실제 Gmail 메일 불러오기 · 바뀐 내용 Gmail에 반영 ───────── */
 const real = { on: false, token: null };
@@ -3361,7 +3388,7 @@ if (hash === '#compose') {
   // 연결해 둔 계정이면 예시 메일을 잠깐이라도 보여 주지 않고 로딩 화면 → 실제 메일
   MAILS = []; BOXES = []; renderNav(); renderList(); renderRead();
   if (IS_EXT || tokCache.get()) { bootScreen('loading'); loadReal(false); }
-  else { real.expired = true; renderTop(); bootScreen('login'); }
+  else { bootScreen('loading', 'Gmail 연결 중…'); extAvailable().then(ok => { if (ok) loadReal(false); else { real.expired = true; renderTop(); bootScreen('login'); } }); }  // 확장이 있으면 다시 연결 누르지 않아도 됨
 } else if (!store.get('skip-connect', false)) {
   MAILS = []; BOXES = []; renderNav(); renderList(); renderRead();
   openWelcome(false);
