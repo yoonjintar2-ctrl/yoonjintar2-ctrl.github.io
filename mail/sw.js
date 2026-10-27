@@ -1,6 +1,6 @@
-// JIN-mail 앱 서비스 워커: 화면 파일(글꼴·아이콘·버전 붙은 스크립트)을 이 PC에 저장해 두고 빠르게 열기
+// 지니메일 앱 서비스 워커: 화면 파일(글꼴·아이콘·버전 붙은 스크립트)을 이 PC에 저장해 두고 빠르게 열기
 // 메일 내용·Gmail 요청은 다루지 않음 (다른 주소라 여기서 가로채지 않음)
-const C = 'jin-app-v1';
+const C = 'jin-app-v2';
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== C).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
@@ -16,7 +16,7 @@ self.addEventListener('fetch', e => {
     e.respondWith(fetch(e.request).then(r => { const cp = r.clone(); caches.open(C).then(c => c.put('./', cp)); return r; }).catch(() => caches.match('./')));
   }
 });
-// 알림을 누르면 JIN-mail 창으로
+// 알림을 누르면 지니메일 창으로
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const id = e.notification.data && e.notification.data.id;

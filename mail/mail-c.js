@@ -1,4 +1,4 @@
-/* JIN-mail 화면 샘플 — 예시 데이터로 동작 (계정 연결만 실제). 실제 메일 연결 전 화면·동작 확인용 */
+/* 지니메일 화면 샘플 — 예시 데이터로 동작 (계정 연결만 실제). 실제 메일 연결 전 화면·동작 확인용 */
 'use strict';
 
 /* ───────── 아이콘 (무채색 선 아이콘) ───────── */
@@ -140,6 +140,9 @@ const nl = s => esc(s).replace(/\n/g, '<br>');
 const isMe = p => !!p && !!p.email && p.email.toLowerCase() === (ME.email || '').toLowerCase();
 const nameOf = p => isMe(p) ? '나' : p.name;
 const fmtD = d => (d.getMonth() + 1) + '/' + d.getDate();
+/* 지니메일(jinny mail) 로고 — 요술램프 + 글자. 글꼴 없이 바로 그려지게 모양(path)으로 */
+const LOGO_WM = '<svg viewBox="-126 246 4317 967" role="img" aria-label="jinny mail"><path fill="#202124" d="M-43 1188Q-61 1188 -78.0 1184.5Q-95 1181 -105.5 1165.5Q-116 1150 -116 1114Q-116 1080 -105.5 1064.5Q-95 1049 -77.5 1045.0Q-60 1041 -41 1041Q-28 1041 -13.0 1038.0Q2 1035 15.0 1025.5Q28 1016 36.5 998.0Q45 980 45 951V550Q45 533 48.5 517.0Q52 501 68.0 491.0Q84 481 119 481Q155 481 170.5 492.0Q186 503 189.0 520.0Q192 537 192 556V955Q192 1013 171.5 1056.5Q151 1100 117.0 1129.5Q83 1159 41.5 1173.5Q0 1188 -43 1188ZM117 410Q74 410 58.0 393.5Q42 377 42 332Q42 289 58.5 273.0Q75 257 119 257Q163 257 178.5 273.0Q194 289 194 333Q194 377 178.0 393.5Q162 410 117 410ZM347 983Q310 983 294.5 972.5Q279 962 275.5 944.5Q272 927 272 908V559Q272 539 275.5 522.0Q279 505 295.0 494.5Q311 484 348 484Q384 484 399.5 495.0Q415 506 418.5 523.0Q422 540 422 561V909Q422 928 418.5 945.5Q415 963 399.5 973.0Q384 983 347 983ZM347 411Q309 411 293.0 400.0Q277 389 273.5 371.0Q270 353 270 333Q270 312 274.0 294.5Q278 277 294.0 266.5Q310 256 348 256Q385 256 401.0 267.0Q417 278 420.5 296.0Q424 314 424 334Q424 354 420.5 372.0Q417 390 401.0 400.5Q385 411 347 411ZM574 982Q537 982 521.5 971.5Q506 961 502.5 943.5Q499 926 499 907V555Q499 536 503.0 519.5Q507 503 522.5 493.0Q538 483 575 483Q607 483 622.0 491.5Q637 500 641.5 512.0Q646 524 646.0 534.5Q646 545 648 549L647 553Q651 546 658 537Q671 522 691.5 509.5Q712 497 735.5 490.0Q759 483 782 483Q830 483 867.5 500.5Q905 518 931.0 551.0Q957 584 970.5 628.5Q984 673 984 726V908Q984 927 980.5 944.5Q977 962 961.5 972.0Q946 982 909 982Q871 982 855.5 971.5Q840 961 836.0 943.5Q832 926 832 907V726Q832 696 822.0 675.0Q812 654 792.0 642.5Q772 631 743.0 631.0Q714 631 693.0 643.0Q672 655 660.5 676.0Q649 697 649 726V908Q649 927 645.5 944.5Q642 962 626.5 972.0Q611 982 574 982ZM1127 982Q1090 982 1074.5 971.5Q1059 961 1055.5 943.5Q1052 926 1052 907V555Q1052 536 1056.0 519.5Q1060 503 1075.5 493.0Q1091 483 1128 483Q1160 483 1175.0 491.5Q1190 500 1194.5 512.0Q1199 524 1199.0 534.5Q1199 545 1201 549L1200 553Q1204 546 1211 537Q1224 522 1244.5 509.5Q1265 497 1288.5 490.0Q1312 483 1335 483Q1383 483 1420.5 500.5Q1458 518 1484.0 551.0Q1510 584 1523.5 628.5Q1537 673 1537 726V908Q1537 927 1533.5 944.5Q1530 962 1514.5 972.0Q1499 982 1462 982Q1424 982 1408.5 971.5Q1393 961 1389.0 943.5Q1385 926 1385 907V726Q1385 696 1375.0 675.0Q1365 654 1345.0 642.5Q1325 631 1296.0 631.0Q1267 631 1246.0 643.0Q1225 655 1213.5 676.0Q1202 697 1202 726V908Q1202 927 1198.5 944.5Q1195 962 1179.5 972.0Q1164 982 1127 982ZM1747 1185Q1706 1167 1699.5 1145.0Q1693 1123 1710 1086L1796 894L1599 594Q1577 561 1581.5 539.0Q1586 517 1621 494Q1660 470 1681.5 475.5Q1703 481 1725 515L1868 734L1961 525Q1978 486 1998.5 478.5Q2019 471 2060 487Q2100 506 2106.5 527.0Q2113 548 2097 583L1845 1148Q1828 1187 1808.0 1195.0Q1788 1203 1747 1185Z"/><path fill="#80868b" transform="translate(2333 0)" d="M106 984Q87 984 78.0 978.0Q69 972 66.0 962.0Q63 952 63 938V542Q63 528 66.0 519.0Q69 510 78.5 505.0Q88 500 107 500Q129 500 138.5 508.5Q148 517 148 538L144 581Q151 566 165.0 551.0Q179 536 198.5 524.0Q218 512 240.0 505.0Q262 498 285 498Q320 498 347.5 510.5Q375 523 397.0 546.0Q419 569 434 603Q454 570 476.5 546.5Q499 523 528.0 510.5Q557 498 593 498Q650 498 688.5 526.5Q727 555 746.5 606.5Q766 658 766 730V939Q766 953 763.5 963.0Q761 973 751.5 978.5Q742 984 722 984Q703 984 693.5 978.0Q684 972 681.0 962.0Q678 952 678 938V729Q678 684 667.5 651.5Q657 619 635.5 601.0Q614 583 580 583Q544 583 516.5 600.5Q489 618 474.0 651.0Q459 684 459 729V940Q459 955 453.0 966.0Q447 977 435.0 981.5Q423 986 406 983Q390 981 382.0 975.0Q374 969 372.0 959.5Q370 950 370 938V729Q370 684 359.5 651.5Q349 619 327.5 601.0Q306 583 272 583Q236 583 208.5 601.5Q181 620 166.0 653.0Q151 686 151 729V939Q151 953 148.0 963.0Q145 973 135.5 978.5Q126 984 106 984ZM1291 983Q1269 983 1259.5 974.0Q1250 965 1248 946L1252 896Q1242 912 1221.0 932.5Q1200 953 1166.0 968.5Q1132 984 1083 984Q1035 984 993.5 965.0Q952 946 920.5 912.0Q889 878 871.5 834.0Q854 790 854 740Q854 691 871.5 647.5Q889 604 921.0 571.0Q953 538 994.5 519.0Q1036 500 1083 500Q1127 500 1158.0 511.5Q1189 523 1211.5 541.5Q1234 560 1251 583L1249 541Q1248 519 1258.5 509.5Q1269 500 1292 500Q1311 500 1319.5 506.0Q1328 512 1331.0 523.0Q1334 534 1334 550V936Q1334 950 1331.0 961.0Q1328 972 1319.0 977.5Q1310 983 1291 983ZM1098 900Q1138 900 1171.5 879.0Q1205 858 1224.5 822.5Q1244 787 1244 741Q1244 694 1223.5 658.5Q1203 623 1169.5 602.5Q1136 582 1096 582Q1049 582 1014.5 603.5Q980 625 960.0 661.0Q940 697 940 743Q940 788 960.0 823.5Q980 859 1015.5 879.5Q1051 900 1098 900ZM1492 984Q1473 984 1463.5 978.5Q1454 973 1451.0 963.0Q1448 953 1448 939V544Q1448 530 1451.0 520.0Q1454 510 1463.5 505.0Q1473 500 1493 500Q1512 500 1521.0 505.5Q1530 511 1533.0 521.0Q1536 531 1536 546V940Q1536 954 1533.0 964.0Q1530 974 1520.5 979.0Q1511 984 1492 984ZM1492 380Q1470 380 1459.0 373.5Q1448 367 1444.5 355.0Q1441 343 1441 327Q1441 311 1445.0 299.5Q1449 288 1460.0 282.5Q1471 277 1493 277Q1514 277 1525.0 283.0Q1536 289 1539.5 301.0Q1543 313 1543 329Q1543 345 1539.5 356.5Q1536 368 1525.0 374.0Q1514 380 1492 380ZM1809 984Q1777 984 1751.5 978.5Q1726 973 1707.0 961.0Q1688 949 1675.5 930.0Q1663 911 1657.5 884.0Q1652 857 1652 821V321Q1652 306 1654.5 296.0Q1657 286 1667.0 280.5Q1677 275 1695 275Q1715 275 1724.5 280.0Q1734 285 1737.0 295.0Q1740 305 1740 319V820Q1740 840 1744.0 854.5Q1748 869 1756.5 879.0Q1765 889 1778.0 893.0Q1791 897 1809 897Q1821 897 1829.5 900.0Q1838 903 1843.0 912.0Q1848 921 1848 940Q1848 960 1843.0 969.5Q1838 979 1829.5 981.5Q1821 984 1809 984Z"/></svg>';
+const APP_ICON = '<svg viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14.5" fill="#202124"/><g transform="translate(1.5 3.5)"><path fill="#fff" d="M18.5 35.5Q18.5 46 33.5 46Q48.5 46 48.5 35.5Z"/><path fill="#fff" d="M24 34Q24 26.5 33.5 26.5Q43 26.5 43 34Z"/><circle fill="#fff" cx="33.5" cy="24.2" r="2.4"/><path fill="#fff" d="M20.5 41.5C13 41.5 9.5 36 5.5 30.5Q5 29.5 6.3 29.6L8.6 29.8C12.5 34.5 15.5 36.3 20.5 36.3Z"/><path fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" d="M47.5 33.6C55.5 31.8 57.8 41.8 46.4 41.8"/><path fill="#fff" d="M28.5 45.5H38.5L40.5 50.5Q40.7 51.5 39.6 51.5H27.4Q26.3 51.5 26.5 50.5Z"/><path fill="#fff" d="M10.5 10.8Q11.332 15.168 15.7 16Q11.332 16.832 10.5 21.2Q9.668 16.832 5.3 16Q9.668 15.168 10.5 10.8Z"/><path fill="#fff" opacity=".6" d="M18.5 6.7Q18.948 9.052 21.3 9.5Q18.948 9.948 18.5 12.3Q18.052 9.948 15.7 9.5Q18.052 9.052 18.5 6.7Z"/></g></svg>';
 function toast(t, undo, label) {
   // '되돌리기'가 있는 안내(이동·삭제·보내기)는 5초 동안 다른 일반 안내에 덮이지 않게 — 일반 안내는 끝난 뒤에 보여 줌
   if (!undo && toast.lock && Date.now() < toast.lock) { clearTimeout(toast.q); toast.q = setTimeout(() => toast(t), toast.lock - Date.now() + 50); return; }
@@ -268,7 +271,7 @@ function renameBox(id) {
   inp.addEventListener('blur', () => finish(true));
   inp.addEventListener('click', e => e.stopPropagation());
 }
-function renamePaths() { return Promise.resolve(); }  // (예전: Gmail 라벨 이름 변경) — 이제 JIN-mail 안에서만
+function renamePaths() { return Promise.resolve(); }  // (예전: Gmail 라벨 이름 변경) — 이제 지니메일 안에서만
 async function deleteBox(id) {
   const ids = descIds(id); const n = MAILS.filter(m => ids.includes(m.box) && !m.deleted).length;
   if (n) { toast(`이 편지함에 메일 ${n}통이 있어요. 먼저 다른 곳으로 옮겨 주세요`); return; }
@@ -278,7 +281,7 @@ async function deleteBox(id) {
   toast('편지함을 삭제했어요', () => { BOXES = before; saveAll(); renderNav(); });
 }
 
-/* ───────── 자동 분류 (실제 계정: Gmail 필터라서 JIN-mail을 닫아도 서버에서 분류) ───────── */
+/* ───────── 자동 분류 (실제 계정: Gmail 필터라서 지니메일을 닫아도 서버에서 분류) ───────── */
 const ruleQuery = r => [r.from && `from:(${r.from})`, r.to && `to:(${r.to})`, r.subject && `subject:(${r.subject})`, r.query].filter(Boolean).join(' ');
 const ruleText = r => [r.from && `보낸사람에 '${r.from}'`, r.to && `받는사람에 '${r.to}'`, r.subject && `제목에 '${r.subject}'`, r.query && `내용·키워드 '${r.query}'`].filter(Boolean).join(' 그리고 ');
 const FILTER_SCOPE = 'https://www.googleapis.com/auth/gmail.settings.basic';
@@ -299,7 +302,7 @@ async function addRule(r) {
 async function delRule(id) {
   if (real.on) { J.data.rules = (J.data.rules || []).filter(x => x.id !== id); jSave(); } else store.set('rules', store.get('rules', []).filter(x => x.id !== id));
 }
-// 조건에 맞는지 (JIN-mail 안에서 판단 — Gmail 필터 아님)
+// 조건에 맞는지 (지니메일 안에서 판단 — Gmail 필터 아님)
 function ruleHit(m, r) {
   const has = (hay, k) => !k || k.split(/\s+OR\s+/i).some(alt => alt.split(/\s+/).filter(Boolean).every(w => hay.toLowerCase().includes(w.toLowerCase())));
   return has((m.from.email || '') + ' ' + (m.from.name || ''), r.from) && has(m.to.concat(m.cc || []).map(p => p.email + ' ' + p.name).join(' '), r.to) && has(m.subj || '', r.subject) && has((m.subj || '') + ' ' + (m.body || m.snippet || ''), r.query);
@@ -323,7 +326,7 @@ async function openRules(box) {
   const draw = async () => {
     let rules = [];
     try { rules = (await loadRules()).filter(r => r.box === box); } catch (e) { body.innerHTML = `<p class="desc" style="color:#d93025">규칙을 불러오지 못했어요: ${esc(e.message)}</p>`; return; }
-    body.innerHTML = `<p class="desc">아래 조건에 맞는 <b>새 메일</b>은 자동으로 이 편지함에 들어가요 (JIN-mail 안에서만 분류돼요 — Gmail 라벨·필터는 바뀌지 않아요). 이미 받은편지함에 있는 메일은 아래 '모든 분류 조건 지금 실행'을 누르면 모든 편지함 조건이 한꺼번에 적용돼요.</p>
+    body.innerHTML = `<p class="desc">아래 조건에 맞는 <b>새 메일</b>은 자동으로 이 편지함에 들어가요 (지니메일 안에서만 분류돼요 — Gmail 라벨·필터는 바뀌지 않아요). 이미 받은편지함에 있는 메일은 아래 '모든 분류 조건 지금 실행'을 누르면 모든 편지함 조건이 한꺼번에 적용돼요.</p>
       <h5>지금 있는 조건 <span class="rcount">${rules.length}개</span></h5>${rules.length ? rules.map(r => `<div class="rulerow"><span>${ico('where', 15)} <b>${esc(ruleText(r))}</b>${r.skipInbox ? ' <small>· 받은편지함 건너뛰기</small>' : ''}</span><button class="ib" data-del="${esc(r.id)}" title="조건 삭제">${ico('trash', 16)}</button></div>`).join('') : '<div class="rulerow empty">아직 조건이 없어요 — 아래에서 추가해 주세요</div>'}
       <h5>조건 추가 <small style="font-weight:400;color:var(--mute)">(여러 칸을 채우면 모두 맞을 때만, 칸 안에서 'OR'로 여러 개)</small></h5>
       <div class="rulef"><label>보낸사람 주소·이름에</label><input data-f="from" placeholder="예: coway.com 또는 kim@nasmedia.co.kr"></div>
@@ -1489,7 +1492,7 @@ async function sendMail() {
   }
   clearTimeout(cs.timer); cs.saving = false;
   const snap = draftNow(); snap.files = cs.files.slice();
-  // 새 창에서 쓴 메일: 원래 JIN-mail 창에 넘겨서 거기서 보내고(5초 취소도 거기서), 이 창은 바로 닫음
+  // 새 창에서 쓴 메일: 원래 지니메일 창에 넘겨서 거기서 보내고(5초 취소도 거기서), 이 창은 바로 닫음
   if (document.body.classList.contains('popmode') && !st.open && await handOffSend(d, snap)) { window.close(); return; }
   return runSend(d, snap);
 }
@@ -2435,7 +2438,7 @@ document.addEventListener('scroll', () => { placeTSize(); if ($('#tbar')) tableB
 function saveAll() { if (!real.on) store.set('sample-boxes', BOXES); else if (J.data) { J.data.boxes = BOXES.map(b => ({ id: b.id, name: b.name, parent: b.parent, hidden: !!b.hidden })); jSave(); } store.set('footers2', FOOTERS); store.set('settings', SET); }
 // 저장 폴더: 브라우저가 고른 폴더 권한을 기억 (IndexedDB)
 const idb = (op, val) => new Promise(res => { try { const rq = indexedDB.open('jin-mail', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('kv'); rq.onsuccess = () => { const tx = rq.result.transaction('kv', op === 'get' ? 'readonly' : 'readwrite'); const s = tx.objectStore('kv'); const r = op === 'get' ? s.get('dir') : s.put(val, 'dir'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }; rq.onerror = () => res(null); } catch (e) { res(null); } });
-// 로그아웃: 이 브라우저의 로그인 정보를 지움 (구글 계정의 JIN-mail 허락은 그대로 → 다음엔 한 번 누르면 바로 로그인)
+// 로그아웃: 이 브라우저의 로그인 정보를 지움 (구글 계정의 지니메일 허락은 그대로 → 다음엔 한 번 누르면 바로 로그인)
 async function logout(wipe) {
   if (!confirm(wipe ? '로그아웃하고 이 PC에 저장한 메일·임시저장도 지울까요?' : '로그아웃할까요?')) return;
   const email = (store.get('connected', null) || {}).email || ME.email;
@@ -2520,12 +2523,12 @@ function openSettings(tab) {
     }
     if (t === 'app') {
       const st0 = APP.standalone(), perm = 'Notification' in window ? Notification.permission : 'unsupported';
-      body.innerHTML = `<h5>JIN-mail 앱으로 설치</h5>
-        <p class="desc">exe 프로그램이 아니라 크롬의 '웹앱 설치' 기능이에요. 시작 메뉴·작업 표시줄·바탕화면에 JIN-mail 아이콘이 생기고, 주소창 없는 별도 창으로 열려요. PC에 새 프로그램이 깔리지 않고 관리자 권한도 필요 없어요.</p>
-        <div class="acct${st0 ? ' on' : ''}"><span class="dot"></span><span style="flex:1">${st0 ? '지금 JIN-mail 앱으로 쓰고 있어요' : APP.prompt ? '이 PC에 설치할 수 있어요' : '이 창에서는 설치 버튼을 바로 띄울 수 없어요 (아래 방법으로 설치)'}</span>${!st0 && APP.prompt ? '<button class="btn pri" id="appInstall">앱 설치</button>' : ''}</div>
-        ${st0 ? '' : `<ol class="guide"><li>크롬 주소창 오른쪽 끝의 <b>설치 아이콘(모니터+화살표)</b>을 누르거나,</li><li>크롬 메뉴 <b>⋮ → 전송, 저장 및 공유 → 페이지를 앱으로 설치…</b> (엣지는 <b>⋯ → 앱 → 이 사이트를 앱으로 설치</b>)</li><li>설치한 뒤엔 시작 메뉴에서 'JIN-mail'을 찾아 작업 표시줄에 고정해 두면 편해요.</li></ol>`}
+      body.innerHTML = `<h5>지니메일 앱으로 설치</h5>
+        <p class="desc">exe 프로그램이 아니라 크롬의 '웹앱 설치' 기능이에요. 시작 메뉴·작업 표시줄·바탕화면에 지니메일 아이콘이 생기고, 주소창 없는 별도 창으로 열려요. PC에 새 프로그램이 깔리지 않고 관리자 권한도 필요 없어요.</p>
+        <div class="acct${st0 ? ' on' : ''}"><span class="dot"></span><span style="flex:1">${st0 ? '지금 지니메일 앱으로 쓰고 있어요' : APP.prompt ? '이 PC에 설치할 수 있어요' : '이 창에서는 설치 버튼을 바로 띄울 수 없어요 (아래 방법으로 설치)'}</span>${!st0 && APP.prompt ? '<button class="btn pri" id="appInstall">앱 설치</button>' : ''}</div>
+        ${st0 ? '' : `<ol class="guide"><li>크롬 주소창 오른쪽 끝의 <b>설치 아이콘(모니터+화살표)</b>을 누르거나,</li><li>크롬 메뉴 <b>⋮ → 전송, 저장 및 공유 → 페이지를 앱으로 설치…</b> (엣지는 <b>⋯ → 앱 → 이 사이트를 앱으로 설치</b>)</li><li>설치한 뒤엔 시작 메뉴에서 '지니메일'을 찾아 작업 표시줄에 고정해 두면 편해요.</li></ol>`}
         <h5>새 메일 알림</h5>
-        <p class="desc">JIN-mail이 열려 있으면(최소화해도 됨) 1분마다 새 메일을 확인해서, 다른 일을 하는 중이면 윈도우 알림으로 알려 줘요. 앱으로 설치하면 작업 표시줄 아이콘에 안 읽은 메일 수도 표시돼요. JIN-mail 창을 완전히 닫으면 알림은 오지 않아요.</p>
+        <p class="desc">지니메일이 열려 있으면(최소화해도 됨) 1분마다 새 메일을 확인해서, 다른 일을 하는 중이면 윈도우 알림으로 알려 줘요. 앱으로 설치하면 작업 표시줄 아이콘에 안 읽은 메일 수도 표시돼요. 지니메일 창을 완전히 닫으면 알림은 오지 않아요.</p>
         <label class="opt"><input type="checkbox" id="setNotify"${SET.notify && perm === 'granted' ? ' checked' : ''}${perm === 'unsupported' ? ' disabled' : ''}> 새 메일이 오면 윈도우 알림 보내기</label>
         <p class="desc" id="notifyState">${perm === 'denied' ? '⚠ 이 사이트 알림이 크롬에서 차단돼 있어요. 주소창 왼쪽 자물쇠(사이트 정보) → 알림 → 허용으로 바꿔 주세요.' : perm === 'unsupported' ? '이 브라우저는 알림을 지원하지 않아요.' : ''}</p>
         <button class="btn" id="notifyTest"${SET.notify && perm === 'granted' ? '' : ' disabled'}>알림 시험해 보기</button>`;
@@ -2536,20 +2539,20 @@ function openSettings(tab) {
         <label class="opt" style="margin-top:6px"><input type="checkbox" id="logoutWipe" checked> 로그아웃할 때 이 PC에 저장한 메일·임시저장도 지우기 <span style="color:var(--mute)">(공용 PC라면 꼭 켜 두세요)</span></label>` : `<p class="desc">아직 로그인하지 않았어요.</p><button class="btn pri" id="reconn">Gmail 계정으로 로그인</button>`}
       <h5>로그인하는 방법</h5>
       <ol class="guide">
-        <li>JIN-mail 첫 화면에서 <b>[Gmail 연결]</b>을 누르고, 회사 Gmail 계정(@smtown.com 등)을 고릅니다.</li>
+        <li>지니메일 첫 화면에서 <b>[Gmail 연결]</b>을 누르고, 회사 Gmail 계정(@smtown.com 등)을 고릅니다.</li>
         <li>"Google에서 확인하지 않은 앱" 화면이 나오면 <b>고급 → JIN-mail(으)로 이동</b>을 누릅니다. (아직 구글 심사를 받지 않은 사내용 앱이라 나오는 안내예요)</li>
-        <li>권한 화면에서 <b>Gmail 읽기·보내기</b>와 <b>드라이브 앱 전용 공간</b>(편지함 정보 저장용)을 허용합니다. JIN-mail은 Gmail의 라벨·읽음·필터를 바꾸지 않아요.</li>
+        <li>권한 화면에서 <b>Gmail 읽기·보내기</b>와 <b>드라이브 앱 전용 공간</b>(편지함 정보 저장용)을 허용합니다. 지니메일은 Gmail의 라벨·읽음·필터를 바꾸지 않아요.</li>
         <li>처음엔 최근 3개월 메일을 이 PC에 받아 두느라 1~2분 걸릴 수 있어요. 다음부터는 몇 초면 열려요.</li>
       </ol>
       <h5>로그인 유지 (선택)</h5>
-      <p class="desc">구글 로그인은 1시간마다 끝나서, 오래 켜 두면 화면을 한 번 눌러 연장하거나 다시 연결해야 할 때가 있어요. 이게 번거로우면 작은 크롬 확장 프로그램 <b>'JIN-mail 로그인 유지'</b>를 설치하세요. 창 없이 알아서 연장해 줘요. (메일 내용은 읽지 않아요)</p>
+      <p class="desc">구글 로그인은 1시간마다 끝나서, 오래 켜 두면 화면을 한 번 눌러 연장하거나 다시 연결해야 할 때가 있어요. 이게 번거로우면 작은 크롬 확장 프로그램 <b>'지니메일 로그인 유지'</b>를 설치하세요. 창 없이 알아서 연장해 줘요. (메일 내용은 읽지 않아요)</p>
       <div class="acct" id="extState"><span class="dot"></span><span>확인 중…</span></div>
       <ol class="guide">
         <li><a href="jin-mail-login.zip" download>jin-mail-login.zip</a>을 내려받아 압축을 풉니다. (풀린 폴더는 지우지 말고 그대로 두세요)</li>
         <li>크롬 주소창에 <code>chrome://extensions</code> 를 입력합니다. <button class="btn" id="copyExtUrl" style="padding:1px 8px">주소 복사</button></li>
         <li>오른쪽 위 <b>개발자 모드</b>를 켭니다.</li>
         <li><b>압축해제된 확장 프로그램을 로드합니다</b>를 누르고, 1에서 푼 <b>jin-mail-login</b> 폴더를 고릅니다.</li>
-        <li>JIN-mail을 새로고침하면 위 표시가 <b>'사용 중'</b>으로 바뀌어요.</li>
+        <li>지니메일을 새로고침하면 위 표시가 <b>'사용 중'</b>으로 바뀌어요.</li>
       </ol>`;
       extAvailable(true).then(ok => { const el = $('#extState', body); if (!el) return; el.classList.toggle('on', ok); el.querySelector('span:last-child').textContent = ok ? '로그인 유지 확장 사용 중 — 로그인이 끝나기 전에 자동으로 연장돼요' : '로그인 유지 확장이 설치돼 있지 않아요'; });
     }
@@ -2649,7 +2652,7 @@ function openSettings(tab) {
 
 /* ───────── 첫 접속: Gmail 계정 연결 ───────── */
 const CLIENT_ID = '94151073420-uuu2lscanfblmr7f7ghllcpe90e7c2uv.apps.googleusercontent.com';
-const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file';  // Gmail은 읽기·보내기만, JIN-mail 편지함 정보는 드라이브 숨은 앱 공간  // + 자동 분류(필터)  // 읽기 + 읽음표시·라벨(편지함)·휴지통 이동
+const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file';  // Gmail은 읽기·보내기만, 지니메일 편지함 정보는 드라이브 숨은 앱 공간  // + 자동 분류(필터)  // 읽기 + 읽음표시·라벨(편지함)·휴지통 이동
 const IS_EXT = !!(window.chrome && chrome.identity && chrome.identity.launchWebAuthFlow);
 // 로그인 토큰(1시간)은 이 브라우저에만 잠깐 보관 → 새로고침해도 다시 로그인하지 않음
 const tokCache = { get() { const t = store.get('tok', null); return t && t.exp > Date.now() + 60000 ? t.t : null; }, left() { const t = store.get('tok', null); return t ? t.exp - Date.now() : 0; }, set(t, sec) { store.set('tok', { t, exp: Date.now() + (sec || 3500) * 1000 }); }, clear() { store.set('tok', null); } };
@@ -2674,7 +2677,7 @@ setInterval(() => { if (real.poll) real.poll(); }, 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && real.poll) real.poll(); });
 const APP = { prompt: null, standalone: () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true };
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); APP.prompt = e; });
-window.addEventListener('appinstalled', () => { APP.prompt = null; toast('JIN-mail 앱을 설치했어요. 시작 메뉴·작업 표시줄에서 열 수 있어요'); });
+window.addEventListener('appinstalled', () => { APP.prompt = null; toast('지니메일 앱을 설치했어요. 시작 메뉴·작업 표시줄에서 열 수 있어요'); });
 if ('serviceWorker' in navigator && location.protocol === 'https:' && !IS_EXT) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
   navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'jin-open') openFromNotify(e.data.id); });
@@ -2685,14 +2688,14 @@ function updateBadge() {
   if (!real.on) return; const n = MAILS.filter(m => m.inbox && m.unread && !m.deleted).length;
   if (updateBadge.n === n) return; updateBadge.n = n;
   try { if (navigator.setAppBadge) n ? navigator.setAppBadge(n) : navigator.clearAppBadge(); } catch (e) { /* */ }
-  if (!document.body.classList.contains('popmode')) document.title = (n ? `(${n}) ` : '') + 'JIN-mail';
+  if (!document.body.classList.contains('popmode')) document.title = (n ? `(${n}) ` : '') + 'jinny mail';
 }
 function notifyNew(list) {
   if (!list.length) return;
   const focused = document.visibilityState === 'visible' && document.hasFocus();
   // 화면을 보고 있거나 알림을 꺼 두었으면 화면 아래 짧은 안내만
   if (focused || !SET.notify || !('Notification' in window) || Notification.permission !== 'granted') { toast(`새 메일 ${list.length}통 — ${list[0].from.name || list[0].from.email}: ${list[0].subj}`); return; }
-  // 알림 모양: 큰 그림(로고) 없이 → 윈도우가 맨 위에 작은 JIN-mail 아이콘만 표시. 굵은 첫 줄 = 보낸사람·제목, 아래 = 본문 미리보기
+  // 알림 모양: 큰 그림(로고) 없이 → 윈도우가 맨 위에 작은 지니메일 아이콘만 표시. 굵은 첫 줄 = 보낸사람·제목, 아래 = 본문 미리보기
   const one = (title, body, gid) => {
     const opt = { body, tag: 'jin-' + gid, data: { id: gid }, silent: false };
     if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification(title, opt)).catch(() => {});
@@ -2702,7 +2705,7 @@ function notifyNew(list) {
   if (list.length <= 3) list.forEach(m => one(`${m.from.name || m.from.email} · ${m.subj}`, peek(m), m.gid));
   else one(`새 메일 ${list.length}통`, list.slice(0, 3).map(m => `${m.from.name || m.from.email}: ${m.subj}`).join('\n'), list[0].gid);
 }
-/* ───────── 'JIN-mail 로그인 유지' 확장 프로그램 (설치돼 있으면) ─────────
+/* ───────── '지니메일 로그인 유지' 확장 프로그램 (설치돼 있으면) ─────────
    웹페이지는 클릭 없이 Google 로그인을 연장할 수 없음 → 작은 확장 프로그램이 창 없이 새 토큰을 받아 넘겨줌.
    설치 안 돼 있으면 예전처럼 '다음 클릭 때' 연장 */
 const EXT_LOGIN = 'hfjgdhjepedelhgdmdcpljmdjkknjfkh';
@@ -2764,7 +2767,7 @@ function renewToken() {
     .finally(() => { auth.p = null; });
   return auth.p;
 }
-// 지금 쓸 토큰: 같은 브라우저의 다른 JIN-mail 탭이 새로 받아 둔 게 있으면 그것 (탭마다 따로 다시 로그인하지 않게)
+// 지금 쓸 토큰: 같은 브라우저의 다른 지니메일 탭이 새로 받아 둔 게 있으면 그것 (탭마다 따로 다시 로그인하지 않게)
 function curTok() { const t = tokCache.get(); if (t && t !== real.token) { real.token = t; if (real.expired || auth.needClick) { real.expired = false; auth.needClick = false; auth.waiters.splice(0).forEach(w => w(t)); renderTop(); } } return real.token; }
 // 다른 탭에서 로그인을 연장하면 이 탭도 바로 이어서 (기다리던 요청 재개)
 window.addEventListener('storage', e => { if (e.key === 'jin-tok' && real.on) curTok(); });
@@ -2826,7 +2829,7 @@ async function gapi(path, opt, tries) {
 // 화면에서 바꾼 것을 Gmail에도 반영 (실패하면 알림)
 function sync(label, job) { if (!real.on) return Promise.resolve(); return job().catch(e => { toast(`Gmail 반영 실패 (${label}): ${e.message}`); throw e; }); }
 const gidsOf = ids => ids.map(id => (MAILS.find(m => m.id === id) || {}).gid).filter(Boolean);
-// 읽음·이동은 JIN-mail 기록에만 (Gmail은 바꾸지 않음)
+// 읽음·이동은 지니메일 기록에만 (Gmail은 바꾸지 않음)
 const syncLabels = (ids, add, remove) => { ids.forEach(id => { const m = MAILS.find(x => x.id === id); if (!m) return;
     const p = {}; if (add.includes('UNREAD')) p.u = 1; if (remove.includes('UNREAD')) p.u = 0; if (add.includes('INBOX')) p.i = 1; if (remove.includes('INBOX')) p.i = 0;
     const nb = add.find(x => x !== 'UNREAD' && x !== 'INBOX'); if (nb) p.b = nb; jSet(m, p); }); return Promise.resolve(); };
@@ -2867,8 +2870,8 @@ function parseMsg(g, full) {
     replyTo: parsePeople(H['reply-to'])[0] || null,
     subj: H.subject || '(제목 없음)', snippet: decodeEnt(g.snippet), body: full ? plain.replace(/\r/g, '').trim() : '', html: full ? html : '', att, full: !!full };
 }
-/* ───────── JIN-mail 자체 기록 (Gmail과 별개) ─────────
-   메일마다 { b: 편지함, i: 받은편지함에 있음, u: 안 읽음, d: 삭제 } 를 JIN-mail이 따로 기억.
+/* ───────── 지니메일 자체 기록 (Gmail과 별개) ─────────
+   메일마다 { b: 편지함, i: 받은편지함에 있음, u: 안 읽음, d: 삭제 } 를 지니메일이 따로 기억.
    처음 한 번은 그때의 Gmail 라벨 상태를 복사해 오고, 이후로는 Gmail을 따라가지도, 바꾸지도 않음.
    저장: 내 Google 드라이브의 숨은 앱 공간(jin-mail.json) + 이 PC 사본 */
 const J = { data: null, fileId: null, t: null };
@@ -2923,7 +2926,7 @@ function jSet(m, patch) {
   const r = J.data.m[m.gid] || (J.data.m[m.gid] = { b: m.box || '', i: m.inbox ? 1 : 0, u: m.unread ? 1 : 0, d: m.deleted ? 1 : 0 });
   Object.assign(r, patch); jSave();
 }
-// 목록용 데이터 → 화면용 메일 (편지함·읽음·삭제는 JIN-mail 기록에서)
+// 목록용 데이터 → 화면용 메일 (편지함·읽음·삭제는 지니메일 기록에서)
 function toMail(meta, lab) {
   const when = new Date(meta.when), day = new Date(when); day.setHours(0, 0, 0, 0);
   const g = meta.gid, sent = lab.sent.has(g);
@@ -2934,7 +2937,7 @@ function toMail(meta, lab) {
     // 내가 보낸 메일은 받는사람에 내가 있어도(그룹 주소 포함) 받은 메일로 치지 않음 → 보낸편지함에만
     const mine = isMe(meta.from), isNew = !J.data || meta.when > J.data.initAt, received = !mine && (!sent || lab.inbox.has(g));
     let b = isNew ? '' : (lab.box.get(g) || ''), i = isNew ? (received ? 1 : 0) : (lab.inbox.has(g) ? 1 : 0);
-    // 새로 들어온 메일엔 JIN-mail 자동 분류 규칙 적용
+    // 새로 들어온 메일엔 지니메일 자동 분류 규칙 적용
     if (isNew && received && J.data) { const rule = (J.data.rules || []).find(x => ruleHit(m, x)); if (rule) { b = rule.box; if (rule.skipInbox) i = 0; } }
     r = { b, i, u: !sent && lab.unread.has(g) ? 1 : 0, d: 0 };
     if (real.labReady && J.data) { J.data.m[g] = r; J.dirty = true; }
@@ -2976,7 +2979,7 @@ async function loadReal(interactive, token) {
   if (real.loading) return; real.loading = true; const gen = real.gen = (real.gen || 0) + 1;
   const prog = t => { real.prog = t; renderTop(); const bm = $('#bootMsg'); if (bm && t) bm.textContent = t; };
   try {
-    if (!token && !interactive) { const sc = store.get('tok-scope', null); if (sc != null && !sc.includes('drive.appdata')) { tokCache.clear(); throw Object.assign(new Error('JIN-mail이 Gmail을 바꾸지 않도록 권한을 바꿨어요. 한 번만 다시 연결해 주세요'), { relogin: true }); } }
+    if (!token && !interactive) { const sc = store.get('tok-scope', null); if (sc != null && !sc.includes('drive.appdata')) { tokCache.clear(); throw Object.assign(new Error('지니메일이 Gmail을 바꾸지 않도록 권한을 바꿨어요. 한 번만 다시 연결해 주세요'), { relogin: true }); } }
     real.token = token || await googleLogin(interactive); real.expired = false;
     prog('Gmail 연결 중…');
     const [prof, labs] = await Promise.all([gapi('profile'), gapi('labels')]);
@@ -2986,8 +2989,8 @@ async function loadReal(interactive, token) {
     ME.name = (cn.email === prof.emailAddress && cn.name) || prof.emailAddress.split('@')[0];
     gapi('settings/sendAs').then(sa => { const pr = (sa.sendAs || []).find(x => x.isPrimary) || (sa.sendAs || [])[0]; if (pr && pr.displayName) { ME.name = pr.displayName; store.set('connected', Object.assign({}, cn, { email: prof.emailAddress, name: pr.displayName })); } }).catch(() => { /* 못 읽으면 보낸 메일에서 찾음 */ });  // 기다리지 않음
     real.ids = real.ids || new Map(); real.num = g => { if (!real.ids.has(g)) real.ids.set(g, real.ids.size + 1); return real.ids.get(g); };
-    // JIN-mail 편지함·분류 기록 (드라이브 숨은 앱 공간). 처음이면 지금의 Gmail 라벨 구조를 한 번만 복사
-    prog('JIN-mail 편지함 불러오는 중…');
+    // 지니메일 편지함·분류 기록 (드라이브 숨은 앱 공간). 처음이면 지금의 Gmail 라벨 구조를 한 번만 복사
+    prog('지니메일 편지함 불러오는 중…');
     // 이 PC 캐시도 동시에 읽기 (목록용 정보만 먼저, 검색용 본문 글자는 화면이 뜬 뒤에)
     const withTimeout = (p, ms, v) => Promise.race([p, new Promise(z => setTimeout(() => z(v), ms))]);
     const dbP = withTimeout(cacheDb(), 6000, null); const cacheP = dbP.then(db => withTimeout(cacheAll(db), 15000, []));
@@ -3099,7 +3102,7 @@ async function loadReal(interactive, token) {
       return metas.size;
     });
   } catch (err) {
-    if (/Drive 403/.test(err.message) && /insufficient|scope/i.test(err.message)) { tokCache.clear(); err.message = 'JIN-mail이 Gmail을 바꾸지 않도록 권한을 바꿨어요. 한 번만 다시 연결해 주세요'; }
+    if (/Drive 403/.test(err.message) && /insufficient|scope/i.test(err.message)) { tokCache.clear(); err.message = '지니메일이 Gmail을 바꾸지 않도록 권한을 바꿨어요. 한 번만 다시 연결해 주세요'; }
     if (/accessNotConfigured|has not been used|is disabled/i.test(err.message)) err.message = 'Google 드라이브 연결 준비가 아직 안 됐어요 (관리자 설정 중). 잠시 후 다시 시도해 주세요';
     real.expired = !real.on; prog(''); renderTop(); if (!real.on && $('#boot')) bootScreen('login', err.relogin || /권한을 바꿨어요/.test(err.message) ? err.message : '메일을 불러오지 못했어요: ' + err.message); else toast('실제 메일을 불러오지 못했어요: ' + err.message); }
   finally { real.loading = false; }
@@ -3176,7 +3179,7 @@ async function resolveInline(m) {
 
 // 첨부 누르기 = 크롬 일반 다운로드 (다운로드 폴더에 저장, 크롬 우상단 다운로드 아이콘에 표시)
 function openRealAtt(m, a) { downloadAtt(m, a); }
-// 첨부 → 내 드라이브 'JIN-mail 첨부' 폴더에 저장 (드라이브 권한은 JIN-mail이 만든 파일만 다루는 drive.file)
+// 첨부 → 내 드라이브 'JIN-mail 첨부' 폴더에 저장 (드라이브 권한은 지니메일이 만든 파일만 다루는 drive.file)
 async function driveFolder() {
   const k = 'drive-folder-' + ME.email, id = store.get(k, null);
   if (id) { try { const f = await (await dfetch(`${DRIVE}/files/${id}?fields=id,trashed`)).json(); if (!f.trashed) return id; } catch (e) { if (e.status !== 404) throw e; } }
@@ -3198,7 +3201,7 @@ async function saveAttToDrive(m, i, btn) {
   setAProg(m, i, 'drv', 0);
   try {
     const [blob, fid] = await Promise.all([attBlob(m, a, f => setAProg(m, i, 'drv', f == null ? null : f * 0.5)), driveFolder()]);
-    const b = boundary(), meta = { name: a[1], parents: [fid], mimeType: blob.type || 'application/octet-stream', description: `JIN-mail · ${m.from.name || m.from.email} · ${m.subj}` };
+    const b = boundary(), meta = { name: a[1], parents: [fid], mimeType: blob.type || 'application/octet-stream', description: `지니메일 · ${m.from.name || m.from.email} · ${m.subj}` };
     const body = new Blob([`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: ${meta.mimeType}\r\n\r\n`, blob, `\r\n--${b}--`]);
     const f = await xhrUpload(`${DRIVE_UP}/files?uploadType=multipart&fields=id,webViewLink`, `multipart/related; boundary=${b}`, body, x => setAProg(m, i, 'drv', 0.5 + x * 0.5));
     const url = f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`;
@@ -3278,7 +3281,7 @@ function bootScreen(mode, msg) {
   if (el && el.classList.contains('out')) { el.remove(); el = null; }
   if (!el) { el = document.createElement('div'); el.id = 'boot'; document.body.append(el); }
   const c = store.get('connected', null) || {};
-  el.innerHTML = `<div class="bootbox">${mode === 'loading' ? '' : `<div class="logo">${ico('env', 44)}</div>`}<h2>JIN-mail</h2>${mode === 'loading'
+  el.innerHTML = `<div class="bootbox">${mode === 'loading' ? '' : `<div class="brandlogo">${APP_ICON}</div>`}<h2 class="wmh">${LOGO_WM}</h2>${mode === 'loading'
     ? `<div class="envani"><svg viewBox="0 0 140 124" width="140" height="124" aria-hidden="true">
       <ellipse class="eshadow" cx="70" cy="114" rx="44" ry="5" fill="#d7dbe2"/>
       <g class="ebody">
@@ -3299,7 +3302,7 @@ function bootScreen(mode, msg) {
 function openWelcome(force) {
   if (!force && (store.get('connected', null) || store.get('skip-connect', false))) return;
   const bg = document.createElement('div'); bg.className = 'modal-bg';
-  bg.innerHTML = `<div class="modal welcome"><div class="logo">${ico('env', 48)}</div><h2>JIN-mail</h2><p>쓰던 Gmail 계정을 연결하면 바로 시작할 수 있어요.</p>
+  bg.innerHTML = `<div class="modal welcome"><div class="brandlogo">${APP_ICON}</div><h2 class="wmh">${LOGO_WM}</h2><p>쓰던 Gmail 계정을 연결하면 바로 시작할 수 있어요.</p>
     <div class="steps"><div><span class="st" id="s1">1</span>Gmail 계정으로 로그인 (메일 읽기·정리 권한)</div><div><span class="st" id="s2">2</span>라벨을 편지함으로, 서명을 풋터로 가져오기</div><div><span class="st" id="s3">3</span>시작</div></div>
     <button class="btn pri gbtn" id="gConn">${ico('env', 18)} Gmail 계정 연결하기</button><div class="res" id="gRes"></div><button class="later" id="gLater">나중에 할게요 (예시 메일로 둘러보기)</button></div>`;
   document.body.append(bg);
@@ -3582,7 +3585,7 @@ function wire() {
 wire(); renderTop(); renderNav();
 const hash = location.hash;
 if (hash === '#compose') {
-  document.body.classList.add('popmode'); document.title = '메일 쓰기 · JIN-mail';
+  document.body.classList.add('popmode'); document.title = '메일 쓰기 · jinny mail';
   // 연결된 계정이면 실제 보내기 모드 (예전엔 예시 화면으로 처리돼 보내지지 않던 문제)
   const c = store.get('connected', null);
   if (c && c.email && tokCache.get()) { real.on = true; real.token = tokCache.get(); ME.email = c.email.toLowerCase(); if (c.name) ME.name = c.name; real.num = real.num || (g => g); }
@@ -3591,13 +3594,13 @@ if (hash === '#compose') {
 } else if (hash === '#view=real') {
   document.body.classList.add('popmode');
   const m = store.get('pop-view', null);
-  if (m) { MAILS = [m]; st.open = m.id; real.on = true; real.token = tokCache.get(); document.title = m.subj + ' · JIN-mail'; }
+  if (m) { MAILS = [m]; st.open = m.id; real.on = true; real.token = tokCache.get(); document.title = m.subj + ' · jinny mail'; }
   renderRead();
 } else if (/^#view=\d+/.test(hash)) {
   // 새 창 읽기 — 여기서 답장을 누르면 이 창에서 바로 작성
   document.body.classList.add('popmode');
   st.open = +hash.split('=')[1];
-  const m = MAILS.find(x => x.id === st.open); if (m) { m.unread = 0; document.title = m.subj + ' · JIN-mail'; }
+  const m = MAILS.find(x => x.id === st.open); if (m) { m.unread = 0; document.title = m.subj + ' · jinny mail'; }
   renderRead();
 } else if (store.get('connected', null)) {
   // 연결해 둔 계정이면 예시 메일을 잠깐이라도 보여 주지 않고 로딩 화면 → 실제 메일
@@ -3621,7 +3624,7 @@ if (hash === '#compose') {
       const v = ((await (await fetch(location.pathname + '?vchk=' + Date.now(), { cache: 'no-store' })).text()).match(/mail-c\.js\?v=(\d+)/) || [])[1];
       if (!v || v === cur) return;
       const go = () => { flushCompose(); location.replace(location.pathname + '?v=' + v); };
-      if ($('#read').classList.contains('composing') || cs.saving) toast('JIN-mail 새 버전이 있어요', go, '지금 적용');
+      if ($('#read').classList.contains('composing') || cs.saving) toast('지니메일 새 버전이 있어요', go, '지금 적용');
       else go();
     } catch (e) { /* 다음에 다시 */ }
   };
