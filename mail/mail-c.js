@@ -1202,16 +1202,19 @@ async function sendMail() {
   }
   clearTimeout(cs.timer); cs.saving = false;
   const snap = draftNow(), files = cs.files.slice();
-  const orig = MAILS.find(x => x.id === cs.mailId);
-  $('#read').classList.remove('composing'); renderRead(true);
+  // 보내기를 누르면 '작성 중이던 답장' 표시는 바로 없앰 → 취소하거나 보내지 못했을 때만 되살림
+  const origId = cs.mailId, orig0 = MAILS.find(x => x.id === origId), keepDraft = orig0 && orig0.draft;
+  const setDraft = v => { const o = MAILS.find(x => x.id === origId); if (o) o.draft = v; };
+  setDraft(null);
+  $('#read').classList.remove('composing'); renderRead(true); renderList(); renderNav();
   let cancelled = false;
   // 5초 동안 '보내기 취소' 가능 → 그 뒤 실제 발송
-  toast('보내는 중… (5초 안에 취소할 수 있어요)', () => { cancelled = true; cs.files = files; loadDraft(snap); cs.files = files; renderFiles(); toast('보내기를 취소했어요'); });
+  toast('보내는 중… (5초 안에 취소할 수 있어요)', () => { cancelled = true; setDraft(keepDraft); cs.files = files; loadDraft(snap); cs.files = files; renderFiles(); renderList(); renderNav(); toast('보내기를 취소했어요'); });
   await new Promise(z => setTimeout(z, 5000));
   if (cancelled) return;
   try {
     const r = await uploadMime('messages/send', await buildMime(d), d.threadId ? { threadId: d.threadId } : {});
-    if (orig) orig.draft = null;
+    setDraft(null);
     store.set('draft-last', null); ndRemove(d.nd); renderNav(); renderList();
     toast(`보냈어요 — ${d.to.concat(d.cc).map(p => p.name || p.email).slice(0, 3).join(', ')}${d.to.length + d.cc.length > 3 ? ' 외' : ''}`);
     // 보낸편지함에 바로 보이게
@@ -1219,6 +1222,7 @@ async function sendMail() {
     if (document.body.classList.contains('popmode') && !st.open) setTimeout(() => window.close(), 1200);
   } catch (e) {
     toast('보내지 못했어요: ' + e.message + ' — 작성 내용을 다시 열어 둘게요');
+    setDraft(keepDraft || '(보내지 못한 답장)'); renderList(); renderNav();
     cs.files = files; loadDraft(snap); cs.files = files; renderFiles();
   }
 }
