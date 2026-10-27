@@ -941,7 +941,8 @@ function pickFooter(kind, m) {
   return FOOTERS.find(f => score(f) > 0) || null;
 }
 function composeHtml(text, footer, quote) {
-  return nl(text) + '<div><span id="gpCaret"></span><br></div>' + footerHtml(footer) +
+  // 풋터가 있으면 위에 빈 줄을 따로 두지 않음 → 풋터 안 첫 빈 줄(인사말과 맺음말 사이)에 커서 (loadDraft에서)
+  return nl(text) + (footer ? '' : '<div><span id="gpCaret"></span><br></div>') + footerHtml(footer) +
     (quote && quote.length ? `<div class="quote" contenteditable="false" spellcheck="false">${nestQ(quote, 0)}</div>` : '');
 }
 function nestQ(blocks, i) { return i >= blocks.length ? '' : `<div class="qb">${esc(blocks[i])}${nestQ(blocks, i + 1)}</div>`;
@@ -972,16 +973,19 @@ function buildDraft(kind, m) {
 }
 function loadDraft(d) {
   cs.nd = d.nd || null; cs.kind = d.kind; cs.mailId = d.mailId; cs.footer = d.footer; cs.files = (d.files || []).slice();
-  setChips($('#toBox'), d.to); setChips($('#ccBox'), d.cc);
+  setChips($('#toBox'), d.to); setChips($('#ccBox'), d.cc); setChips($('#bccBox'), d.bcc || []);
+  showBcc((d.bcc || []).length > 0);
   $('#subj').value = d.subj;
   $('#cbody').innerHTML = d.html;
   $$('#cbody .tdsel, #cbody .hrsel').forEach(x => x.classList.remove('tdsel', 'hrsel')); TS.cells = []; TS.multi = false;
   renderFooterBar(); renderFiles(); setSave('');
   $('#read').classList.add('composing');
   applyBaseFont();
-  const mk = $('#gpCaret');
+  let mk = $('#gpCaret');
+  if (!mk && $('.gp-footer', $('#cbody'))) mk = caretInFooter($('.gp-footer', $('#cbody')));
   cs.initial = null; setTimeout(() => { cs.initial = composeSig(); });
-  if (d.kind === 'new' || d.kind === 'fwd' || !d.to.length) { if (mk) mk.remove(); $('#toBox input').focus(); } else caretAt(mk);
+  // 새 메일·전달은 받는사람부터. 커서 자리 표시는 남겨 두고, 나중에 Tab으로 본문에 오면 그 자리로
+  if (d.kind === 'new' || d.kind === 'fwd' || !d.to.length) $('#toBox input').focus(); else caretAt(mk);
   runTypo();
 }
 // 작성 칸 기본 글꼴 (설정 > 일반)
@@ -990,13 +994,39 @@ function applyBaseFont() {
   b.style.fontFamily = `'${F.family}', sans-serif`; b.style.fontSize = F.size + 'pt';
   if ($('#fFont')) $('#fFont').value = F.family; if ($('#fSize')) $('#fSize').value = String(F.size);
 }
+// 풋터 안에서 글을 쓸 자리: 글자가 나온 뒤 첫 빈 줄(빈 문단 또는 <br><br>). 없으면 풋터 위에 한 줄 만듦
+// 숨은참조 칸: 필요할 때만 (넣은 사람이 있으면 계속 보임)
+function showBcc(on) { $('#bccFld').hidden = !on; $('#bccTog').hidden = on; }
+function caretInFooter(f) {
+  const mk = document.createElement('span'); mk.id = 'gpCaret';
+  const isEmptyBlock = n => n.nodeType === 1 && /^(DIV|P)$/.test(n.tagName) && !n.textContent.replace(/[\s\u00a0]/g, '') && !n.querySelector('img,table,hr');
+  let seen = false, spot = null;
+  const tw = document.createTreeWalker(f, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+  for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+    if (n.nodeType === 3) { if (n.textContent.replace(/[\s\u00a0]/g, '')) seen = true; continue; }
+    if (!seen) continue;
+    if (isEmptyBlock(n)) { spot = () => n.insertBefore(mk, n.firstChild); break; }
+    if (n.tagName === 'BR') { let x = n.nextSibling; while (x && x.nodeType === 3 && !x.textContent.trim()) x = x.nextSibling; if (x && x.nodeName === 'BR') { spot = () => n.after(mk); break; } }
+    if (/^(TABLE|HR)$/.test(n.tagName)) break;  // 서명 표·선 아래로는 내려가지 않음
+  }
+  if (spot) spot(); else { const d = document.createElement('div'); d.append(mk, document.createElement('br')); f.before(d); }
+  return mk;
+}
+// 본문에 처음 들어올 때: Tab 등 키보드로 오면 커서 자리로, 마우스로 누른 곳이 있으면 거기 그대로
+let cbodyMouse = 0;
+document.addEventListener('mousedown', e => { if (e.target.closest && e.target.closest('#cbody')) cbodyMouse = Date.now(); }, true);
+document.addEventListener('focusin', e => {
+  if (e.target.id !== 'cbody') return; const mk = $('#gpCaret'); if (!mk) return;
+  if (Date.now() - cbodyMouse < 400) { mk.remove(); return; }
+  setTimeout(() => { if ($('#gpCaret')) caretAt($('#gpCaret')); });
+});
 function caretAt(mk) {
   const b = $('#cbody'); b.focus();
   const r = document.createRange();
   if (mk) { r.setStartBefore(mk); mk.remove(); } else { r.selectNodeContents(b); r.collapse(false); }
   r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
 }
-const draftNow = () => ({ nd: cs.nd || null, kind: cs.kind, mailId: cs.mailId, to: chipsOf($('#toBox')), cc: chipsOf($('#ccBox')), subj: $('#subj').value, html: $('#cbody').innerHTML, footer: cs.footer, files: cs.files.map(f => Object.assign({}, f)) });
+const draftNow = () => ({ nd: cs.nd || null, kind: cs.kind, mailId: cs.mailId, to: chipsOf($('#toBox')), cc: chipsOf($('#ccBox')), bcc: chipsOf($('#bccBox')), subj: $('#subj').value, html: $('#cbody').innerHTML, footer: cs.footer, files: cs.files.map(f => Object.assign({}, f)) });
 /* 자동 임시저장: 입력이 멈추면 1.2초 뒤 저장. 저장 전에 떠나려 하면 알림 */
 function setSave(s) { const el = $('#saveState'); el.textContent = s; el.classList.toggle('busy', /중/.test(s)); }
 function dirty() {
@@ -1005,7 +1035,7 @@ function dirty() {
   clearTimeout(cs.timer); cs.timer = setTimeout(saveDraft, 1200);
 }
 // 처음 연 상태 그대로인지 (받는사람·참조·제목·본문·첨부)
-const composeSig = () => JSON.stringify([chipsOf($('#toBox')), chipsOf($('#ccBox')), $('#subj').value, $('#cbody').innerText.replace(/\s+/g, ' ').trim(), $$('#cbody img').length, cs.files.length]);
+const composeSig = () => JSON.stringify([chipsOf($('#toBox')), chipsOf($('#ccBox')), chipsOf($('#bccBox')), $('#subj').value, $('#cbody').innerText.replace(/\s+/g, ' ').trim(), $$('#cbody img').length, cs.files.length]);
 function saveDraft() {
   clearTimeout(cs.timer);
   if (cs.initial && composeSig() === cs.initial) { cs.saving = false; setSave(''); return; }
@@ -1120,6 +1150,7 @@ async function buildMime(d) {
   const alt = boundary(), rel = boundary(), mix = boundary();
   const hdr = [`From: ${addrHdr([ME])}`, `To: ${addrHdr(d.to)}`];
   if (d.cc.length) hdr.push(`Cc: ${addrHdr(d.cc)}`);
+  if (d.bcc && d.bcc.length) hdr.push(`Bcc: ${addrHdr(d.bcc)}`);  // Gmail이 보낼 때 이 줄은 지우고 각자에게만 전달
   hdr.push(`X-JIN-Id: ${d.jid || (d.jid = 'jin' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8))}`);
   hdr.push(`Subject: ${encHdr(d.subj)}`, 'MIME-Version: 1.0', `Date: ${new Date().toUTCString().replace('GMT', '+0000')}`);
   if (d.inReplyTo) { hdr.push(`In-Reply-To: ${d.inReplyTo}`, `References: ${[d.refs, d.inReplyTo].filter(Boolean).join(' ')}`); }
@@ -1191,8 +1222,8 @@ function composeDraftForSend() {
 }
 async function sendMail() {
   const d = composeDraftForSend();
-  if (!d.to.length && !d.cc.length) { toast('받는사람을 넣어 주세요'); $('#toBox input').focus(); return; }
-  const pend = $('#toBox input').value.trim() || $('#ccBox input').value.trim();
+  if (!d.to.length && !d.cc.length && !(d.bcc || []).length) { toast('받는사람을 넣어 주세요'); $('#toBox input').focus(); return; }
+  const pend = $('#toBox input').value.trim() || $('#ccBox input').value.trim() || $('#bccBox input').value.trim();
   if (pend) { toast(`'${pend}'이(가) 아직 받는사람 칸에 글자로 남아 있어요. Enter로 넣거나 지워 주세요`); return; }
   if (!d.subj.trim() && !confirm('제목 없이 보낼까요?')) return;
   if (sendTotal(d) > 33 * 1048576) { toast('첨부가 너무 커요 (최대 약 33MB). 큰 파일은 드라이브 링크로 보내 주세요'); return; }
@@ -1218,7 +1249,8 @@ async function sendMail() {
     const r = await uploadMime('messages/send', await buildMime(d), d.threadId ? { threadId: d.threadId } : {});
     setDraft(null);
     store.set('draft-last', null); ndRemove(d.nd); renderNav(); renderList();
-    toast(`보냈어요 — ${d.to.concat(d.cc).map(p => p.name || p.email).slice(0, 3).join(', ')}${d.to.length + d.cc.length > 3 ? ' 외' : ''}`);
+    const all = d.to.concat(d.cc, d.bcc || []);
+    toast(`보냈어요 — ${all.map(p => p.name || p.email).slice(0, 3).join(', ')}${all.length > 3 ? ' 외' : ''}`);
     // 보낸편지함에 바로 보이게
     try { const g = await gapi(`messages/${r.id}?format=full`); const x = parseMsg(g, true); const mm = toMail(x, real.lab || { inbox: new Set(), sent: new Set([r.id]), unread: new Set(), box: new Map() }); mm.sent = 1; mm.from = ME; MAILS.unshift(mm); saveFull(mm); renderNav(); renderList(); } catch (e) { /* 목록은 다음 새로 고침 때 */ }
     if (document.body.classList.contains('popmode') && !st.open) setTimeout(() => window.close(), 1200);
@@ -2768,7 +2800,10 @@ function wire() {
   body.addEventListener('focus', () => setTimeout(tableBar));
   body.addEventListener('mouseup', () => setTimeout(tableBar));
   $('#subj').addEventListener('input', dirty);
-  setupRcpt($('#toBox')); setupRcpt($('#ccBox'));
+  setupRcpt($('#toBox')); setupRcpt($('#ccBox')); setupRcpt($('#bccBox'));
+  $('#bccTog').addEventListener('click', () => { showBcc(true); $('#bccBox input').focus(); });
+  // 제목에서 Tab → 본문으로 (서식 막대를 거치지 않게)
+  $('#subj').addEventListener('keydown', e => { if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); const mk = $('#gpCaret'); if (mk) caretAt(mk); else $('#cbody').focus(); } });
   document.addEventListener('mousedown', e => { if (!e.target.closest('.typo')) $$('.typo').forEach(x => x.remove()); });
   // 단축키: j/k 다음·이전, a 전체답장, f 전달, c 새 메일, / 검색, Esc 작성 닫기 (답장 r은 Ctrl+R 새로고침과 헷갈려서 없앰)
   document.addEventListener('keydown', e => {

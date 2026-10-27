@@ -232,6 +232,9 @@ input.ck{width:15px;height:15px;margin:0;accent-color:var(--blue);cursor:pointer
 .fld .box{flex:1;min-height:34px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;border:1px solid #c4cbd6;border-radius:7px;padding:3px 8px;background:#fff}
 .fld .box:focus-within{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
 .fld .box input{flex:1;min-width:140px;border:0;outline:none;padding:3px 0;background:transparent}
+.bcctog{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--blue);font-size:12px;cursor:pointer;padding:2px 4px;z-index:1}
+.bcctog:hover{text-decoration:underline}
+#ccBox{padding-right:64px}
 .attbox{cursor:pointer;color:var(--mute);font-size:13px}
 .attbox:hover{border-color:var(--blue)}
 .afile{display:inline-flex;align-items:center;gap:5px;border:1px solid #d5dae2;border-radius:6px;padding:2px 4px 2px 8px;background:#f8f9fb;font-size:12.5px;color:#3c4043}
@@ -574,7 +577,8 @@ body.resizing{cursor:col-resize;user-select:none}
       </div>
       <div class="fields">
         <div class="fld"><label>받는사람</label><div class="box rcpt" id="toBox"><input autocomplete="off"></div><div class="ac"></div></div>
-        <div class="fld"><label>참조</label><div class="box rcpt" id="ccBox"><input autocomplete="off"></div><div class="ac"></div></div>
+        <div class="fld"><label>참조</label><div class="box rcpt" id="ccBox"><input autocomplete="off"></div><div class="ac"></div><button class="bcctog" id="bccTog" type="button" title="숨은참조 칸 열기">숨은참조</button></div>
+        <div class="fld" id="bccFld" hidden><label>숨은참조</label><div class="box rcpt" id="bccBox"><input autocomplete="off"></div><div class="ac"></div></div>
         <div class="fld"><label>제목</label><div class="box"><input id="subj" spellcheck="false"></div></div>
         <div class="fld"><label>첨부</label><div class="box attbox" id="attBox"><span id="attHint">클릭해서 파일 고르기 · 작성 화면 어디에든 끌어다 놓기</span></div></div>
       </div>
@@ -587,6 +591,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793061547"></script>
+<script src="mail-c.js?v=1793061770"></script>
 </body>
 </html>
