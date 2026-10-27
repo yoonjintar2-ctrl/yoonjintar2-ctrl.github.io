@@ -51,7 +51,7 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .refbtn .rfr,.refbtn .rfr .dm-fill{border-radius:inherit}
 .refbtn .rfr{border-radius:var(--r-top,10px)}
 .refbtn .rfr .dm-orb{inset:0;border-radius:0;animation:none}
-.refbtn .rfr .dm-orb i{left:0;top:0;margin:-2.5px 0 0 -2.5px;offset-path:path("M21 0H31A11 11 0 0 1 42 11V31A11 11 0 0 1 31 42H11A11 11 0 0 1 0 31V11A11 11 0 0 1 11 0Z");offset-rotate:0deg;animation:dmDrop .45s cubic-bezier(.3,1.6,.5,1) both,rfOrb 1.3s linear infinite}
+.refbtn .rfr .dm-orb i{left:0;top:0;margin:-2.5px 0 0 -2.5px;offset-path:path("M21 0H25A17 17 0 0 1 42 17V25A17 17 0 0 1 25 42H17A17 17 0 0 1 0 25V17A17 17 0 0 1 17 0Z");offset-rotate:0deg;animation:dmDrop .45s cubic-bezier(.3,1.6,.5,1) both,rfOrb 1.3s linear infinite}
 @keyframes rfOrb{from{offset-distance:0%}to{offset-distance:100%}}
 .refbtn.ok .rfr .dm-orb{opacity:0;transition:opacity .3s}
 .refbtn.spin.hi{color:#fff}
@@ -744,6 +744,37 @@ body.resizing{cursor:col-resize;user-select:none}
 .row .l3 > .mini .fti{width:13px!important;height:13px!important}
 .deltag{font-size:11px;font-weight:700;color:#b3261e;border:1px solid #f1b8b4;background:#fdecea;border-radius:4px;padding:0 5px;vertical-align:1px}
 .dbanner.delb{background:#fdecea;border-color:#f1b8b4;color:#8c1d18}
+
+/* ── 리퀴드 버튼 팩 (2026-10-27 선택) — 말랑한 알약 + 젤리 눌림 + 물결 기다림 ──
+   필터 칩·목록 버튼·답장 등 높이 32px로 통일, 모든 버튼 완전 둥근 알약, 아이콘 버튼은 동그라미 */
+:root{--lq-line:#c9d5ea;--lq-ink:#22324a;--lq-on:#e3edff;--lq-on-line:#7aa6f0;--lq-hover:#f2f6fd}
+.btn{border:1.5px solid var(--lq-line);border-radius:999px;color:var(--lq-ink);transition:background .2s,border-color .2s}
+.btn.pri{border-color:var(--blue);color:#fff}
+.btn.danger{border-color:#d93025}
+.btn.on,.lfilt .tf.on{background:var(--lq-on);border-color:var(--lq-on-line);color:var(--blue)}
+.lfilt .tf{height:32px;padding:0 12px;border:1.5px solid var(--lq-line);border-radius:999px;color:var(--lq-ink);font-size:13px}
+.lfilt .tfstar{width:32px;min-width:32px;padding:0;border-radius:50%}
+.lhead .btn{height:32px;padding:0 12px;font-size:12.5px}
+.racts .bar .btn{height:32px;padding:0 13px}
+.ib{border-radius:50%}
+.attbox .attpick{height:32px;border:1.5px solid var(--lq-line);border-radius:999px;color:var(--lq-ink)}
+.ctool .btn,.ctool .ib,.ctool .sendgrp .btn.pri:first-child{border-radius:999px}
+.ctool #discard{border-radius:50%;border:1.5px solid var(--lq-line)}
+.newbtn{border-radius:999px}
+.refbtn{border-radius:16px}
+.pplmore{border-radius:999px;padding:0 9px}
+.attw .att{border-radius:999px 0 0 999px;padding-left:12px}
+.attbtn:last-child{border-radius:0 999px 999px 0;width:34px}
+.fbtn{border-radius:50%;border:1.5px solid var(--lq-line)}
+.fbtn.on{border-color:var(--lq-on-line);background:var(--lq-on)}
+.sbox{border-radius:999px;border-color:var(--lq-line)}
+.sbox input{padding-left:18px}
+.sbox .go{width:48px;border-left:0;background:transparent}
+@media (hover:hover){.btn:hover,.lfilt .tf:hover,.attbox .attpick:hover{background:var(--lq-hover)}.btn.pri:hover{background:var(--blue-d)}.btn.on:hover,.lfilt .tf.on:hover{background:#d8e6ff}}
+/* 누르면 젤리처럼 출렁 */
+.squish{animation:lqSquish .45s cubic-bezier(.3,1.5,.5,1)}
+@keyframes lqSquish{0%{transform:scale(1)}30%{transform:scale(1.07,.88)}55%{transform:scale(.96,1.05)}80%{transform:scale(1.02,.98)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.squish{animation:none}}
 </style>
 </head>
 <body>
@@ -793,6 +824,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793110047"></script>
+<script src="mail-c.js?v=1793111135"></script>
 </body>
 </html>

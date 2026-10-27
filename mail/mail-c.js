@@ -3672,6 +3672,12 @@ function wire() {
     if (!t.closest('.list') || t.closest('.row, button, input, label, select, a, .lfilt, #lhead, #convbar, .menu, .more-rows')) return;
     deselect();
   });
+  // 리퀴드 버튼: 누르는 순간 젤리처럼 출렁
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest('.btn, .lfilt .tf, .ib, .refbtn, .attpick, .pplmore, .attbtn, .chipmore, .fbtn, .sbox .go'); if (!b || b.disabled) return;
+    b.classList.remove('squish'); void b.offsetWidth; b.classList.add('squish');
+    b.addEventListener('animationend', function f(ev) { if (ev.animationName === 'lqSquish') { b.classList.remove('squish'); b.removeEventListener('animationend', f); } });
+  }, true);
   setupSplits(); setupDragScroll();
 }
 // 선택 취소: 열어 둔 메일·체크를 모두 풀기 → 안 읽은 메일함에서 읽은 메일은 이때 목록에서 빠짐
