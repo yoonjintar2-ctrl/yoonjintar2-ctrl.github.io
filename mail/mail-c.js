@@ -171,8 +171,8 @@ const SYS = {
   all: { name: '전체 메일', ic: 'all', f: () => true },
   trash: { name: '지운 편지함', ic: 'trash', f: m => !!m.deleted }
 };
-const folderFn = k => { if (k === 'conv') return m => !!(st.conv && st.conv.ids.has(m.id)); if (k === 'all') return () => true; if (k === 'trash') return m => !!m.deleted; if (k === 'unread') return m => !m.deleted && (m.unread || (m.id === st.open && st.unreadKeep === m.id)); if (SYS[k]) { const sf = SYS[k].f; return m => !m.deleted && sf(m); } const ids = new Set(descIds(k)); const f = m => !m.deleted && ids.has(m.box); f.boxId = k; return f; };
-const folderName = k => k === 'conv' ? '대화 보기' + (st.conv ? ' · ' + st.conv.title : '') : SYS[k] ? SYS[k].name : boxPath(k);
+const folderFn = k => { if (k === 'srch') return m => !m.deleted; if (k === 'conv') return m => !!(st.conv && st.conv.ids.has(m.id)); if (k === 'all') return () => true; if (k === 'trash') return m => !!m.deleted; if (k === 'unread') return m => !m.deleted && (m.unread || (m.id === st.open && st.unreadKeep === m.id)); if (SYS[k]) { const sf = SYS[k].f; return m => !m.deleted && sf(m); } const ids = new Set(descIds(k)); const f = m => !m.deleted && ids.has(m.box); f.boxId = k; return f; };
+const folderName = k => k === 'srch' ? '모든 편지함' : k === 'conv' ? '대화 보기' + (st.conv ? ' · ' + st.conv.title : '') : SYS[k] ? SYS[k].name : boxPath(k);
 /* ── 대화로 보기 (2026-10-26) ──
    같은 Gmail 대화(threadId) + 제목이 같은 답장·전달(같은 사람들끼리)을 한데 모아 시간 순으로 보여 준다. */
 const normSubj = s => String(s || '').replace(/^\s*((re|fw|fwd|aw|wg|답장|회신|전달|답변)\s*(\[\d+\]|\(\d+\))?\s*[:：]\s*|\[(외부|external|ext)\]\s*)+/ig, '').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -401,7 +401,7 @@ function renderTop() {
   pill.title = R.expired ? '로그인이 만료됐어요. 누르면 다시 연결해요' : '';
   pill.onclick = R.expired ? () => (R.on ? renewToken().catch(e => toast('연결하지 못했어요: ' + e.message)) : loadReal(true)) : null;
   const set = (id, ic, on, tip) => { const b = $(id); b.innerHTML = ico(ic); b.classList.toggle('on', !!on); b.title = tip; };
-  set('#fBox', 'folder', st.folder !== 'all', st.folder === 'all' ? '편지함: 전체 (필터 없음)' : '편지함: ' + folderName(st.folder));
+  set('#fBox', 'folder', st.folder !== 'all' && st.folder !== 'srch', st.folder === 'all' || st.folder === 'srch' ? '편지함: 전체 (필터 없음)' : '편지함: ' + folderName(st.folder));
   set('#fWhere', 'where', f.where !== 'all' || f.exclude || f.exact, '검색 범위: ' + (f.where === 'subj' ? '제목만' : '제목+내용+첨부파일 이름') + (f.exact ? ' · 정확히 일치' : '') + (f.exclude ? ' · 제외: ' + f.exclude : ''));
   const p = f.period.k === 'range' ? fmtD(f.period.from) + '~' + fmtD(f.period.to) : PERIODS.find(x => x[0] === f.period.k)[1];
   set('#fPeriod', 'cal', f.period.k !== 'all', '기간: ' + p);
@@ -428,7 +428,8 @@ function boxPickItems(cur, pick) {
 function boxFilterMenu() {
   const pick = k => { st.folder = k; st.picked.clear(); closeMenus(); renderNav(); renderTop(); renderList(); };
   const node = document.createElement('div');
-  node.innerHTML = `<div class="mi${st.folder === 'all' ? ' on' : ''}" data-k="all" style="font-weight:700"><span class="chk">${st.folder === 'all' ? '✓' : ''}</span>${ico('close', 16)} 선택 취소 (모든 메일에서 보기)</div>
+  const noBox = st.folder === 'all' || st.folder === 'srch';
+  node.innerHTML = `<div class="mi${noBox ? ' on' : ''}" data-k="${st.q.trim() ? 'srch' : 'all'}" style="font-weight:700"><span class="chk">${noBox ? '✓' : ''}</span>${ico('close', 16)} 선택 취소 (모든 메일에서 보기)</div>
     <div class="mrow"><input type="text" placeholder="편지함 이름으로 찾기" autocomplete="off"></div><div class="boxlist"></div>`;
   const inp = $('input', node), list = $('.boxlist', node);
   const row = (k, html, dep) => `<div class="mi${st.folder === k ? ' on' : ''}" data-k="${k}"><span class="chk">${st.folder === k ? '✓' : ''}</span><span style="padding-left:${(dep || 0) * 14}px;display:inline-flex;align-items:center;gap:7px">${html}</span></div>`;
@@ -737,7 +738,8 @@ function renderHead(list) {
   } else if (cb) cb.remove();
   const label = n ? `<span class="cnt"><b>${n}개 선택</b></span>`
     : conv ? `<span class="cnt">대화 · ${list.length}통 (최근 메일부터)</span>`
-    : `<span class="cnt">${esc(folderName(st.folder))} · ${list.length}통</span>`;
+    : st.folder === 'srch' ? `<span class="cnt" title="왼쪽 편지함을 누르면 그 편지함 안에서만 찾아요">모든 편지함에서 검색 · ${list.length}통</span>`
+    : `<span class="cnt">${esc(folderName(st.folder))}${st.q.trim() ? ' 안에서 검색' : ''} · ${list.length}통</span>`;
   lh.innerHTML = `<input type="checkbox" class="ck" id="ckAll" title="모두 선택"${all ? ' checked' : ''}>
     ${label}
     <button class="btn" data-b="move"${dis}>${ico('move', 15)} 이동</button><button class="btn" data-b="read"${dis}>읽음 처리</button><button class="btn" data-b="unread"${dis}>안읽음 처리</button>${st.folder === 'trash' ? `<button class="btn" data-b="restore"${dis}>되살리기</button>` : `<button class="ib" data-b="del" title="삭제"${dis}>${ico('trash', 17)}</button>`}`;
@@ -3148,14 +3150,21 @@ function wire() {
   $('#fClear').addEventListener('click', () => { Object.assign(st.f, { from: null, to: null, att: { k: 'any', types: [] }, readf: 'all' }); renderTop(); renderList(); });
   // 검색
   const q = $('#q');
+  // 검색은 기본적으로 모든 편지함에서 (보던 편지함과 상관없이). 검색 중 왼쪽 편지함을 누르면 그 안에서만. 검색어를 지우면 보던 편지함으로
+  const setQuery = v => {
+    const was = !!st.q.trim(), now = !!(v || '').trim(); st.q = v;
+    if (!was && now) { st.preFolder = st.folder === 'conv' ? (st.conv && st.conv.prev) || 'inbox' : st.folder; if (st.folder === 'conv') st.conv = null; st.folder = 'srch'; st.picked.clear(); }
+    else if (was && !now) { if (st.folder === 'srch') st.folder = st.preFolder || 'inbox'; st.preFolder = null; }
+    renderNav(); renderTop(); renderList();
+  };
   // 글자를 칠 때마다 바로 다시 찾지 않고, 잠깐(0.15초) 멈추면 찾음 — 한글 조합 중 자모마다 검색하던 것도 줄어듦
-  let qT = 0; q.addEventListener('input', () => { clearTimeout(qT); qT = setTimeout(() => { if (st.q !== q.value) { st.q = q.value; renderList(); } }, 150); });
-  q.addEventListener('compositionend', () => { clearTimeout(qT); qT = setTimeout(() => { if (st.q !== q.value) { st.q = q.value; renderList(); } }, 60); });
+  let qT = 0; q.addEventListener('input', () => { clearTimeout(qT); qT = setTimeout(() => { if (st.q !== q.value) setQuery(q.value); }, 150); });
+  q.addEventListener('compositionend', () => { clearTimeout(qT); qT = setTimeout(() => { if (st.q !== q.value) setQuery(q.value); }, 60); });
   q.addEventListener('focus', renderSugg);
   q.addEventListener('blur', () => setTimeout(() => $('#sugg').classList.remove('on'), 150));
-  q.addEventListener('keydown', e => { if (e.key === 'Enter' && st.q !== q.value) { clearTimeout(qT); st.q = q.value; renderList(); } if (e.key === 'Enter') { $('#sugg').classList.remove('on'); const first = visible()[0]; if (first) openMail(first.id); } if (e.key === 'Escape') { q.value = ''; st.q = ''; renderList(); } });
-  $('#goSearch').addEventListener('click', () => { st.q = q.value; $('#sugg').classList.remove('on'); renderList(); });
-  $('#sugg').addEventListener('mousedown', e => { e.preventDefault(); const si = e.target.closest('.si'); if (!si) return; if (si.dataset.id) openMail(+si.dataset.id); if (si.dataset.p) { st.f.from = si.dataset.p; q.value = ''; st.q = ''; renderTop(); renderList(); } $('#sugg').classList.remove('on'); });
+  q.addEventListener('keydown', e => { if (e.key === 'Enter' && st.q !== q.value) { clearTimeout(qT); setQuery(q.value); } if (e.key === 'Enter') { $('#sugg').classList.remove('on'); const first = visible()[0]; if (first) openMail(first.id); } if (e.key === 'Escape') { clearTimeout(qT); q.value = ''; setQuery(''); } });
+  $('#goSearch').addEventListener('click', () => { clearTimeout(qT); $('#sugg').classList.remove('on'); setQuery(q.value); });
+  $('#sugg').addEventListener('mousedown', e => { e.preventDefault(); const si = e.target.closest('.si'); if (!si) return; if (si.dataset.id) openMail(+si.dataset.id); if (si.dataset.p) { st.f.from = si.dataset.p; q.value = ''; setQuery(''); } $('#sugg').classList.remove('on'); });
   // 왼쪽
   const nav = $('#nav');
   nav.addEventListener('click', e => {
