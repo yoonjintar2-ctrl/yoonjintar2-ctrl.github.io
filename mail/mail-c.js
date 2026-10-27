@@ -426,7 +426,7 @@ function boxPickItems(cur, pick) {
 }
 // 편지함 필터: 맨 위 '필터 해제' + 이름 검색 + 스크롤 목록 (편지함이 많아도 빨리 찾기)
 function boxFilterMenu() {
-  const pick = k => { st.folder = k; st.picked.clear(); closeMenus(); renderNav(); renderTop(); renderList(); };
+  const pick = k => { if (st.folder !== k) { st.f.from = null; st.f.to = null; } st.folder = k; st.picked.clear(); closeMenus(); renderNav(); renderTop(); renderList(); };
   const node = document.createElement('div');
   const noBox = st.folder === 'all' || st.folder === 'srch';
   node.innerHTML = `<div class="mi${noBox ? ' on' : ''}" data-k="${st.q.trim() ? 'srch' : 'all'}" style="font-weight:700"><span class="chk">${noBox ? '✓' : ''}</span>${ico('close', 16)} 선택 취소 (모든 메일에서 보기)</div>
@@ -3262,7 +3262,8 @@ function wire() {
   // 검색은 기본적으로 모든 편지함에서 (보던 편지함과 상관없이). 검색 중 왼쪽 편지함을 누르면 그 안에서만. 검색어를 지우면 보던 편지함으로
   const setQuery = v => {
     const was = !!st.q.trim(), now = !!(v || '').trim(); st.q = v;
-    if (!was && now) { st.preFolder = st.folder === 'conv' ? (st.conv && st.conv.prev) || 'inbox' : st.folder; if (st.folder === 'conv') st.conv = null; st.folder = 'srch'; st.picked.clear(); }
+    if (!was && now) { st.f.from = null; st.f.to = null;  // 검색을 시작하면 보낸사람·받는사람 필터는 풀기
+      st.preFolder = st.folder === 'conv' ? (st.conv && st.conv.prev) || 'inbox' : st.folder; if (st.folder === 'conv') st.conv = null; st.folder = 'srch'; st.picked.clear(); }
     else if (was && !now) { if (st.folder === 'srch') st.folder = st.preFolder || 'inbox'; st.preFolder = null; }
     renderNav(); renderTop(); renderList();
   };
@@ -3284,6 +3285,7 @@ function wire() {
     if (tw && tw.innerHTML) { const id = tw.dataset.tw; st.collapsed.has(id) ? st.collapsed.delete(id) : st.collapsed.add(id); store.set('collapsed', [...st.collapsed]); renderNav(); return; }
     if (e.target.closest('input.ren')) return;
     const a = e.target.closest('.ni[data-f]'); if (!a) return;
+    if (st.folder !== a.dataset.f) { st.f.from = null; st.f.to = null; }  // 다른 편지함으로 가면 보낸사람·받는사람 필터 풀기
     st.folder = a.dataset.f; st.picked.clear(); renderNav(); renderTop(); renderList();
   });
   nav.addEventListener('contextmenu', e => { const el = e.target.closest('.ni[data-box]'); if (!el) return; e.preventDefault(); boxMenu(el, el.dataset.box, { x: e.clientX, y: e.clientY }); });
