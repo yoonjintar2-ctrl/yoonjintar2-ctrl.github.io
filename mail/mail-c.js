@@ -401,7 +401,7 @@ const ATYPES = [['XLS', '엑셀'], ['PPT', '파워포인트'], ['PDF', 'PDF'], [
 function renderTop() {
   const f = st.f;
   $('#newMail').innerHTML = ico('pen') + ' 새 메일';
-  const rb = $('#refBtn'); if (rb && !rb.firstChild) rb.innerHTML = '<svg viewBox="0 0 32 32" width="26" height="26"><path class="arc" d="M25.3 12.4A10 10 0 1 0 26 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M26.4 6.6v6.3h-6.3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><text x="16" y="19.4" text-anchor="middle" font-size="7.6" font-weight="700" fill="currentColor" font-family="Pretendard,sans-serif">F9</text></svg>';
+  const rb = $('#refBtn'); if (rb && !rb.firstChild) rb.innerHTML = '<svg viewBox="0 0 64 64" width="32" height="32"><g class="lamp"><path fill="currentColor" d="M18.5 35.5Q18.5 46 33.5 46Q48.5 46 48.5 35.5Z"/><path fill="currentColor" d="M24 34Q24 26.5 33.5 26.5Q43 26.5 43 34Z"/><circle fill="currentColor" cx="33.5" cy="24.2" r="2.4"/><path fill="currentColor" d="M20.5 41.5C13 41.5 9.5 36 5.5 30.5Q5 29.5 6.3 29.6L8.6 29.8C12.5 34.5 15.5 36.3 20.5 36.3Z"/><path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" d="M47.5 33.6C55.5 31.8 57.8 41.8 46.4 41.8"/><path fill="currentColor" d="M28.5 45.5H38.5L40.5 50.5Q40.7 51.5 39.6 51.5H27.4Q26.3 51.5 26.5 50.5Z"/></g><g class="spk"><path fill="currentColor" d="M10.5 10.8Q11.332 15.168 15.7 16Q11.332 16.832 10.5 21.2Q9.668 16.832 5.3 16Q9.668 15.168 10.5 10.8Z"/><path fill="currentColor" opacity=".6" d="M18.5 6.7Q18.948 9.052 21.3 9.5Q18.948 9.948 18.5 12.3Q18.052 9.948 15.7 9.5Q18.052 9.052 18.5 6.7Z"/></g></svg><span class="f9">F9</span>';  // 램프를 문지르면 마법으로 메일이 오가요
   $('#goSearch').innerHTML = ico('search');
   $('#gear').innerHTML = ico('gear', 20);
   let pill = $('#srcPill'); if (!pill) { pill = document.createElement('span'); pill.id = 'srcPill'; $('#gear').before(pill); }
@@ -2664,7 +2664,7 @@ async function refreshNow() {
   const q = [...SENDQ]; q.forEach(x => x.fire());
   let n = null; const t0 = Date.now();
   try { n = real.poll ? await real.poll() : null; } catch (e) { /* */ }
-  setTimeout(() => { if (b) b.classList.remove('spin'); }, Math.max(0, 500 - (Date.now() - t0)));
+  setTimeout(() => { if (b) b.classList.remove('spin'); }, Math.max(0, 900 - (Date.now() - t0)));
   if (q.length) return;  // 보낸 메일은 '보냈어요' 안내가 따로 뜸
   if (!real.on) toast(real.loading ? '메일을 불러오는 중이에요' : '예시 화면이에요');
   else if (!real.poll) toast('메일을 아직 불러오는 중이에요');
