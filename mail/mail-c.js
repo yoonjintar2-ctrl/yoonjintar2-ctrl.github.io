@@ -832,11 +832,24 @@ function moveTo(ids, boxId) {
 }
 
 /* ───────── 오른쪽: 읽기 ───────── */
-// 받는사람이 20명을 넘으면 접어서 보여 줌 (펼치기는 이 메일을 보는 동안만)
-const PPL_MAX = 20;
+// 받는사람·참조: 화면 너비에 맞춰 두 줄까지만 보이고 나머지는 '외 N명' (누르면 펼치기 — 이 메일을 보는 동안만)
+const PPL_LINES = 2, PPL_MAX = 20;  // PPL_MAX: 작성 화면 받는사람 칸 접기 기준
 function personLine(list, k) {
-  if (list.length <= PPL_MAX || st.pplOpen === st.open + ':' + k) return personLine0(list) + (list.length > PPL_MAX ? ` <button class="pplmore" data-act="ppl" data-k="${k}">접기</button>` : '');
-  return personLine0(list.slice(0, PPL_MAX)) + ` <button class="pplmore" data-act="ppl" data-k="${k}">외 ${list.length - PPL_MAX}명 펼치기</button>`;
+  const open = st.pplOpen === st.open + ':' + k;
+  return `<span class="ppl" data-k="${k}"${open ? ' data-open="1"' : ''}>${list.map((p, i) => `<span class="pp">${personLine0([p])}${i < list.length - 1 ? ',' : ''}</span>`).join(' ')} <button class="pplmore" data-act="ppl" data-k="${k}" hidden></button></span>`;
+}
+function fitPpl() {
+  $$('#view .ppl').forEach(box => {
+    const items = $$('.pp', box), btn = $('.pplmore', box); if (!items.length) return;
+    items.forEach(x => { x.hidden = false; }); btn.hidden = true;
+    const top0 = items[0].offsetTop, lh = items[0].offsetHeight || 18, maxTop = top0 + lh * (PPL_LINES - 1) + lh / 2;
+    let cut = items.findIndex(x => x.offsetTop > maxTop);
+    if (box.dataset.open) { if (cut > 0) { btn.textContent = '접기'; btn.hidden = false; } return; }
+    if (cut < 0) return;
+    const hideFrom = c => { items.forEach((x, i) => { x.hidden = i >= c; }); btn.textContent = `외 ${items.length - c}명`; btn.title = '모두 보기'; };
+    btn.hidden = false; hideFrom(cut);
+    while (cut > 1 && btn.offsetTop > maxTop) hideFrom(--cut);
+  });
 }
 function personLine0(list) { return list.map(p => isMe(p) ? '<span class="me">나</span>' : `${esc(p.name)} <span style="color:var(--mute)">&lt;${esc(p.email)}&gt;</span>`).join(', '); }
 function prevHtml(prev, i) {
@@ -860,10 +873,7 @@ function renderRead(force) {
     <div class="rhead"><h2>${esc(m.subj)}</h2>
       <div class="hrow">
         <div class="people">
-          <div class="from">${esc(m.from.name)}<span class="addr">&lt;${esc(m.from.email)}&gt;</span></div>
-          <div class="pl${toMe ? ' tome' : ''}"><span class="k">수신</span>${personLine(m.to, 'to')}</div>
-          ${m.cc.length ? `<div class="pl"><span class="k">참조</span>${personLine(m.cc, 'cc')}</div>` : ''}
-          ${m.box ? `<div class="boxchip">${ico('folder', 13)}${esc(boxPath(m.box))}</div>` : ''}
+          <div class="from"><b>${esc(m.from.name)}</b><span class="addr">&lt;${esc(m.from.email)}&gt;</span></div>
         </div>
         <div class="racts">
           <div class="bar">
@@ -873,13 +883,18 @@ function renderRead(force) {
           <span class="when">${m.d === 0 ? '오늘' : fmtD(dayOf(m))} ${m.t}</span>
         </div>
       </div>
+      <div class="plwrap">
+        <div class="pl${toMe ? ' tome' : ''}"><span class="k">수신</span>${personLine(m.to, 'to')}</div>
+        ${m.cc.length ? `<div class="pl"><span class="k">참조</span>${personLine(m.cc, 'cc')}</div>` : ''}
+        ${m.box ? `<div class="boxchip">${ico('folder', 13)}${esc(boxPath(m.box))}</div>` : ''}
+      </div>
     </div>
     ${attsOf(m).length ? `<div class="attbar${st.attFull === m.id ? ' full' : ''}"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b><div class="attgrid n${Math.min(3, attsOf(m).length)}">${attsOf(m).map(([[t, n, s], i]) => `<span class="attw"><span class="att" data-ai="${i}" title="${esc(n)} · 누르면 다운로드">${ftIcon(t, 17, n)}<span class="an">${esc(n)}</span> <small>${s}</small></span>${attBtns(m, i, n)}</span>`).join('')}</div><button class="attmore" data-act="attfull" hidden>${st.attFull === m.id ? '접기' : '펼치기'}</button></div>` : ''}
     ${m.deleted ? `<div class="dbanner delb"><span>${ico('trash', 16)} 삭제한 메일이에요</span><button data-act="restore">되살리기</button></div>` : ''}
     ${m.draft ? `<div class="dbanner"><span>${ico('pen', 16)} 이 대화에 작성 중이던 답장이 있어요</span><button data-act="draft">이어서 쓰기</button><button class="ib" data-act="deldraft" title="작성 중이던 메일 삭제">${ico('trash', 17)}</button></div>` : ''}
     <div class="rbody${(m.real && !m.full) || (m.html && !m.htmlReady) ? ' loading' : ''}">${m.real && !m.full ? '<div class="blank" style="padding:40px 0;min-height:260px"></div>' : m.html ? '<iframe class="mailhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>' : `<div class="txt">${esc(m.body)}</div>${prevHtml(m.prev, 0)}`}</div>`;
   const fr = $('#view iframe.mailhtml');
-  attMoreCheck();
+  attMoreCheck(); fitPpl();
   if (fr) {
     const fit = () => { try { const d = fr.contentDocument; fr.style.height = Math.max(d.documentElement.scrollHeight, d.body.getBoundingClientRect().height) + 20 + 'px'; } catch (e) { /* */ } };
     fr.addEventListener('load', () => { try {
@@ -906,7 +921,7 @@ function attMoreCheck() {
   const bar = $('#view .attbar'); if (!bar) return; const b = $('.attmore', bar);
   b.hidden = !bar.classList.contains('full') && ![...bar.querySelectorAll('.an')].some(e => e.scrollWidth > e.clientWidth + 1);
 }
-window.addEventListener('resize', () => { clearTimeout(attMoreCheck.t); attMoreCheck.t = setTimeout(attMoreCheck, 150); });
+window.addEventListener('resize', () => { clearTimeout(attMoreCheck.t); attMoreCheck.t = setTimeout(() => { attMoreCheck(); fitPpl(); }, 150); });
 function openMail(id) {
   if (id < 0) { openNd(id); return; }
   st.unreadKeep = st.folder === 'unread' ? id : null;  // 안 읽은 메일에서 연 메일은 다른 메일을 누를 때까지 목록에 남김
@@ -2672,7 +2687,7 @@ async function refreshNow() {
     tick = setInterval(() => { p += (0.86 - p) * 0.12; dmSet(ring, p); b.classList.toggle('hi', p >= 0.55); }, 80); }
   const q = [...SENDQ]; q.forEach(x => x.fire()); if (q.length) p = Math.max(p, 0.3);
   let n = null; const t0 = Date.now();
-  try { n = real.poll ? await real.poll() : null; } catch (e) { /* */ }
+  try { n = real.poll ? await Promise.race([real.poll(), new Promise(z => setTimeout(() => z(null), 15000))]) : null; } catch (e) { /* */ }
   setTimeout(async () => {
     if (!b) return; clearInterval(tick);
     if (n != null || q.length) { dmSet(ring, 'ok'); b.classList.add('hi', 'ok'); await new Promise(z => setTimeout(z, 700)); }
@@ -3420,12 +3435,13 @@ function setupDragScroll() {
 function setupSplits() {
   const Wd = store.get('widths', null);
   if (Wd) { document.documentElement.style.setProperty('--w-nav', Wd.nav + 'px'); document.documentElement.style.setProperty('--w-list', Wd.list + 'px'); }
-  $$('.split').forEach(sp => sp.addEventListener('mousedown', e => {
-    e.preventDefault(); sp.classList.add('drag'); document.body.classList.add('resizing');
+  // 마우스·터치(아이패드)·펜 모두: pointer 이벤트
+  $$('.split').forEach(sp => sp.addEventListener('pointerdown', e => {
+    if (e.button > 0) return; e.preventDefault(); try { sp.setPointerCapture(e.pointerId); } catch (er) { /* */ } sp.classList.add('drag'); document.body.classList.add('resizing');
     const which = sp.dataset.split, el = which === 'nav' ? $('nav') : $('.list'), x0 = e.clientX, w0 = el.getBoundingClientRect().width;
     const mv = ev => { const w = Math.max(which === 'nav' ? 150 : 260, Math.min(which === 'nav' ? 380 : 760, w0 + ev.clientX - x0)); document.documentElement.style.setProperty(which === 'nav' ? '--w-nav' : '--w-list', w + 'px'); };
-    const up = () => { sp.classList.remove('drag'); document.body.classList.remove('resizing'); document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); store.set('widths', { nav: $('nav').getBoundingClientRect().width, list: $('.list').getBoundingClientRect().width }); };
-    document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+    const up = () => { sp.classList.remove('drag'); document.body.classList.remove('resizing'); document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); fitPpl(); store.set('widths', { nav: $('nav').getBoundingClientRect().width, list: $('.list').getBoundingClientRect().width }); };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
   }));
 }
 
