@@ -37,7 +37,10 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 
 /* ── 맨 위 ── */
 .top{flex:none;display:flex;align-items:center;gap:8px;padding:16px 14px;background:var(--chrome)}  /* 위 검색줄 + 왼쪽 편지함 = 같은 회색 틀(고정된 머리 부분) */
-.newbtn{width:calc(var(--w-nav) - 21px);min-width:120px;flex:none;height:40px;justify-content:center;font-size:15px;border-radius:10px}
+.newbtn{width:calc(var(--w-nav) - 69px);min-width:120px;flex:none;height:40px;justify-content:center;font-size:15px;border-radius:10px}
+.refbtn{flex:none;width:40px;height:40px;border-radius:10px;border:1px solid #c9ced6;background:#fff;color:#5f6368;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+.refbtn:hover{color:var(--blue);border-color:var(--blue)}
+.refbtn.spin svg{animation:jspin .7s linear infinite}
 .sbwrap{position:relative;flex:none;width:var(--w-list);min-width:200px}  /* 검색창 오른쪽 끝 = 메일 목록 오른쪽 끝 */
 .sbox{display:flex;align-items:center;height:40px;border:1.5px solid #c9ced6;border-radius:10px;background:#fff;overflow:hidden}
 .sbox:focus-within{border-color:var(--blue)}
@@ -86,6 +89,19 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .row .convb svg{width:15px;height:15px}
 .row .convb:hover{border-color:#a8c7fa;background:#fff;color:var(--blue)}
 .row .subj{padding-right:34px}
+.row .snip{padding-right:26px}
+.row .snip .atti{display:inline-flex;align-items:center;gap:2px;vertical-align:-2px;margin-right:6px}
+.row .snip .atti svg,.row .snip .atti img{width:14px;height:14px}
+.row .snip .atti b{font-size:11px;font-weight:600;color:#7a8089;margin-left:1px}
+/* 즐겨찾기 별: 대화 표시 아래 */
+.row .starb{position:absolute;right:11px;bottom:8px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border:0;background:none;padding:0;cursor:pointer;border-radius:6px}
+.row .starb svg{fill:none;stroke:#c4c9d2}
+.row .starb:hover svg{stroke:#9aa0a6}
+.row .starb.on svg{fill:#fbbc04;stroke:#f29900}
+.lfilt .tfstar{width:30px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.lfilt .tfstar svg{fill:none;stroke:#80868b}
+.lfilt .tfstar.on{background:#fff7d6;border-color:#f6c445}
+.lfilt .tfstar.on svg{fill:#fbbc04;stroke:#f29900}
 .l3.compact .mini .nm{display:inline}  /* 종류+개수는 짧아서 항상 보이게 */
 
 /* ── 본문 3칸 + 경계선 끌기 ── */
@@ -494,6 +510,11 @@ body.resizing{cursor:col-resize;user-select:none}
 .mini.inl{opacity:.55}
 .att.inl{opacity:.6;border-style:dashed}
 .srcpill.warn{background:#fce8e6;color:#c5221f;font-weight:600;cursor:pointer}
+.srcpill.avatar{width:32px;height:32px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;cursor:pointer;margin-right:6px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.55)}
+/* 마우스를 올리면 바로 뜨는 설명 (브라우저 기본 툴팁은 1초쯤 늦게 떠서) */
+.tip{position:relative}
+.tip:hover::after{content:attr(data-tip);position:absolute;top:calc(100% + 8px);right:-4px;z-index:120;background:#202124;color:#fff;font-size:12px;font-weight:500;line-height:1.55;padding:7px 11px;border-radius:8px;white-space:pre;text-align:left;box-shadow:0 6px 18px rgba(0,0,0,.18);pointer-events:none}
+.tip[data-tip=""]:hover::after{display:none}
 .pastebtn{position:fixed;z-index:44;display:inline-flex;align-items:center;gap:3px;height:24px;padding:0 6px;border:1px solid #c4cbd6;border-radius:5px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.12);color:var(--sub);font-size:11px;cursor:pointer}
 .pastebtn:hover{border-color:var(--blue);color:var(--blue)}
 .pastebar{position:fixed;z-index:44;display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid #c4cbd6;border-radius:8px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.16);font-size:12px}
@@ -525,6 +546,7 @@ body.resizing{cursor:col-resize;user-select:none}
 .row.unread .who,.row.unread .subj{color:#111827}
 .row.unread .who{font-weight:700}
 .row.unread .subj{font-weight:700}
+.row .boxt{display:inline-block;font-size:10.5px;font-weight:600;color:#3b63c4;background:#eef3fd;border:1px solid #d5e1f8;border-radius:6px;padding:0 5px;line-height:15px;vertical-align:-4px;margin-left:3px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row .dom{display:inline-block;font-size:10.5px;font-weight:500;color:#8a9099;background:#f0f2f5;border:1px solid #e3e6eb;border-radius:6px;padding:0 5px;line-height:15px;vertical-align:1px;margin-left:3px}
 .row.unread .dom{font-weight:500}
 /* 시작 로딩 화면 */
@@ -625,6 +647,7 @@ body.resizing{cursor:col-resize;user-select:none}
 </head>
 <body>
 <div class="top">
+  <button class="refbtn" id="refBtn" title="새로 고침 (F9) — 보내기 대기 중인 메일은 바로 보내고, 새 메일 확인"></button>
   <button class="btn pri newbtn" id="newMail"></button>
   <div class="sbwrap">
     <div class="sbox"><input id="q" placeholder="메일 검색" autocomplete="off"><button class="go" id="goSearch" title="검색"></button></div>
@@ -639,7 +662,7 @@ body.resizing{cursor:col-resize;user-select:none}
 <div class="body">
   <nav id="nav"></nav>
   <div class="split" data-split="nav"></div>
-  <div class="list"><div class="lfilt" id="lfilt"><button class="tf" id="fFrom"></button><button class="tf" id="fTo"></button><button class="tf" id="fAtt"></button><button class="tf" id="fRead"></button><button class="tfx" id="fClear" title="이 필터 모두 해제" hidden>초기화</button></div><div class="lhead" id="lhead"></div><div class="rows" id="rows"></div></div>
+  <div class="list"><div class="lfilt" id="lfilt"><button class="tf" id="fFrom"></button><button class="tf" id="fTo"></button><button class="tf" id="fAtt"></button><button class="tf" id="fRead"></button><button class="tf tfstar" id="fStar"></button><button class="tfx" id="fClear" title="이 필터 모두 해제" hidden>초기화</button></div><div class="lhead" id="lhead"></div><div class="rows" id="rows"></div></div>
   <div class="split" data-split="list"></div>
   <div class="read" id="read">
     <div class="view" id="view"></div>
@@ -669,6 +692,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793094080"></script>
+<script src="mail-c.js?v=1793094777"></script>
 </body>
 </html>

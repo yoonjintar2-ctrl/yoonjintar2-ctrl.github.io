@@ -127,7 +127,7 @@ let SET = Object.assign({ composeMode: 'inline', typo: true, showHidden: false, 
 let IGNORE = new Set(store.get('typo-ignore', []));
 const st = {
   folder: 'inbox', q: '', open: null, picked: new Set(), anchor: null, collapsed: new Set(store.get('collapsed', [])),
-  f: { where: 'all', exclude: '', exact: false, period: { k: 'all' }, att: { k: 'any', types: [] }, readf: 'all', from: null, to: null }
+  f: { where: 'all', exclude: '', exact: false, period: { k: 'all' }, att: { k: 'any', types: [] }, readf: 'all', from: null, to: null, star: false }
 };
 const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
 const dayOf = m => { const x = new Date(TODAY); x.setDate(x.getDate() - m.d); return x; };
@@ -398,17 +398,21 @@ const ATYPES = [['XLS', '엑셀'], ['PPT', '파워포인트'], ['PDF', 'PDF'], [
 function renderTop() {
   const f = st.f;
   $('#newMail').innerHTML = ico('pen') + ' 새 메일';
+  const rb = $('#refBtn'); if (rb && !rb.firstChild) rb.innerHTML = '<svg viewBox="0 0 32 32" width="26" height="26"><path class="arc" d="M25.3 12.4A10 10 0 1 0 26 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M26.4 6.6v6.3h-6.3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><text x="16" y="19.4" text-anchor="middle" font-size="7.6" font-weight="700" fill="currentColor" font-family="Pretendard,sans-serif">F9</text></svg>';
   $('#goSearch').innerHTML = ico('search');
   $('#gear').innerHTML = ico('gear', 20);
   let pill = $('#srcPill'); if (!pill) { pill = document.createElement('span'); pill.id = 'srcPill'; $('#gear').before(pill); }
   const R = typeof real !== 'undefined' ? real : {};
-  pill.className = 'srcpill' + (R.expired ? ' warn' : R.on ? ' real' : '');
-  pill.textContent = R.expired ? (auth.needClick ? '로그인 연장 — 화면을 한 번 눌러 주세요' : 'Gmail 다시 연결하기 (클릭)') : R.on ? `Gmail · ${ME.email}` : R.prog ? R.prog : '예시 메일';
+  // 로그인 계정: 평소엔 메일 주소 첫 글자만 둥근 원으로, 마우스를 올리면 바로 자세한 정보 (누르면 설정 > 계정)
+  const avatar = R.on && !R.expired;
+  pill.className = 'srcpill' + (R.expired ? ' warn' : avatar ? ' avatar tip' : '');
+  pill.textContent = R.expired ? (auth.needClick ? '로그인 연장 — 화면을 한 번 눌러 주세요' : 'Gmail 다시 연결하기 (클릭)') : avatar ? (ME.email || '?').charAt(0).toUpperCase() : R.prog ? R.prog : '예시 메일';
   // 뒤에서 하는 일(옛날 메일 저장·본문 저장 등)은 눈에 띄지 않는 회색 모래시계로만, 마우스를 올리면 내용
   let hg = $('#bgWork'); if (!hg) { hg = document.createElement('span'); hg.id = 'bgWork'; hg.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9"/></svg>'; pill.before(hg); }
-  hg.hidden = !(R.on && R.prog && !R.expired); hg.title = R.prog || '';
+  hg.hidden = !(R.on && R.prog && !R.expired); hg.className = 'tip'; hg.dataset.tip = R.prog || '';  // 마우스를 올리는 즉시 내용
   pill.title = R.expired ? '로그인이 만료됐어요. 누르면 다시 연결해요' : '';
-  pill.onclick = R.expired ? () => (R.on ? renewToken().catch(e => toast('연결하지 못했어요: ' + e.message)) : loadReal(true)) : null;
+  if (avatar) { pill.style.background = dotColor(ME.email); pill.dataset.tip = `${ME.name || ''}\n${ME.email}\nGmail 연결됨${extAuth.ok ? ' · 로그인 자동 연장 중' : ''}\n(누르면 계정 설정)`; } else { pill.style.background = ''; delete pill.dataset.tip; }
+  pill.onclick = R.expired ? () => (R.on ? renewToken().catch(e => toast('연결하지 못했어요: ' + e.message)) : loadReal(true)) : avatar ? () => openSettings('account') : null;
   const set = (id, ic, on, tip) => { const b = $(id); b.innerHTML = ico(ic); b.classList.toggle('on', !!on); b.title = tip; };
   set('#fBox', 'folder', st.folder !== 'all' && st.folder !== 'srch', st.folder === 'all' || st.folder === 'srch' ? '편지함: 전체 (필터 없음)' : '편지함: ' + folderName(st.folder));
   set('#fWhere', 'where', f.where !== 'all' || f.exclude || f.exact, '검색 범위: ' + (f.where === 'subj' ? '제목만' : '제목+내용+첨부파일 이름') + (f.exact ? ' · 정확히 일치' : '') + (f.exclude ? ' · 제외: ' + f.exclude : ''));
@@ -422,7 +426,8 @@ function renderTop() {
   tf('#fTo', f.to, f.to ? '받는사람: ' + pname(f.to) : '받는사람', '받는사람(참조 포함): ' + (f.to || '전체'));
   tf('#fAtt', f.att.k !== 'any', f.att.k === 'any' ? '첨부파일' : '첨부: ' + a, '첨부: ' + a);
   tf('#fRead', f.readf !== 'all', { all: '읽음/안읽음', unread: '안 읽은 메일', read: '읽은 메일' }[f.readf], '읽음 여부: ' + { all: '전체', unread: '안 읽은 메일', read: '읽은 메일' }[f.readf]);
-  const any4 = f.from || f.to || f.att.k !== 'any' || f.readf !== 'all';
+  const sb = $('#fStar'); if (sb) { sb.innerHTML = STAR_SVG; sb.classList.toggle('on', !!f.star); sb.title = f.star ? '별표한 메일만 보는 중 (누르면 해제)' : '별표한 메일만 보기'; }
+  const any4 = f.from || f.to || f.att.k !== 'any' || f.readf !== 'all' || f.star;
   const cx = $('#fClear'); if (cx) cx.hidden = !any4;
   const lf = $('#lfilt'); if (lf) { lf.classList.toggle('off', st.folder === 'conv'); lf.title = st.folder === 'conv' ? '대화 보기 중에는 필터가 적용되지 않아요' : ''; }
 }
@@ -668,6 +673,7 @@ function visible() {
     if (f.att.k === 'no' && A.length) return false;
     if (f.att.types.length && !A.some(([a]) => f.att.types.includes(a[0]))) return false;
     // 지금 열어 둔 메일은 읽음 상태가 바뀌어도 목록에 남김 (다른 메일을 누르면 그때 필터 적용)
+    if (f.star && !m.star && m.id !== st.open) return false;
     if (f.readf === 'unread' && !m.unread && m.id !== st.open) return false;
     if (f.readf === 'read' && m.unread && m.id !== st.open) return false;
     if (f.from && m.from.email !== f.from) return false;
@@ -703,6 +709,16 @@ const ATT_KIND = (t, n) => { const e = extOf(n);
   if (t === 'ZIP' || /^(zip|7z|rar|alz|egg)$/.test(e)) return ['ZIP', '압축'];
   if (/^(mp4|mov|avi|wmv|mkv)$/.test(e)) return [t || 'FILE', '동영상'];
   return [t || 'FILE', '파일']; };
+// 목록 한 줄: 첨부 파일 종류 아이콘 최대 3개(넘으면 +N) → 이어서 본문 미리보기
+const attIcons = m => { const A = attsOf(m); if (!A.length) return ''; return `<span class="atti" title="${esc(A.map(([a]) => a[1]).join('\n'))}">${A.slice(0, 3).map(([a]) => ftIcon(a[0], 14, a[1])).join('')}${A.length > 3 ? `<b>+${A.length - 3}</b>` : ''}</span>`; };
+// 메일이 들어 있는 편지함 이름 (목록 이름·도메인 옆, 같은 높이의 작은 표시)
+const boxTag = m => { let nm, full; if (m.deleted) nm = full = '지운 편지함'; else if (m.box && boxById(m.box)) { nm = boxById(m.box).name; full = boxPath(m.box); } else if (m.draft && !m.inbox && !m.sent) nm = full = '작성 중'; else if (m.sent && !m.inbox) nm = full = '보낸편지함'; else if (m.inbox) nm = full = '받은편지함'; else nm = full = '전체 메일'; return ` <span class="boxt" title="편지함: ${esc(full)}">${esc(nm)}</span>`; };
+const STAR_SVG = '<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" stroke-linejoin="round" stroke-width="1.6"/></svg>';
+function toggleStar(id) {
+  const m = MAILS.find(x => x.id === id); if (!m) return;
+  m.star = m.star ? 0 : 1; jSet(m, { s: m.star });
+  renderList(); if (st.open === id) renderRead(true);
+}
 const ftBadges = list => {
   const g = new Map();
   list.forEach(([[t, n]]) => { const [kt, kl] = ATT_KIND(t, n); if (!g.has(kl)) g.set(kl, { t: kt, n: n, c: 0, names: [] }); const x = g.get(kl); x.c++; x.names.push(n); });
@@ -722,14 +738,13 @@ function renderList() {
   shown.forEach(m => {
     const gn = grpName(m.d, m);
     if (gn !== g) { g = gn; h += `<div class="grp">${gn}</div>`; }
-    const who = m.sent ? esc('받는사람: ' + m.to.map(nameOf).join(', ')) : `${esc(m.from.name)}${m.from.email && m.from.email.includes('@') ? ` <span class="dom">${esc(m.from.email.split('@')[1])}</span>` : ''}`;
+    const who = m.sent ? esc('받는사람: ' + m.to.map(nameOf).join(', ')) : `${esc(m.from.name)}${m.from.email && m.from.email.includes('@') ? ` <span class="dom">${esc(m.from.email.split('@')[1])}</span>` : ''}` + boxTag(m);
     h += `<div class="row${m.unread ? ' unread' : ''}${st.open === m.id || (m.nd && st.ndOpen === m.id && $('#read').classList.contains('composing')) ? ' open' : ''}${st.picked.has(m.id) ? ' picked' : ''}" data-id="${m.id}" draggable="true">
       <input type="checkbox" class="ck"${st.picked.has(m.id) ? ' checked' : ''}><div class="mid">
       <div class="l1"><span class="who">${who}</span><span class="dt">${dateLabel(m)}</span></div>
       <div class="subj">${m.deleted ? '<span class="deltag">삭제됨</span> ' : ''}${m.draft ? '<span class="draft">작성 중</span> ' : ''}${esc(m.subj)}</div>
-      <div class="snip">${esc(snipOf(m)) || '&nbsp;'}</div>
-      ${attsOf(m).length ? `<div class="l3">${ftBadges(attsOf(m))}</div>` : ''}
-    </div>${(() => { const n = convCount(m); return `<button class="convb${n > 1 ? ' has' : ''}" data-conv="${m.id}" title="이 메일과 이어진 대화 ${n}통 보기">${ico('conv', 15)}${n > 1 ? n : ''}</button>`; })()}</div>`;
+      <div class="snip">${attIcons(m)}${esc(snipOf(m)) || '&nbsp;'}</div>
+    </div>${(() => { const n = convCount(m); return `<button class="convb${n > 1 ? ' has' : ''}" data-conv="${m.id}" title="이 메일과 이어진 대화 ${n}통 보기">${ico('conv', 15)}${n > 1 ? n : ''}</button>`; })()}<button class="starb${m.star ? ' on' : ''}" data-star="${m.id}" title="${m.star ? '즐겨찾기 해제' : '즐겨찾기 (별표)'}">${STAR_SVG}</button></div>`;
   });
   if (list.length > shown.length) h += `<div class="more-rows">아래로 내리면 ${list.length - shown.length}통 더 보여요</div>`;
   $('#rows').innerHTML = h;
@@ -1498,6 +1513,7 @@ window.addEventListener('message', e => {
   try { e.source.postMessage({ type: 'jin-send-ok' }, location.origin); } catch (er) { /* */ }
   runSend(d, snap);
 });
+const SENDQ = new Set();  // 보내기 취소 대기(5초) 중인 메일
 async function runSend(d, snap) {
   const files = snap.files || [];
   // 보내기를 누르면 '작성 중이던 답장' 표시는 바로 없앰 → 취소하거나 보내지 못했을 때만 되살림
@@ -1511,7 +1527,8 @@ async function runSend(d, snap) {
   let cancelled = false;
   // 5초 동안 '보내기 취소' 가능 → 그 뒤 실제 발송
   toast('보내는 중… (5초 안에 취소할 수 있어요)', () => { cancelled = true; flushCompose(); if ($('#read').classList.contains('composing') && cs.nd !== snap.nd && cs.mailId == null && !cs.nd && myBodyText().text) ndSave(); setDraft(keepDraft); if (orig0) orig0.draftD = keepD; cs.files = files; loadDraft(snap); cs.files = files; renderFiles(); renderList(); renderNav(); toast('보내기를 취소했어요'); });
-  await new Promise(z => setTimeout(z, 5000));
+  // 5초 기다림 (새로 고침/F9을 누르면 바로 보냄)
+  await new Promise(z => { const it = {}; const t = setTimeout(() => { SENDQ.delete(it); z(); }, 5000); it.fire = () => { clearTimeout(t); SENDQ.delete(it); toast.lock = 0; toast('바로 보내는 중…'); z(); }; it.cancel = () => SENDQ.delete(it); SENDQ.add(it); });
   if (cancelled) return;
   try {
     const r = await uploadMime('messages/send', await buildMime(d), d.threadId ? { threadId: d.threadId } : {});
@@ -2638,6 +2655,20 @@ const IS_EXT = !!(window.chrome && chrome.identity && chrome.identity.launchWebA
 const tokCache = { get() { const t = store.get('tok', null); return t && t.exp > Date.now() + 60000 ? t.t : null; }, left() { const t = store.get('tok', null); return t ? t.exp - Date.now() : 0; }, set(t, sec) { store.set('tok', { t, exp: Date.now() + (sec || 3500) * 1000 }); }, clear() { store.set('tok', null); } };
 let gisReady = null;
 const loadGis = () => gisReady || (gisReady = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.onload = res; sc.onerror = () => rej(new Error('구글 로그인 도구를 불러오지 못했어요')); document.head.append(sc); }));
+/* ───────── 새로 고침 (버튼·F9): 보내기 대기 중인 메일은 바로 보내고, 새 메일 확인 ───────── */
+async function refreshNow() {
+  const b = $('#refBtn'); if (b && b.classList.contains('spin')) return; if (b) b.classList.add('spin');
+  const q = [...SENDQ]; q.forEach(x => x.fire());
+  let n = null; const t0 = Date.now();
+  try { n = real.poll ? await real.poll() : null; } catch (e) { /* */ }
+  setTimeout(() => { if (b) b.classList.remove('spin'); }, Math.max(0, 500 - (Date.now() - t0)));
+  if (q.length) return;  // 보낸 메일은 '보냈어요' 안내가 따로 뜸
+  if (!real.on) toast(real.loading ? '메일을 불러오는 중이에요' : '예시 화면이에요');
+  else if (!real.poll) toast('메일을 아직 불러오는 중이에요');
+  else if (n === 0) toast('새 메일이 없어요');
+  else if (n == null) toast('새 메일을 확인하지 못했어요. 잠시 뒤 다시 눌러 주세요');
+}
+document.addEventListener('keydown', e => { if (e.key === 'F9' && !e.ctrlKey && !e.altKey && !e.metaKey) { e.preventDefault(); refreshNow(); } }, true);
 /* ───────── 앱(설치형 웹앱)·새 메일 알림 ───────── */
 setInterval(() => { if (real.poll) real.poll(); }, 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && real.poll) real.poll(); });
@@ -2908,7 +2939,7 @@ function toMail(meta, lab) {
     r = { b, i, u: !sent && lab.unread.has(g) ? 1 : 0, d: 0 };
     if (real.labReady && J.data) { J.data.m[g] = r; J.dirty = true; }
   }
-  return Object.assign(m, { box: r.b || null, inbox: isMe(m.from) ? 0 : r.i, unread: isMe(m.from) ? 0 : r.u, deleted: r.d });
+  return Object.assign(m, { box: r.b || null, inbox: isMe(m.from) ? 0 : r.i, unread: isMe(m.from) ? 0 : r.u, deleted: r.d, star: r.s ? 1 : 0 });
 }
 // 이 브라우저 안의 저장소(IndexedDB) — 한 번 받은 목록은 다음부터 다시 안 받음
 function cacheDb() {
@@ -3034,16 +3065,20 @@ async function loadReal(interactive, token) {
     toast(`${prof.emailAddress} · 최근 3개월 메일 ${total}통 준비 완료${fresh ? ` (새로 받은 ${fresh}통)` : ''}`);
     prefetchBodies();
     // 새 메일 확인: 1분마다 + 창을 다시 볼 때 — 새로 온 메일을 목록에 넣고 알림
-    real.poll = async () => {
-      if (!real.on || real.expired || real.polling || gen !== real.gen) return; real.polling = true;
-      try {
-        const ids = await listIds('newer_than:1d');
-        const fresh2 = ids.filter(g => !metas.has(g));
-        if (!fresh2.length) return;
-        await fetchMetas(fresh2, '새 메일', true);
-        show(); prefetchBodies();
-        notifyNew(fresh2.map(g => MAILS.find(m => m.gid === g)).filter(m => m && m.inbox && m.unread && !m.deleted && !isMe(m.from)));
-      } catch (e) { /* 다음에 다시 */ } finally { real.polling = false; }
+    real.poll = () => {
+      if (!real.on || real.expired || gen !== real.gen) return Promise.resolve(null);
+      if (real.pollP) return real.pollP;  // 이미 확인 중이면 그 결과를 같이 기다림
+      return (real.pollP = (async () => {
+        try {
+          const ids = await listIds('newer_than:1d');
+          const fresh2 = ids.filter(g => !metas.has(g));
+          if (!fresh2.length) return 0;
+          await fetchMetas(fresh2, '새 메일', true);
+          show(); prefetchBodies();
+          const nw = fresh2.map(g => MAILS.find(m => m.gid === g)).filter(m => m && m.inbox && m.unread && !m.deleted && !isMe(m.from));
+          notifyNew(nw); return nw.length;
+        } catch (e) { return null; /* 다음에 다시 */ } finally { real.pollP = null; }
+      })());
     };
     // 3단계: 3개월보다 옛날 메일 — 메모리 여유가 있을 때 조금씩 끌어와 이 PC에 저장
     const userIds = new Set(user.map(l => l.id));
@@ -3348,7 +3383,9 @@ function wire() {
   const tg = (id, fn) => $(id).addEventListener('click', () => toggleMenu($(id), fn));
   tg('#fBox', boxFilterMenu); tg('#fWhere', whereMenu); tg('#fPeriod', periodMenu); tg('#fAtt', attMenu); tg('#fRead', readMenu);
   tg('#fFrom', () => personMenu('from')); tg('#fTo', () => personMenu('to'));
-  $('#fClear').addEventListener('click', () => { Object.assign(st.f, { from: null, to: null, att: { k: 'any', types: [] }, readf: 'all' }); renderTop(); renderList(); });
+  $('#fClear').addEventListener('click', () => { Object.assign(st.f, { from: null, to: null, att: { k: 'any', types: [] }, readf: 'all', star: false }); renderTop(); renderList(); });
+  $('#refBtn').addEventListener('click', refreshNow);
+  $('#fStar').addEventListener('click', () => { st.f.star = !st.f.star; renderTop(); renderList(); });
   // 검색
   const q = $('#q');
   // 검색은 기본적으로 모든 편지함에서 (보던 편지함과 상관없이). 검색 중 왼쪽 편지함을 누르면 그 안에서만. 검색어를 지우면 보던 편지함으로
@@ -3395,6 +3432,7 @@ function wire() {
   rows.addEventListener('scroll', () => { if (rows.scrollTop + rows.clientHeight > rows.scrollHeight - 400 && visible().length > (st.limit || 200)) { st.limit = (st.limit || 200) + 200; const t = rows.scrollTop; renderList(); rows.scrollTop = t; } }, { passive: true });
   rows.addEventListener('click', e => {
     const cb = e.target.closest('[data-conv]'); if (cb) { e.stopPropagation(); openConv(+cb.dataset.conv); return; }
+    const sb = e.target.closest('[data-star]'); if (sb) { e.stopPropagation(); toggleStar(+sb.dataset.star); return; }
     const r = e.target.closest('.row'); if (!r) return; const id = +r.dataset.id;
     if (e.target.classList.contains('ck') || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) { if (!e.target.classList.contains('ck')) e.preventDefault(); pickClick(id, e); return; }
     st.anchor = id; openMail(id);
