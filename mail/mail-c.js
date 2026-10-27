@@ -738,8 +738,9 @@ function renderHead(list) {
   } else if (cb) cb.remove();
   const label = n ? `<span class="cnt"><b>${n}개 선택</b></span>`
     : conv ? `<span class="cnt">대화 · ${list.length}통 (최근 메일부터)</span>`
-    : st.folder === 'srch' ? `<span class="cnt" title="왼쪽 편지함을 누르면 그 편지함 안에서만 찾아요">모든 편지함에서 검색 · ${list.length}통</span>`
-    : `<span class="cnt">${esc(folderName(st.folder))}${st.q.trim() ? ' 안에서 검색' : ''} · ${list.length}통</span>`;
+    : st.folder === 'srch' ? `<span class="cnt" title="왼쪽 편지함을 누르면 그 편지함 안에서만 찾아요">모든 편지함 · ${list.length}통</span>`
+    : st.q.trim() ? `<span class="cnt">${esc(folderName(st.folder))} 안 · ${list.length}통</span>`
+    : '<span class="cnt"></span>';  // 평소엔 편지함 이름·통수 표시 안 함 (왼쪽에서 이미 보임)
   lh.innerHTML = `<input type="checkbox" class="ck" id="ckAll" title="모두 선택"${all ? ' checked' : ''}>
     ${label}
     <button class="btn" data-b="move"${dis}>${ico('move', 15)} 이동</button><button class="btn" data-b="read"${dis}>읽음 처리</button><button class="btn" data-b="unread"${dis}>안읽음 처리</button>${st.folder === 'trash' ? `<button class="btn" data-b="restore"${dis}>되살리기</button>` : `<button class="ib" data-b="del" title="삭제"${dis}>${ico('trash', 17)}</button>`}`;
@@ -817,6 +818,8 @@ function prevHtml(prev, i) {
   return `<div class="prev"><div class="ph"><b>보낸 사람:</b> ${esc(p.from.name)} &lt;${esc(p.from.email)}&gt;<br><b>보낸 날짜:</b> ${fmtD(dayOf(p))} ${p.t}<br><b>받는 사람:</b> ${p.to.map(x => esc(x.name)).join(', ')}${p.cc.length ? `<br><b>참조:</b> ${p.cc.map(x => esc(x.name)).join(', ')}` : ''}</div>
     <div class="txt">${esc(p.body)}</div>${prevHtml(prev, i + 1)}</div>`;
 }
+// 본문 속 그림을 받아 오는 동안 보여 줄 도는 고리 (첨부 내려받기 표시와 같은 모양)
+const IMG_SPIN = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#d6dbe3" stroke-width="2.6"/><path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="#0b57d0" stroke-width="2.6" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></path></svg>');
 function renderRead(force) {
   const m = MAILS.find(x => x.id === st.open);
   if (!m) { $('#view').innerHTML = '<div class="blank">목록에서 메일을 고르세요</div>'; $('#view').dataset.key = ''; return; }
@@ -847,21 +850,27 @@ function renderRead(force) {
     ${attsOf(m).length ? `<div class="attbar${st.attFull === m.id ? ' full' : ''}"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b><div class="attgrid n${Math.min(3, attsOf(m).length)}">${attsOf(m).map(([[t, n, s], i]) => `<span class="attw"><span class="att" data-ai="${i}" title="${esc(n)} · 누르면 다운로드">${ftIcon(t, 17, n)}<span class="an">${esc(n)}</span> <small>${s}</small></span>${attBtns(m, i, n)}</span>`).join('')}</div><button class="attmore" data-act="attfull" hidden>${st.attFull === m.id ? '접기' : '펼치기'}</button></div>` : ''}
     ${m.deleted ? `<div class="dbanner delb"><span>${ico('trash', 16)} 삭제한 메일이에요</span><button data-act="restore">되살리기</button></div>` : ''}
     ${m.draft ? `<div class="dbanner"><span>${ico('pen', 16)} 이 대화에 작성 중이던 답장이 있어요</span><button data-act="draft">이어서 쓰기</button><button class="ib" data-act="deldraft" title="작성 중이던 메일 삭제">${ico('trash', 17)}</button></div>` : ''}
-    <div class="rbody">${m.real && !m.full ? '<div class="blank" style="padding:40px 0">본문 불러오는 중…</div>' : m.html ? '<iframe class="mailhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>' : `<div class="txt">${esc(m.body)}</div>${prevHtml(m.prev, 0)}`}</div>`;
+    <div class="rbody${(m.real && !m.full) || (m.html && !m.htmlReady) ? ' loading' : ''}">${m.real && !m.full ? '<div class="blank" style="padding:40px 0;min-height:260px"></div>' : m.html ? '<iframe class="mailhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>' : `<div class="txt">${esc(m.body)}</div>${prevHtml(m.prev, 0)}`}</div>`;
   const fr = $('#view iframe.mailhtml');
   attMoreCheck();
   if (fr) {
+    const fit = () => { try { const d = fr.contentDocument; fr.style.height = Math.max(d.documentElement.scrollHeight, d.body.getBoundingClientRect().height) + 20 + 'px'; } catch (e) { /* */ } };
     fr.addEventListener('load', () => { try {
       const d = fr.contentDocument, W = fr.clientWidth, sw = d.documentElement.scrollWidth;
       ['pointerdown', 'keydown'].forEach(ev => d.addEventListener(ev, authGesture, true));  // 메일 본문을 눌러도 로그인 연장
       // 화면보다 조금 넓은 메일(서명·표)은 살짝 줄여서 한눈에 (너무 많이 줄여야 하면 그대로 두고 옆으로 스크롤)
       if (sw > W + 4) { const z = W / sw; if (z >= 0.9) d.body.style.zoom = z.toFixed(3); }  // 10% 넘게 줄여야 하면 그대로 두고 옆으로 스크롤 (글자가 작아지지 않게)
-      fr.style.height = Math.max(d.documentElement.scrollHeight, d.body.getBoundingClientRect().height) + 20 + 'px';
-    } catch (e) { fr.style.height = '70vh'; } });
-    const css = '<base target="_blank"><style>html{overflow-x:auto;overflow-y:hidden}body{margin:0;font:14.5px/1.65 Pretendard,"Malgun Gothic",sans-serif;color:#1f1f1f;word-break:break-word}</style>';
-    const show = h => { if ($('#view iframe.mailhtml') === fr) fr.srcdoc = css + h; };
-    if (m.htmlReady) show(m.htmlReady);
-    else { show(m.html.replace(/src=["']?cid:[^"'\s>]+["']?/gi, 'src="data:image/gif;base64,R0lGODlhAQABAAAAACw="')); resolveInline(m).then(show); }
+      fit();
+      // 그림이 늦게 뜨면서 본문이 길어져도 잘리지 않게 높이 다시 맞춤
+      try { new ResizeObserver(fit).observe(d.body); } catch (e) { /* */ } $$('img', d).forEach(im => { if (!im.complete) im.addEventListener('load', fit, { once: true }); });
+    } catch (e) { fr.style.height = '70vh'; }
+      // 다 그린 뒤에 흐림·로딩 표시 걷어냄. 그림 받기가 오래 걸리면 1.2초 뒤엔 글부터 보여 줌 (그림 자리엔 도는 고리)
+      const rb = fr.closest('.rbody'); if (rb) { if (fr._final) rb.classList.remove('loading'); else setTimeout(() => rb.classList.remove('loading'), 1200); }
+    });
+    const css = '<base target="_blank"><style>html{overflow-x:auto;overflow-y:hidden}body{margin:0;font:14.5px/1.65 Pretendard,"Malgun Gothic",sans-serif;color:#1f1f1f;word-break:break-word}img[data-jl]{object-fit:none;background:#f3f5f8;min-width:28px;min-height:28px;border-radius:4px}</style>';
+    const show = (h, fin) => { if ($('#view iframe.mailhtml') === fr) { fr._final = !!fin; fr.srcdoc = css + h; } };
+    if (m.htmlReady) show(m.htmlReady, true);
+    else { show(m.html.replace(/src=["']?cid:[^"'\s>]+["']?/gi, `src="${IMG_SPIN}" data-jl="1"`)); resolveInline(m).then(h => show(h, true)).catch(() => show(m.html, true)); }
   }
 }
 // 메일을 여는 즉시 읽음
@@ -1681,6 +1690,20 @@ const TYPO = [
   ['확인부탁드', '확인 부탁드'], ['참고부탁드', '참고 부탁드'], ['검토부탁드', '검토 부탁드'], ['공유부탁드', '공유 부탁드'], ['회신부탁드', '회신 부탁드'],
   ['곰방', '금방'], ['어짜피', '어차피'], ['예정되있', '예정돼 있'], ['되있', '돼 있'], ['되 있', '돼 있'], ['됬', '됐'], ['됫다', '됐다']
 ].map(([w, f]) => [new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + (/[다요]$/.test(w) ? W : ''), 'g'), f, w]);
+// 끝맺음 오타 (문맥: 문장 끝 '~니다'·'~습니다'에서 받침이 빠지거나 글자가 더 붙은 경우, 이름 뒤 '입니다' 띄어쓰기)
+const END = '(?=[\\s.,!?~)"\']|$)';
+[
+  [new RegExp('([가-힣]) (이니다|입니다|이였습니다|이었습니다)' + END, 'g'), m => m[0] + m.slice(2).replace(/^이니다/, '입니다').replace(/^이였/, '이었')],  // 윤석진 이니다 → 윤석진입니다
+  [new RegExp('(이|하|되|드리|주시|보내|되시|하시)니다' + END, 'g'), m => m.replace(/니다$/, '').replace(/(.)$/, c => String.fromCharCode(c.charCodeAt(0) + 17)) + '니다'],  // 이니다→입니다, 하니다→합니다, 드리니다→드립니다
+  [new RegExp('([했겠었있없았갔왔됐봤줬])습다' + END, 'g'), m => m.replace(/습다$/, '습니다')],
+  [new RegExp('([했겠었있없았갔왔됐봤줬])니다' + END, 'g'), m => m.replace(/니다$/, '습니다')],  // 했니다 → 했습니다
+  [new RegExp('([합입됩습드립])니디' + END, 'g'), m => m.replace(/니디$/, '니다')],
+  [new RegExp('([합입됩습립])니다다' + END, 'g'), m => m.replace(/니다다$/, '니다')],
+  [/([합입됩습립])니닫/g, m => m.replace(/니닫$/, '니다')],
+  [new RegExp('([합입됩습립])ㄴ디' + END, 'g'), m => m.replace(/ㄴ디$/, '니다')],
+  [new RegExp('감사합니당' + END, 'g'), () => '감사합니다'],
+  [new RegExp('(하|되|드리|보내|하시|주시)겟' , 'g'), m => m.replace(/겟$/, '겠')]
+].reverse().forEach(([re, fix]) => TYPO.unshift([re, fix, '끝맺음']));  // 위 순서대로 먼저 검사
 TYPO.push([/(?<![가-힣])([가-힣]{2,})\s+\1(?![가-힣])/g, m => m.split(/\s+/)[0], '반복']);
 TYPO.push([/(하|주|보|가|오|계|드|시|으|드시|주시|보시|하시|가시|오시)새(요|용)/g, m => m.replace(/새(요|용)$/, '세요'), '세요']);
 TYPO.push([/(하|주|보|가|오|계|드|시)셰요/g, m => m.replace(/셰요$/, '세요'), '세요']);
@@ -2386,6 +2409,19 @@ document.addEventListener('scroll', () => { placeTSize(); if ($('#tbar')) tableB
 function saveAll() { if (!real.on) store.set('sample-boxes', BOXES); else if (J.data) { J.data.boxes = BOXES.map(b => ({ id: b.id, name: b.name, parent: b.parent, hidden: !!b.hidden })); jSave(); } store.set('footers2', FOOTERS); store.set('settings', SET); }
 // 저장 폴더: 브라우저가 고른 폴더 권한을 기억 (IndexedDB)
 const idb = (op, val) => new Promise(res => { try { const rq = indexedDB.open('jin-mail', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('kv'); rq.onsuccess = () => { const tx = rq.result.transaction('kv', op === 'get' ? 'readonly' : 'readwrite'); const s = tx.objectStore('kv'); const r = op === 'get' ? s.get('dir') : s.put(val, 'dir'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }; rq.onerror = () => res(null); } catch (e) { res(null); } });
+// 로그아웃: 이 브라우저의 로그인 정보를 지움 (구글 계정의 JIN-mail 허락은 그대로 → 다음엔 한 번 누르면 바로 로그인)
+async function logout(wipe) {
+  if (!confirm(wipe ? '로그아웃하고 이 PC에 저장한 메일·임시저장도 지울까요?' : '로그아웃할까요?')) return;
+  const email = (store.get('connected', null) || {}).email || ME.email;
+  try { if (real.on && J.data) { clearTimeout(J.t); await jUpload(); } } catch (e) { /* 편지함 정보 마지막 저장 */ }
+  tokCache.clear(); store.set('connected', null); store.set('tok-scope', null); real.on = false; real.token = null;
+  if (wipe && email) {
+    try { if (real.db) real.db.close(); } catch (e) { /* */ }
+    try { indexedDB.deleteDatabase('jin-cache-' + email); } catch (e) { /* */ }
+    ['jstate-' + email, 'nd-' + email, 'rd-' + email, 'draft-last', 'pop-draft', 'pop-view'].forEach(k => { try { localStorage.removeItem('jin-' + k); } catch (e) { /* */ } });
+  }
+  location.reload();
+}
 function openSettings(tab) {
   closeMenus();
   const bg = document.createElement('div'); bg.className = 'modal-bg';
@@ -2443,7 +2479,26 @@ function openSettings(tab) {
     }
     if (t === 'account') {
       const c = store.get('connected', null);
-      body.innerHTML = `<h5>Gmail 계정</h5>${c ? `<p>${ico('env', 16)} <b>${esc(c.email)}</b> 연결됨 <span style="color:var(--mute)">(${esc(c.at || '')})</span></p><p class="desc">${real.on ? '최근 받은 메일 40통·보낸 메일 20통을 보여 주고 있어요. 읽음 표시·편지함 이동·삭제(휴지통)·편지함 이름 바꾸기는 <b>Gmail에도 바로 반영</b>돼요. 편지함 순서와 숨기기는 이 화면에서만 바뀌어요.' : '지금 화면의 메일은 예시예요.'}</p><button class="btn pri" id="loadReal">${real.on ? '다시 불러오기' : '실제 메일 불러오기'}</button> ${real.on ? '<button class="btn" id="useSample">예시 메일로 보기</button> ' : ''}<button class="btn" id="reconn">다시 연결</button> <button class="btn" id="disconn">연결 해제</button>` : `<p class="desc">아직 연결하지 않았어요.</p><button class="btn pri" id="reconn">Gmail 계정 연결하기</button>`}`;
+      body.innerHTML = `<h5>내 계정</h5>${c ? `<div class="acct">${ico('env', 18)}<div><b>${esc(c.name || '')}</b> <span style="color:var(--sub)">${esc(c.email)}</span><div class="desc" style="margin:2px 0 0">${real.on ? 'Gmail에 연결돼 있어요' : '연결 기록만 있어요 (로그인 필요)'}</div></div><span style="flex:1"></span>${real.on ? '' : '<button class="btn pri" id="reconn">로그인</button>'}<button class="btn" id="logout">로그아웃</button></div>
+        <label class="opt" style="margin-top:6px"><input type="checkbox" id="logoutWipe" checked> 로그아웃할 때 이 PC에 저장한 메일·임시저장도 지우기 <span style="color:var(--mute)">(공용 PC라면 꼭 켜 두세요)</span></label>` : `<p class="desc">아직 로그인하지 않았어요.</p><button class="btn pri" id="reconn">Gmail 계정으로 로그인</button>`}
+      <h5>로그인하는 방법</h5>
+      <ol class="guide">
+        <li>JIN-mail 첫 화면에서 <b>[Gmail 연결]</b>을 누르고, 회사 Gmail 계정(@smtown.com 등)을 고릅니다.</li>
+        <li>"Google에서 확인하지 않은 앱" 화면이 나오면 <b>고급 → JIN-mail(으)로 이동</b>을 누릅니다. (아직 구글 심사를 받지 않은 사내용 앱이라 나오는 안내예요)</li>
+        <li>권한 화면에서 <b>Gmail 읽기·보내기</b>와 <b>드라이브 앱 전용 공간</b>(편지함 정보 저장용)을 허용합니다. JIN-mail은 Gmail의 라벨·읽음·필터를 바꾸지 않아요.</li>
+        <li>처음엔 최근 3개월 메일을 이 PC에 받아 두느라 1~2분 걸릴 수 있어요. 다음부터는 몇 초면 열려요.</li>
+      </ol>
+      <h5>로그인 유지 (선택)</h5>
+      <p class="desc">구글 로그인은 1시간마다 끝나서, 오래 켜 두면 화면을 한 번 눌러 연장하거나 다시 연결해야 할 때가 있어요. 이게 번거로우면 작은 크롬 확장 프로그램 <b>'JIN-mail 로그인 유지'</b>를 설치하세요. 창 없이 알아서 연장해 줘요. (메일 내용은 읽지 않아요)</p>
+      <div class="acct" id="extState"><span class="dot"></span><span>확인 중…</span></div>
+      <ol class="guide">
+        <li><a href="jin-mail-login.zip" download>jin-mail-login.zip</a>을 내려받아 압축을 풉니다. (풀린 폴더는 지우지 말고 그대로 두세요)</li>
+        <li>크롬 주소창에 <code>chrome://extensions</code> 를 입력합니다. <button class="btn" id="copyExtUrl" style="padding:1px 8px">주소 복사</button></li>
+        <li>오른쪽 위 <b>개발자 모드</b>를 켭니다.</li>
+        <li><b>압축해제된 확장 프로그램을 로드합니다</b>를 누르고, 1에서 푼 <b>jin-mail-login</b> 폴더를 고릅니다.</li>
+        <li>JIN-mail을 새로고침하면 위 표시가 <b>'사용 중'</b>으로 바뀌어요.</li>
+      </ol>`;
+      extAvailable(true).then(ok => { const el = $('#extState', body); if (!el) return; el.classList.toggle('on', ok); el.querySelector('span:last-child').textContent = ok ? '로그인 유지 확장 사용 중 — 로그인이 끝나기 전에 자동으로 연장돼요' : '로그인 유지 확장이 설치돼 있지 않아요'; });
     }
   };
   body.addEventListener('input', e => {
@@ -2497,7 +2552,8 @@ function openSettings(tab) {
     if (t.id === 'reconn') { bg.remove(); openWelcome(true); return; }
     if (t.id === 'loadReal') { bg.remove(); loadReal(!real.token, real.token); return; }
     if (t.id === 'useSample') { location.reload(); return; }
-    if (t.id === 'disconn') { store.set('connected', null); show('account'); toast('연결을 해제했어요'); return; }
+    if (t.id === 'copyExtUrl') { try { navigator.clipboard.writeText('chrome://extensions'); toast('주소를 복사했어요. 새 탭 주소창에 붙여넣으세요'); } catch (e) { /* */ } return; }
+    if (t.id === 'logout') { const wipe = !!($('#logoutWipe', bg) || {}).checked; logout(wipe); return; }
     if (t.id === 'addFtr') { FOOTERS.push({ id: 'f' + Date.now(), name: '새 풋터', html: '', font: { family: '맑은 고딕', size: 10, color: '#202124' }, rule: { type: 'none', kw: '' } }); saveAll(); show('footers'); renderFooterBar(); return; }
     if (t.id === 'runAllRules') { runRules(null); return; }
     if (t.id === 'addTop') { const nb = { id: 'b' + Date.now(), name: '새 편지함', parent: null, }; BOXES.push(nb); rerender(); show('boxes'); return; }

@@ -35,7 +35,7 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 /* ── 맨 위 ── */
 .top{flex:none;display:flex;align-items:center;gap:8px;padding:16px 14px;background:var(--chrome)}  /* 위 검색줄 + 왼쪽 편지함 = 같은 회색 틀(고정된 머리 부분) */
 .newbtn{width:calc(var(--w-nav) - 21px);min-width:120px;flex:none;height:40px;justify-content:center;font-size:15px;border-radius:10px}
-.sbwrap{position:relative;flex:0 1 560px;min-width:200px}
+.sbwrap{position:relative;flex:none;width:var(--w-list);min-width:200px}  /* 검색창 오른쪽 끝 = 메일 목록 오른쪽 끝 */
 .sbox{display:flex;align-items:center;height:40px;border:1.5px solid #c9ced6;border-radius:10px;background:#fff;overflow:hidden}
 .sbox:focus-within{border-color:var(--blue)}
 .sbox input{flex:1;min-width:0;border:0;outline:none;padding:0 14px;font-size:14px}
@@ -233,15 +233,15 @@ input.ck{width:15px;height:15px;margin:0;accent-color:var(--blue);cursor:pointer
 .prev .txt{color:#3c4043}
 
 /* ── 작성 (배경을 조금 더 푸르게) ── */
-.compose{display:none;flex:1;flex-direction:column;min-height:0;background:var(--compose);position:relative}
-.read.composing{background:var(--compose)}
+.compose{display:none;flex:1;flex-direction:column;min-height:0;background:linear-gradient(180deg,#d9e6f8 0%,#e6eefa 38%,#f3f7fd 100%);position:relative}
+.read.composing{background:#f3f7fd}
 .read.composing .view{display:none}
 .read.composing .compose{display:flex}
 .ctool{flex:none;display:flex;gap:6px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--compose-line)}
 .sendgrp{display:inline-flex}
 .sendgrp .btn.pri:first-child{border-radius:7px;padding:7px 22px}
 .sendgrp .btn.pri.arrow{border-radius:0 7px 7px 0;padding:7px 7px;border-left:1px solid rgba(255,255,255,.35)}
-.ctool .save{font-size:12px;color:var(--mute);margin-left:8px}
+.ctool .save{font-size:12px;color:var(--mute);margin-right:6px;text-align:right}
 .ctool .save.busy{color:var(--blue)}
 .ctool .sched{font-size:12px;color:var(--blue);font-weight:600;margin-left:6px}
 .fields{flex:none;padding:6px 20px 8px;border-bottom:1px solid var(--compose-line)}
@@ -278,7 +278,7 @@ body.chipdragging,body.chipdragging *{cursor:grabbing!important}
 .ac .it.on,.ac .it:hover{background:var(--blue-l)}
 .ac .it i{width:8px;height:8px;border-radius:50%;flex:none}
 .ac .it small{color:var(--sub)}
-.fmt{flex:none;display:flex;flex-wrap:wrap;gap:1px;align-items:center;padding:5px 14px;border-bottom:1px solid var(--compose-line);background:#fff}
+.fmt{flex:none;display:flex;flex-wrap:wrap;gap:1px;align-items:center;padding:5px 14px;border-bottom:1px solid var(--compose-line);background:rgba(255,255,255,.6)}
 .fmt select{height:30px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:0 4px;margin-right:2px;font-size:13px}
 .fmt .ib{width:30px;height:30px;font-weight:700;color:#3c4043;position:relative}
 .fmt .ib.on{background:var(--blue-l);color:var(--blue)}
@@ -436,6 +436,19 @@ body.resizing{cursor:col-resize;user-select:none}
 .cbody img{cursor:pointer}
 /* 실제 메일 본문(격리 영역) */
 .rbody iframe.mailhtml{width:100%;border:0;display:block;min-height:120px}
+/* 본문 불러오는 동안: 흐리게 + 가운데 도는 고리 (덜 그려진 화면이 에러처럼 보이지 않게) */
+.rbody.loading{position:relative;min-height:300px}
+.rbody.loading > *{filter:blur(3px);opacity:.45;pointer-events:none;user-select:none}
+.rbody.loading::before{content:"";position:sticky;top:120px;display:block;width:30px;height:30px;margin:60px auto -90px;border-radius:50%;border:3px solid #d6dbe3;border-top-color:var(--blue);animation:jspin .8s linear infinite;z-index:3}
+.rbody.loading::after{content:"메일 불러오는 중…";position:absolute;left:0;right:0;top:100px;text-align:center;font-size:12.5px;color:var(--sub);z-index:3}
+@keyframes jspin{to{transform:rotate(360deg)}}
+.mbody .acct{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fafbfc}
+.mbody .acct .dot{width:9px;height:9px;border-radius:50%;background:#c4c9d2;flex:none}
+.mbody .acct.on .dot{background:#1e8e3e}
+.mbody .acct.on{background:#f1f8f3;border-color:#cfe8d6}
+.mbody ol.guide{margin:6px 0 4px;padding-left:20px;line-height:1.75;font-size:13px;color:var(--ink)}
+.mbody ol.guide code{background:#f1f3f4;border-radius:4px;padding:1px 5px;font-size:12px}
+.mbody ol.guide a{color:var(--blue);font-weight:600}
 /* 답장 인용: 전체 히스토리를 겹겹이 */
 .cbody .quote .qb .qb{margin-top:18px;padding-left:12px;border-left:2px solid #d5d9e0}
 .srcpill{font-size:12px;border-radius:12px;padding:3px 10px;margin-right:8px;background:#e9eef6;color:var(--sub);white-space:nowrap}
@@ -606,11 +619,11 @@ body.resizing{cursor:col-resize;user-select:none}
     <div class="compose" id="compose">
       <div class="dropcover">여기에 놓으면 첨부돼요</div>
       <div class="ctool">
-        <span class="save" id="saveState"></span>
         <span style="flex:1"></span>
-        <button class="btn" id="popBtn" title="새 창에서 쓰기"></button>
-        <button class="btn" id="closeC"></button>
+        <span class="save" id="saveState"></span>
         <button class="ib" id="discard" title="작성 중인 메일 삭제"></button>
+        <button class="btn" id="closeC"></button>
+        <button class="btn" id="popBtn" title="새 창에서 쓰기"></button>
         <span class="sendgrp"><button class="btn pri" id="send" title="보내기 (Ctrl+Enter)">보내기</button></span>
       </div>
       <div class="fields">
@@ -629,6 +642,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793092115"></script>
+<script src="mail-c.js?v=1793092982"></script>
 </body>
 </html>
