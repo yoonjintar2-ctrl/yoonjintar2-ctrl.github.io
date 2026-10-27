@@ -2719,14 +2719,24 @@ async function dfetch(url, opt, again) {
   if (!r.ok) { let msg = 'Drive ' + r.status; try { msg += ': ' + (await r.json()).error.message; } catch (e) { /* */ } const e = new Error(msg); e.status = r.status; throw e; }
   return r;
 }
+// 이 PC에 저장해 둔 기록이 있으면 그걸로 바로 시작하고, 드라이브(다른 PC에서 바뀐 것)는 뒤에서 확인 → 더 최신이면 바꿔 끼움
+// (드라이브에서 1MB 넘는 기록을 받느라 시작이 2~3초씩 늦던 것 개선)
+const jNorm = d => { if (d) { d.m = d.m || {}; d.rules = d.rules || []; } return d; };
 async function jLoad() {
   const local = store.get('jstate-' + ME.email, null);
-  let remote = null;
-  const l = await (await dfetch(`${DRIVE}/files?spaces=appDataFolder&fields=files(id,modifiedTime)&q=${encodeURIComponent("name='jin-mail.json'")}`)).json();
-  if (l.files && l.files[0]) { J.fileId = l.files[0].id; remote = await (await dfetch(`${DRIVE}/files/${J.fileId}?alt=media`)).json(); }
-  J.data = local && (!remote || (local.savedAt || 0) > (remote.savedAt || 0)) ? local : remote;
-  if (J.data && J.data === local && remote) jSave();  // 이 PC 쪽이 더 최신이면 드라이브에 올림
-  if (J.data) { J.data.m = J.data.m || {}; J.data.rules = J.data.rules || []; }
+  J.listP = (async () => { const l = await (await dfetch(`${DRIVE}/files?spaces=appDataFolder&fields=files(id,modifiedTime)&q=${encodeURIComponent("name='jin-mail.json'")}`)).json(); if (l.files && l.files[0]) J.fileId = l.files[0].id; return J.fileId || null; })();
+  const remoteP = J.listP.then(async id => id ? (await dfetch(`${DRIVE}/files/${id}?alt=media`)).json() : null);
+  if (local) {
+    J.data = jNorm(local);
+    J.remoteP = remoteP.then(remote => {
+      if (remote && (remote.savedAt || 0) > (J.data.savedAt || 0)) { J.data = jNorm(remote); try { store.set('jstate-' + ME.email, J.data); } catch (e) { /* */ } return true; }
+      if (!remote || (J.data.savedAt || 0) > (remote.savedAt || 0)) jSave();  // 이 PC 쪽이 더 최신이면 드라이브에 올림
+      return false;
+    }).catch(() => false);
+    return true;
+  }
+  const remote = await remoteP; J.remoteP = Promise.resolve(false);
+  J.data = jNorm(remote);
   return !!J.data;
 }
 function jSave() {
@@ -2736,6 +2746,7 @@ function jSave() {
 }
 async function jUpload() {
   try {
+    if (J.listP) await J.listP.catch(() => null);  // 드라이브 파일을 찾기 전에 올리면 파일이 두 개 생김
     const body = JSON.stringify(J.data);
     if (J.fileId) await dfetch(`${DRIVE_UP}/files/${J.fileId}?uploadType=media`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body });
     else {
@@ -2810,10 +2821,11 @@ async function loadReal(interactive, token) {
     // 내 이름: Gmail '보내는 사람' 설정의 이름 → 없으면 저장해 둔 이름 → 주소 앞부분 (보내는 메일의 From 이름에 쓰임)
     const cn = store.get('connected', null) || {};
     ME.name = (cn.email === prof.emailAddress && cn.name) || prof.emailAddress.split('@')[0];
-    try { const sa = await gapi('settings/sendAs'); const pr = (sa.sendAs || []).find(x => x.isPrimary) || (sa.sendAs || [])[0]; if (pr && pr.displayName) { ME.name = pr.displayName; store.set('connected', Object.assign({}, cn, { email: prof.emailAddress, name: pr.displayName })); } } catch (e) { /* 못 읽으면 보낸 메일에서 찾음 */ }
+    gapi('settings/sendAs').then(sa => { const pr = (sa.sendAs || []).find(x => x.isPrimary) || (sa.sendAs || [])[0]; if (pr && pr.displayName) { ME.name = pr.displayName; store.set('connected', Object.assign({}, cn, { email: prof.emailAddress, name: pr.displayName })); } }).catch(() => { /* 못 읽으면 보낸 메일에서 찾음 */ });  // 기다리지 않음
     real.ids = real.ids || new Map(); real.num = g => { if (!real.ids.has(g)) real.ids.set(g, real.ids.size + 1); return real.ids.get(g); };
     // JIN-mail 편지함·분류 기록 (드라이브 숨은 앱 공간). 처음이면 지금의 Gmail 라벨 구조를 한 번만 복사
     prog('JIN-mail 편지함 불러오는 중…');
+    const dbP = cacheDb(); const cacheP = dbP.then(db => Promise.all([cacheAll(db), idbAll(db, 'text')]));  // 이 PC 캐시도 동시에 읽기
     const hasJ = await jLoad();
     const user = (labs.labels || []).filter(l => l.type === 'user').sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
     const byName = new Map(user.map(l => [l.name, l.id]));
@@ -2823,8 +2835,8 @@ async function loadReal(interactive, token) {
     }
     BOXES = J.data.boxes.map(b => Object.assign({}, b));
     real.labReady = false;
-    const db = await cacheDb(); const cached = new Map((await cacheAll(db)).map(x => [x.gid, x]));
-    real.texts = new Map((await idbAll(db, 'text')).map(x => [x.gid, x.t]));
+    const db = await dbP; const [cArr, tArr] = await cacheP; const cached = new Map(cArr.map(x => [x.gid, x]));
+    real.texts = new Map(tArr.map(x => [x.gid, x.t]));
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* */ }
     const metas = new Map(); const lab = { inbox: new Set(), sent: new Set(), unread: new Set(), box: new Map() };
     real.lab = lab;
@@ -2832,6 +2844,8 @@ async function loadReal(interactive, token) {
     const labFrom = x => { if (!x.lb) return; const L = new Set(x.lb); if (L.has('INBOX')) lab.inbox.add(x.gid); if (L.has('SENT')) lab.sent.add(x.gid); if (L.has('UNREAD')) lab.unread.add(x.gid); const u = x.lb.find(id => /^Label_/.test(id)); if (u && !lab.box.has(x.gid)) lab.box.set(x.gid, u); };
     const oldCut = Date.now() - DAYS * 86400000;
     cached.forEach(x => { if (x.when < oldCut) { metas.set(x.gid, x); labFrom(x); } });
+    // 이 PC에 받아 둔 최근 메일도 바로 목록에 (편지함·읽음 기록이 있는 메일만) → Gmail 목록 확인은 뒤에서
+    if (hasJ) cached.forEach(x => { if (x.when >= oldCut && J.data.m[x.gid]) metas.set(x.gid, x); });
     const first = !real.on;
     const show = () => {
       const keepFull = new Map(MAILS.filter(m => m.real && m.full).map(m => [m.gid, m]));
@@ -2857,12 +2871,18 @@ async function loadReal(interactive, token) {
       cachePut(db, buf);
       return todo.length;
     };
+    // 0단계: 이 PC에 있던 것으로 먼저 화면에 (몇 초 걸리던 Gmail 목록 확인을 기다리지 않음)
+    if (first && hasJ && metas.size) show();
+    if (J.remoteP) J.remoteP.then(changed => { if (changed && gen === real.gen) { BOXES = J.data.boxes.map(b => Object.assign({}, b)); show(); toast('다른 PC에서 바뀐 편지함 정보를 불러왔어요'); } });
     // 1단계: 최근 1주 (금방) → 바로 화면에
     prog('최근 메일 불러오는 중…');
     const stage = async (q, label) => {
       const [all, inb, snt, unr] = await Promise.all([listIds(q), listIds(q, 'INBOX'), listIds(q, 'SENT'), listIds(q, 'UNREAD')]);
       inb.forEach(g => lab.inbox.add(g)); snt.forEach(g => lab.sent.add(g)); unr.forEach(g => lab.unread.add(g));
-      if (/newer_than:9/.test(q)) real.labReady = true;  // 3개월치 상태를 다 알았을 때부터 처음 본 메일을 기록
+      if (/newer_than:9/.test(q)) {
+        real.labReady = true;  // 3개월치 상태를 다 알았을 때부터 처음 본 메일을 기록
+        const live = new Set(all); [...metas.keys()].forEach(g => { const x = metas.get(g); if (x.when >= oldCut && !live.has(g)) metas.delete(g); });  // Gmail에서 아예 없어진 메일은 빼기
+      }
       const n = await fetchMetas(all, label);
       if (ME.name === ME.email.split('@')[0]) { const mine = snt.map(g => metas.get(g)).find(x => x && x.from && x.from.email && x.from.email.toLowerCase() === ME.email && x.from.name && x.from.name !== x.from.email); if (mine) { ME.name = mine.from.name; store.set('connected', Object.assign({}, store.get('connected', null) || {}, { name: ME.name })); } }
       show(); return [all.length, n];
