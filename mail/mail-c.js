@@ -234,6 +234,7 @@ function renderNav() {
   const nDel = MAILS.filter(m => m.deleted).length;
   h += `<div class="nsep-trash"></div><div class="ni ni-top ni-trash${st.folder === 'trash' ? ' on' : ''}" data-f="trash" data-sys="trash" style="padding-left:14px"><span class="ic">${ico('trash')}</span><span class="nm">지운 편지함</span><span class="n" style="font-weight:400;color:var(--mute)">${nDel || ''}</span></div>`;
   $('#nav').innerHTML = h;
+  try { updateBadge(); } catch (e) { /* */ }
 }
 /* 편지함 메뉴 (⋮ · 우클릭) */
 function boxMenu(anchor, id, at) {
@@ -2422,10 +2423,14 @@ async function logout(wipe) {
   }
   location.reload();
 }
+function notifyTestNow() {
+  const opt = { body: '새 메일이 오면 이렇게 알려 드려요', icon: 'appicons/notify-64.png', tag: 'jin-test' };
+  try { if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification('JIN-mail 알림 시험', opt)); else new Notification('JIN-mail 알림 시험', opt); } catch (e) { toast('알림을 보내지 못했어요: ' + e.message); }
+}
 function openSettings(tab) {
   closeMenus();
   const bg = document.createElement('div'); bg.className = 'modal-bg';
-  bg.innerHTML = `<div class="modal set"><h3>설정</h3><div class="tabs"><button data-tab="general">일반</button><button data-tab="footers">풋터</button><button data-tab="boxes">편지함</button><button data-tab="account">계정</button></div><div class="mbody" id="setBody"></div><div class="mfoot"><button class="btn pri" data-x>닫기</button></div></div>`;
+  bg.innerHTML = `<div class="modal set"><h3>설정</h3><div class="tabs"><button data-tab="general">일반</button><button data-tab="footers">풋터</button><button data-tab="boxes">편지함</button><button data-tab="account">계정</button><button data-tab="app">앱·알림</button></div><div class="mbody" id="setBody"></div><div class="mfoot"><button class="btn pri" data-x>닫기</button></div></div>`;
   document.body.append(bg);
   const body = $('#setBody', bg);
   const rerender = () => { saveAll(); renderNav(); renderList(); renderRead(); renderFooterBar(); renderTop(); };
@@ -2477,6 +2482,18 @@ function openSettings(tab) {
       walk(null, 0);
       body.innerHTML = h + `<button class="btn" id="addTop" style="margin-top:10px">${ico('plus')} 편지함 추가</button>`;
     }
+    if (t === 'app') {
+      const st0 = APP.standalone(), perm = 'Notification' in window ? Notification.permission : 'unsupported';
+      body.innerHTML = `<h5>JIN-mail 앱으로 설치</h5>
+        <p class="desc">exe 프로그램이 아니라 크롬의 '웹앱 설치' 기능이에요. 시작 메뉴·작업 표시줄·바탕화면에 JIN-mail 아이콘이 생기고, 주소창 없는 별도 창으로 열려요. PC에 새 프로그램이 깔리지 않고 관리자 권한도 필요 없어요.</p>
+        <div class="acct${st0 ? ' on' : ''}"><span class="dot"></span><span style="flex:1">${st0 ? '지금 JIN-mail 앱으로 쓰고 있어요' : APP.prompt ? '이 PC에 설치할 수 있어요' : '이 창에서는 설치 버튼을 바로 띄울 수 없어요 (아래 방법으로 설치)'}</span>${!st0 && APP.prompt ? '<button class="btn pri" id="appInstall">앱 설치</button>' : ''}</div>
+        ${st0 ? '' : `<ol class="guide"><li>크롬 주소창 오른쪽 끝의 <b>설치 아이콘(모니터+화살표)</b>을 누르거나,</li><li>크롬 메뉴 <b>⋮ → 전송, 저장 및 공유 → 페이지를 앱으로 설치…</b> (엣지는 <b>⋯ → 앱 → 이 사이트를 앱으로 설치</b>)</li><li>설치한 뒤엔 시작 메뉴에서 'JIN-mail'을 찾아 작업 표시줄에 고정해 두면 편해요.</li></ol>`}
+        <h5>새 메일 알림</h5>
+        <p class="desc">JIN-mail이 열려 있으면(최소화해도 됨) 1분마다 새 메일을 확인해서, 다른 일을 하는 중이면 윈도우 알림으로 알려 줘요. 앱으로 설치하면 작업 표시줄 아이콘에 안 읽은 메일 수도 표시돼요. JIN-mail 창을 완전히 닫으면 알림은 오지 않아요.</p>
+        <label class="opt"><input type="checkbox" id="setNotify"${SET.notify && perm === 'granted' ? ' checked' : ''}${perm === 'unsupported' ? ' disabled' : ''}> 새 메일이 오면 윈도우 알림 보내기</label>
+        <p class="desc" id="notifyState">${perm === 'denied' ? '⚠ 이 사이트 알림이 크롬에서 차단돼 있어요. 주소창 왼쪽 자물쇠(사이트 정보) → 알림 → 허용으로 바꿔 주세요.' : perm === 'unsupported' ? '이 브라우저는 알림을 지원하지 않아요.' : ''}</p>
+        <button class="btn" id="notifyTest"${SET.notify && perm === 'granted' ? '' : ' disabled'}>알림 시험해 보기</button>`;
+    }
     if (t === 'account') {
       const c = store.get('connected', null);
       body.innerHTML = `<h5>내 계정</h5>${c ? `<div class="acct">${ico('env', 18)}<div><b>${esc(c.name || '')}</b> <span style="color:var(--sub)">${esc(c.email)}</span><div class="desc" style="margin:2px 0 0">${real.on ? 'Gmail에 연결돼 있어요' : '연결 기록만 있어요 (로그인 필요)'}</div></div><span style="flex:1"></span>${real.on ? '' : '<button class="btn pri" id="reconn">로그인</button>'}<button class="btn" id="logout">로그아웃</button></div>
@@ -2523,6 +2540,10 @@ function openSettings(tab) {
       toast(`기본 글꼴: ${SET.font.family} ${SET.font.size}pt`);
     }
     if (e.target.id === 'setTypo') { SET.typo = e.target.checked; saveAll(); runTypo(); }
+    if (e.target.id === 'setNotify') {
+      if (!e.target.checked) { SET.notify = false; saveAll(); show('app'); return; }
+      Notification.requestPermission().then(pm => { SET.notify = pm === 'granted'; saveAll(); show('app'); if (pm === 'granted') toast('새 메일 알림을 켰어요'); });
+    }
     if (fr) {
       const f = FOOTERS.find(x => x.id === fr.dataset.id);
       if (k === 'family') f.font.family = e.target.value;
@@ -2552,6 +2573,8 @@ function openSettings(tab) {
     if (t.id === 'reconn') { bg.remove(); openWelcome(true); return; }
     if (t.id === 'loadReal') { bg.remove(); loadReal(!real.token, real.token); return; }
     if (t.id === 'useSample') { location.reload(); return; }
+    if (t.id === 'appInstall' && APP.prompt) { APP.prompt.prompt(); APP.prompt.userChoice.then(() => { APP.prompt = null; show('app'); }); return; }
+    if (t.id === 'notifyTest') { notifyTestNow(); return; }
     if (t.id === 'copyExtUrl') { try { navigator.clipboard.writeText('chrome://extensions'); toast('주소를 복사했어요. 새 탭 주소창에 붙여넣으세요'); } catch (e) { /* */ } return; }
     if (t.id === 'logout') { const wipe = !!($('#logoutWipe', bg) || {}).checked; logout(wipe); return; }
     if (t.id === 'addFtr') { FOOTERS.push({ id: 'f' + Date.now(), name: '새 풋터', html: '', font: { family: '맑은 고딕', size: 10, color: '#202124' }, rule: { type: 'none', kw: '' } }); saveAll(); show('footers'); renderFooterBar(); return; }
@@ -2596,6 +2619,37 @@ const IS_EXT = !!(window.chrome && chrome.identity && chrome.identity.launchWebA
 const tokCache = { get() { const t = store.get('tok', null); return t && t.exp > Date.now() + 60000 ? t.t : null; }, left() { const t = store.get('tok', null); return t ? t.exp - Date.now() : 0; }, set(t, sec) { store.set('tok', { t, exp: Date.now() + (sec || 3500) * 1000 }); }, clear() { store.set('tok', null); } };
 let gisReady = null;
 const loadGis = () => gisReady || (gisReady = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.onload = res; sc.onerror = () => rej(new Error('구글 로그인 도구를 불러오지 못했어요')); document.head.append(sc); }));
+/* ───────── 앱(설치형 웹앱)·새 메일 알림 ───────── */
+setInterval(() => { if (real.poll) real.poll(); }, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && real.poll) real.poll(); });
+const APP = { prompt: null, standalone: () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true };
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); APP.prompt = e; });
+window.addEventListener('appinstalled', () => { APP.prompt = null; toast('JIN-mail 앱을 설치했어요. 시작 메뉴·작업 표시줄에서 열 수 있어요'); });
+if ('serviceWorker' in navigator && location.protocol === 'https:' && !IS_EXT) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'jin-open') openFromNotify(e.data.id); });
+}
+function openFromNotify(gid) { const m = MAILS.find(x => x.gid === gid); if (!m) return; if (!folderFn(st.folder)(m)) { st.folder = m.inbox ? 'inbox' : 'all'; renderNav(); } openMail(m.id); }
+// 작업 표시줄 아이콘 숫자(안 읽은 받은편지함) + 창 제목
+function updateBadge() {
+  if (!real.on) return; const n = MAILS.filter(m => m.inbox && m.unread && !m.deleted).length;
+  if (updateBadge.n === n) return; updateBadge.n = n;
+  try { if (navigator.setAppBadge) n ? navigator.setAppBadge(n) : navigator.clearAppBadge(); } catch (e) { /* */ }
+  if (!document.body.classList.contains('popmode')) document.title = (n ? `(${n}) ` : '') + 'JIN-mail';
+}
+function notifyNew(list) {
+  if (!list.length) return;
+  const focused = document.visibilityState === 'visible' && document.hasFocus();
+  // 화면을 보고 있거나 알림을 꺼 두었으면 화면 아래 짧은 안내만
+  if (focused || !SET.notify || !('Notification' in window) || Notification.permission !== 'granted') { toast(`새 메일 ${list.length}통 — ${list[0].from.name || list[0].from.email}: ${list[0].subj}`); return; }
+  const one = (title, body, gid) => {
+    const opt = { body, icon: 'appicons/notify-64.png', badge: 'appicons/notify-64.png', tag: 'jin-' + gid, data: { id: gid } };
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification(title, opt)).catch(() => {});
+    else { try { const n = new Notification(title, opt); n.onclick = () => { window.focus(); openFromNotify(gid); n.close(); }; } catch (e) { /* */ } }
+  };
+  if (list.length <= 3) list.forEach(m => one(m.from.name || m.from.email, m.subj, m.gid));
+  else one(`새 메일 ${list.length}통`, list.slice(0, 3).map(m => `${m.from.name || m.from.email}: ${m.subj}`).join('\n'), list[0].gid);
+}
 /* ───────── 'JIN-mail 로그인 유지' 확장 프로그램 (설치돼 있으면) ─────────
    웹페이지는 클릭 없이 Google 로그인을 연장할 수 없음 → 작은 확장 프로그램이 창 없이 새 토큰을 받아 넘겨줌.
    설치 안 돼 있으면 예전처럼 '다음 클릭 때' 연장 */
@@ -2958,6 +3012,18 @@ async function loadReal(interactive, token) {
     prog('');
     toast(`${prof.emailAddress} · 최근 3개월 메일 ${total}통 준비 완료${fresh ? ` (새로 받은 ${fresh}통)` : ''}`);
     prefetchBodies();
+    // 새 메일 확인: 1분마다 + 창을 다시 볼 때 — 새로 온 메일을 목록에 넣고 알림
+    real.poll = async () => {
+      if (!real.on || real.expired || real.polling || gen !== real.gen) return; real.polling = true;
+      try {
+        const ids = await listIds('newer_than:1d');
+        const fresh2 = ids.filter(g => !metas.has(g));
+        if (!fresh2.length) return;
+        await fetchMetas(fresh2, '새 메일', true);
+        show(); prefetchBodies();
+        notifyNew(fresh2.map(g => MAILS.find(m => m.gid === g)).filter(m => m && m.inbox && m.unread && !m.deleted && !isMe(m.from)));
+      } catch (e) { /* 다음에 다시 */ } finally { real.polling = false; }
+    };
     // 3단계: 3개월보다 옛날 메일 — 메모리 여유가 있을 때 조금씩 끌어와 이 PC에 저장
     const userIds = new Set(user.map(l => l.id));
     const addLab = x => { if (!x.labels) return; const L = x.labels; if (L.includes('INBOX')) lab.inbox.add(x.gid); if (L.includes('SENT')) lab.sent.add(x.gid); if (L.includes('UNREAD')) lab.unread.add(x.gid); if (!lab.box.has(x.gid)) { const b = L.find(id => userIds.has(id)); if (b) lab.box.set(x.gid, b); } };
