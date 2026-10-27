@@ -864,8 +864,9 @@ const rdKey = () => 'rd-' + (real.on ? ME.email : 'sample');
 const rdId = m => m.gid || 's' + m.id;
 function rdSave(m, d) {
   const all = store.get(rdKey(), {}); const c = Object.assign({}, d, { files: (d.files || []).filter(f => f.fwd) });
-  // 원본 메일 인용(그림 포함 — 용량 큼)은 저장하지 않고 다시 열 때 새로 붙임
-  c.html = (c.html || '').replace(/<div class="quote qhtml"[\s\S]*$/, '<div class="quote qhtml" data-req="1"></div>');
+  // 원본 메일 인용도 고친 그대로 저장. 단 원본에 있던 그림(용량 큼)은 내용 대신 순번(jin-q:N)만 → 다시 열 때 원본에서 채움
+  const qi = m._qimgs || [];
+  c.html = (c.html || '').replace(/src="(data:[^"]{2000,})"/g, (all0, src) => { const i = qi.indexOf(src); return i >= 0 ? `src="jin-q:${i}"` : all0; });
   all[rdId(m)] = { at: Date.now(), d: c, text: m.draft }; RD_MEM.set(rdId(m), d);
   store.set(rdKey(), all);
 }
@@ -989,7 +990,7 @@ function pickFooter(kind, m) {
 function composeHtml(text, footer, quote) {
   // 풋터가 있으면 위에 빈 줄을 따로 두지 않음 → 풋터 안 첫 빈 줄(인사말과 맺음말 사이)에 커서 (loadDraft에서)
   return nl(text) + (footer ? '' : '<div><span id="gpCaret"></span><br></div>') + footerHtml(footer) +
-    (quote && quote.length ? `<div class="quote" contenteditable="false" spellcheck="false">${nestQ(quote, 0)}</div>` : '');
+    (quote && quote.length ? `<div class="quote" spellcheck="false">${nestQ(quote, 0)}</div>` : '');  // 아래 원본 메일도 고칠 수 있음
 }
 function nestQ(blocks, i) { return i >= blocks.length ? '' : `<div class="qb">${esc(blocks[i])}${nestQ(blocks, i + 1)}</div>`;
 }
@@ -1000,6 +1001,10 @@ async function openCompose(kind, opts) {
   // 작성 중이던 답장: 저장해 둔 그대로(전체 답장·받는사람·서식·첨부) 다시 열기
   let d = opts.draft || (kind === 'draft' && m && m.draftD ? Object.assign({}, m.draftD, { files: (m.draftD.files || []).slice() }) : null);
   if (d && m && m.real && /<div class="quote qhtml" data-req="1">/.test(d.html || '')) { let q = null; try { q = await quoteHtml(m); } catch (e) { /* 인용 없이 */ } d.html = d.html.replace(/<div class="quote qhtml" data-req="1"><\/div>[\s\S]*$/, q || ''); }
+  if (d && m && /src="jin-q:\d+"/.test(d.html || '')) {  // 저장해 둔 인용의 그림 순번 → 원본 메일 그림으로
+    if (!m._qimgs && m.real) { try { await quoteHtml(m); } catch (e) { /* 그림 없이 */ } }
+    const qi = m._qimgs || []; d.html = d.html.replace(/src="jin-q:(\d+)"/g, (a0, i) => qi[+i] ? `src="${qi[+i]}"` : 'src=""');
+  }
   if (!d) {
     d = buildDraft(kind, m);
     // 답장·전달: 원래 메일을 글자만이 아니라 원본 모양(표·색·그림) 그대로 아래에 붙임
@@ -1015,7 +1020,11 @@ async function quoteHtml(m) {
   if (!r) return null;
   const who = p => p.name && p.name !== p.email ? `${esc(p.name)} &lt;${esc(p.email)}&gt;` : esc(p.email);
   const hdr = `<div class="qhdr">-----원본 메일-----<br><b>보낸 사람:</b> ${who(m.from)}<br><b>보낸 날짜:</b> ${fmtD(dayOf(m))} ${m.t}<br><b>받는 사람:</b> ${m.to.map(who).join(', ')}${m.cc && m.cc.length ? `<br><b>참조:</b> ${m.cc.map(who).join(', ')}` : ''}<br><b>제목:</b> ${esc(m.subj)}</div><br>`;
-  return `<div class="quote qhtml" contenteditable="false" spellcheck="false">${hdr}<div class="qbody">${cleanHtml(r.html)}</div></div>`;
+  const body = cleanHtml(r.html).replace(/\scontenteditable="[^"]*"/gi, '');
+  const out = `<div class="quote qhtml" spellcheck="false">${hdr}<div class="qbody">${body}</div></div>`;
+  // 원본 메일 안 그림 목록 (임시저장 때 그림 내용 대신 순번만 저장하려고)
+  m._qimgs = [...out.matchAll(/src="(data:[^"]{2000,})"/g)].map(x => x[1]);
+  return out;
 }
 function buildDraft(kind, m) {
   // 맨 위 인사말: 설정 > 일반에서 정함 (기본은 비움 — 풋터에 인사말이 있으면 겹치지 않게)
@@ -1042,6 +1051,7 @@ function loadDraft(d) {
   showBcc((d.bcc || []).length > 0);
   $('#subj').value = d.subj;
   $('#cbody').innerHTML = d.html;
+  $$('#cbody .quote[contenteditable], #cbody .quote [contenteditable]').forEach(x => x.removeAttribute('contenteditable'));
   $$('#cbody .tdsel, #cbody .hrsel').forEach(x => x.classList.remove('tdsel', 'hrsel')); TS.cells = []; TS.multi = false;
   renderFooterBar(); renderFiles(); setSave('');
   $('#read').classList.add('composing');
@@ -1711,12 +1721,66 @@ document.addEventListener('mousedown', e => {
   e.preventDefault(); $('#cbody').focus(); const r = document.createRange(); r.selectNode(h); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
 });
 document.addEventListener('selectionchange', () => { const s = getSelection(); if (s.rangeCount && $('#cbody') && $('#cbody').contains(s.anchorNode)) { savedRange = s.getRangeAt(0).cloneRange(); syncFmt(); tableBar(); } });
-function restoreSel() { const b = $('#cbody'); b.focus(); if (savedRange && b.contains(savedRange.startContainer)) { const s = getSelection(); s.removeAllRanges(); s.addRange(savedRange); } }
-function setSizePt(pt) {
-  const run = () => { document.execCommand('styleWithCSS', false, false); document.execCommand('fontSize', false, '7'); };
+function restoreSel() { const b = $('#cbody'); if (savedRange && b.contains(savedRange.startContainer)) { const mk = $('#gpCaret'); if (mk && !mk.contains(savedRange.startContainer)) mk.remove(); } /* 도구줄로 돌아올 땐 처음 커서 자리 표시로 튀지 않게 */ b.focus(); if (savedRange && b.contains(savedRange.startContainer)) { const s = getSelection(); s.removeAllRanges(); s.addRange(savedRange); } }
+// 글꼴·크기 바꾸기: 붙여넣은 글(엑셀·리포트 등)은 글자마다 글꼴·크기가 박혀 있어서 바깥에만 입히면 안 바뀜
+// → 표시용 <font>로 감싼 뒤 span으로 바꾸고, 그 안쪽에 박혀 있던 글꼴·크기는 지움
+function applyFontProp(prop, value) {
+  const b = $('#cbody'), MARK = prop === 'font-size' ? null : 'jin-font-mark';
+  const run = () => { document.execCommand('styleWithCSS', false, false); if (MARK) document.execCommand('fontName', false, MARK); else document.execCommand('fontSize', false, '7'); };
   if (!cellsDo(run)) { restoreSel(); run(); }
-  $$('font[size="7"]', $('#cbody')).forEach(f => { const sp = document.createElement('span'); sp.style.fontSize = pt + 'pt'; while (f.firstChild) sp.append(f.firstChild); f.replaceWith(sp); });
-  dirty();
+  const sel = MARK ? `font[face="${MARK}"]` : 'font[size="7"]', made = [];
+  $$(sel, b).forEach(f => {
+    const sp = document.createElement('span'); sp.style.setProperty(prop, value);
+    while (f.firstChild) sp.append(f.firstChild);
+    // 다른 속성(글자색 등)이 같이 붙은 font는 그 속성은 살림
+    if (f.getAttribute('color')) sp.style.color = f.getAttribute('color');
+    f.replaceWith(sp); made.push(sp);
+  });
+  made.forEach(sp => $$('*', sp).forEach(el => {
+    el.style.removeProperty(prop);
+    if (el.tagName === 'FONT') el.removeAttribute(prop === 'font-size' ? 'size' : 'face');
+    if (!el.getAttribute('style')) el.removeAttribute('style');
+  }));
+  // 선택은 바꾼 글자 그대로 유지 (이어서 다른 서식도 줄 수 있게)
+  if (made.length) { const r = document.createRange(); r.setStartBefore(made[0]); r.setEndAfter(made[made.length - 1]); const s = getSelection(); s.removeAllRanges(); s.addRange(r); savedRange = r.cloneRange(); }
+  dirty(); syncFmt();
+}
+function setSizePt(pt) { applyFontProp('font-size', pt + 'pt'); }
+// 서식 도구줄의 글꼴·크기 칸: 지금 고른 글자 기준, 섞여 있으면 '(여러 값)'
+const FONT_ALIAS = { 'malgun gothic': '맑은 고딕', 'nanumgothic': '나눔고딕', 'nanum gothic': '나눔고딕', 'dotum': '돋움', 'gulim': '굴림', 'batang': '바탕', 'apple sd gothic neo': 'Apple SD Gothic Neo' };
+const normFam = f => { const x = String(f || '').split(',')[0].trim().replace(/^["']|["']$/g, ''); return FONT_ALIAS[x.toLowerCase()] || x; };
+function selFontInfo() {
+  const b = $('#cbody'), s = getSelection(); if (!b || !s.rangeCount || !b.contains(s.anchorNode)) return null;
+  const r = s.getRangeAt(0), els = new Set();
+  if (r.collapsed) { const n = r.startContainer; els.add(n.nodeType === 1 ? n : n.parentElement); }
+  else {
+    const root = r.commonAncestorContainer.nodeType === 1 ? r.commonAncestorContainer : r.commonAncestorContainer.parentElement;
+    if (root.nodeType === 1 && !root.firstChild) els.add(root);
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = root.nodeType === 3 ? root : tw.nextNode(); n; n = tw.nextNode()) {
+      if (!r.intersectsNode(n) || !n.nodeValue.replace(/[\s\u00a0]/g, '')) continue;
+      if (n === r.endContainer && r.endOffset === 0) continue;
+      if (n === r.startContainer && r.startOffset >= n.nodeValue.length) continue;
+      els.add(n.parentElement); if (els.size > 500) break;
+    }
+    if (!els.size) els.add(r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement);
+  }
+  const fam = new Set(), size = new Set();
+  els.forEach(el => { const cs = getComputedStyle(el); fam.add(normFam(cs.fontFamily)); size.add(Math.round(parseFloat(cs.fontSize) * 0.75 * 2) / 2); });
+  return { fam: [...fam], size: [...size] };
+}
+function setSelectShown(sel, val, label) {
+  $$('option[data-tmp]', sel).forEach(o => o.remove());
+  if (val == null) { const o = new Option('(여러 값)', '__multi'); o.dataset.tmp = 1; o.hidden = true; sel.prepend(o); sel.value = '__multi'; return; }
+  if (![...sel.options].some(o => o.value === String(val))) { const o = new Option(label || String(val), String(val)); o.dataset.tmp = 1; sel.append(o); }
+  sel.value = String(val);
+}
+function syncFontBox() {
+  const ff = $('#fFont'), fs = $('#fSize'); if (!ff || !fs) return;
+  if (document.activeElement === ff || document.activeElement === fs) return;  // 고르는 중엔 건드리지 않음
+  const info = selFontInfo(); if (!info) return;
+  setSelectShown(ff, info.fam.length === 1 ? info.fam[0] : null);
+  setSelectShown(fs, info.size.length === 1 ? info.size[0] : null, info.size.length === 1 ? info.size[0] + 'pt' : '');
 }
 // 여러 칸을 골랐으면 칸마다 내용 전체를 골라 fn 실행 → 끝나면 다시 그 칸들 선택 상태로
 function cellsDo(fn) {
@@ -2006,7 +2070,7 @@ function showPasteBtn(anchorEl, put, useful, complex) {
   btn.addEventListener('mousedown', e => { e.preventDefault(); toggleMenu(btn, open); });
   btn._open = open;
 }
-function syncFmt() { $$('#fmt [data-cmd]').forEach(x => { let on = false; try { on = /^(bold|italic|underline|strikeThrough|insertUnorderedList|insertOrderedList|justifyLeft|justifyCenter|justifyRight)$/.test(x.dataset.cmd) && document.queryCommandState(x.dataset.cmd); } catch (e) { /* */ } x.classList.toggle('on', on); }); }
+function syncFmt() { try { syncFontBox(); } catch (e) { /* */ } $$('#fmt [data-cmd]').forEach(x => { let on = false; try { on = /^(bold|italic|underline|strikeThrough|insertUnorderedList|insertOrderedList|justifyLeft|justifyCenter|justifyRight)$/.test(x.dataset.cmd) && document.queryCommandState(x.dataset.cmd); } catch (e) { /* */ } x.classList.toggle('on', on); }); }
 /* 표: 먼저 칸 수를 고르고 넣기 */
 function tablePicker() {
   const node = document.createElement('div'); node.className = 'grid-pick';
@@ -3110,8 +3174,8 @@ function wire() {
     if (e.target.closest('#fColor')) { e.preventDefault(); paletteMenu($('#fColor'), PALETTE, null, c => { const run = () => { document.execCommand('styleWithCSS', false, true); document.execCommand('foreColor', false, c || '#000000'); }; if (!cellsDo(run)) { restoreSel(); run(); } $('#fColor .sw').style.background = c || '#000'; dirty(); }, '자동 (검정)'); return; }
     if (e.target.closest('#fHi')) { e.preventDefault(); paletteMenu($('#fHi'), PALETTE, null, c => { const run = () => { document.execCommand('styleWithCSS', false, true); document.execCommand('hiliteColor', false, c || 'transparent'); }; if (!cellsDo(run)) { restoreSel(); run(); } $('#fHi .sw').style.background = c || 'transparent'; dirty(); }, '색 없음'); }
   });
-  $('#fFont').addEventListener('change', e => { const run = () => { document.execCommand('styleWithCSS', false, true); document.execCommand('fontName', false, e.target.value); }; if (!cellsDo(run)) { restoreSel(); run(); } dirty(); });
-  $('#fSize').addEventListener('change', e => setSizePt(+e.target.value));
+  $('#fFont').addEventListener('change', e => { if (e.target.value === '__multi') return; const v = e.target.value; e.target.blur(); applyFontProp('font-family', `'${v}', sans-serif`); });
+  $('#fSize').addEventListener('change', e => { if (e.target.value === '__multi') return; const v = +e.target.value; e.target.blur(); setSizePt(v); });
   $('#foot').addEventListener('mousedown', e => { const c = e.target.closest('[data-fid]'); if (c) { e.preventDefault(); applyFooter(c.dataset.fid); } if (e.target.closest('[data-set]')) { e.preventDefault(); openSettings('footers'); } });
   const body = $('#cbody');
   body.addEventListener('keydown', e => {
@@ -3149,7 +3213,7 @@ function wire() {
     if (e.code === 'KeyC') { e.preventDefault(); e.stopPropagation(); copyFormat(); }
     else if (e.code === 'KeyV' && fmtClip) { e.preventDefault(); e.stopPropagation(); pasteFormat(); }
   }, true);
-  body.addEventListener('mousedown', e => { if (e.target.tagName === 'IMG' && !e.target.closest('.quote')) { e.preventDefault(); selectImg(e.target); } });
+  body.addEventListener('mousedown', e => { if (e.target.tagName === 'IMG') { e.preventDefault(); selectImg(e.target); } });
   document.addEventListener('mousedown', e => { if (selImg && e.target !== selImg && !e.target.closest('#imgsel')) { selImg = null; posImgSel(); } }, true);
   document.addEventListener('scroll', posImgSel, true);
   window.addEventListener('resize', posImgSel);
