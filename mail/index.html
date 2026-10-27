@@ -283,6 +283,43 @@ input.ck{width:15px;height:15px;margin:0;accent-color:var(--blue);cursor:pointer
 .attbox{flex:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:32px;color:var(--mute);font-size:12.5px}
 .attbox .attpick{height:30px;padding:0 12px;font-size:13px;display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #c9ced6;border-radius:8px;color:var(--ink)}
 .attbox .attpick:hover{border-color:var(--blue);color:var(--blue)}
+/* ── '점이 일한다' 진행 효과: 버튼이 동그라미로 줄고 → 점이 떨어져 테두리를 돌고 → 물이 차오르고 → 체크 → 원래 버튼으로 ── */
+.dm-ring{position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 1.5px #c9d6ee;background:#fff;flex:none}
+.dm-fill{position:absolute;inset:0;border-radius:50%;overflow:hidden}
+.dm-wave{position:absolute;left:0;right:0;bottom:-1px;height:calc(var(--p,0) * 100% + 4px);transition:height .35s cubic-bezier(.3,.7,.3,1);
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 4'%3E%3Cpath d='M0 2.2Q3 0 6 2.2T12 2.2V4H0Z' fill='%230b57d0'/%3E%3C/svg%3E") 0 0/12px 4px repeat-x,linear-gradient(#0b57d0,#0b57d0) 0 4px/100% 100% no-repeat;animation:dmWave .8s linear infinite}
+@keyframes dmWave{to{background-position:12px 0,0 4px}}
+.dm-ind .dm-wave{animation:dmWave .8s linear infinite,dmBob 1.4s ease-in-out infinite alternate}
+@keyframes dmBob{from{height:22%}to{height:55%}}
+.dm-orb{position:absolute;inset:-3px;border-radius:50%;animation:dmOrb 1s linear infinite;pointer-events:none}
+.dm-orb i{position:absolute;left:50%;top:0;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:#0b57d0;box-shadow:0 0 0 1.5px #fff;animation:dmDrop .45s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes dmOrb{to{transform:rotate(360deg)}}
+@keyframes dmDrop{from{transform:translateY(-14px);opacity:0}to{transform:none;opacity:1}}
+.dm-ic{position:relative;z-index:1;display:flex;color:#0b57d0;transition:color .2s}
+.dm-ic svg{width:12px!important;height:12px!important}
+.dm-ring.hi .dm-ic{color:#fff}
+.dm-ok{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.3)}
+.dm-ring.ok .dm-wave{height:110%}
+.dm-ring.ok .dm-orb{animation:dmOrb 1s linear infinite,dmOut .3s forwards}
+.dm-ring.ok .dm-ic{opacity:0}
+.dm-ring.ok .dm-ok{animation:dmPop .38s cubic-bezier(.3,1.7,.5,1) .12s forwards}
+.dm-ok path{stroke-dasharray:14;stroke-dashoffset:14;animation:dmDraw .3s .2s forwards}
+@keyframes dmOut{to{opacity:0}}
+@keyframes dmPop{to{opacity:1;transform:none}}
+@keyframes dmDraw{to{stroke-dashoffset:0}}
+.attbtn .dm-ring{width:20px;height:20px}
+/* 알약 버튼 자체가 동그라미로 줄었다가 다시 펴짐 */
+.dotm{position:relative;transition:width .32s cubic-bezier(.5,0,.3,1),padding .32s,border-radius .32s,border-color .2s!important;overflow:visible!important}
+.dotm .dm-lbl{transition:opacity .15s}
+.dotm.shrink{padding:0!important;border-radius:50%!important;border-color:#c9d6ee!important}
+.dotm.shrink .dm-lbl{opacity:0}
+.dotm>.dm-ring{position:absolute;left:50%;top:50%;width:calc(100% + 2px);height:calc(100% + 2px);transform:translate(-50%,-50%);box-shadow:none;background:transparent;opacity:0;transition:opacity .15s}
+.dotm.shrink>.dm-ring{opacity:1;transition-delay:.25s}
+.dotm>.dm-ring .dm-ic svg{width:15px!important;height:15px!important}
+/* 새로 붙은 첨부 파일이 톡 하고 나타남 */
+.afile.pop{animation:afPop .4s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes afPop{from{opacity:0;transform:translateY(6px) scale(.85)}}
+
 /* 제목: 눈에 잘 띄게 (첨부 칸과 헷갈리지 않게) */
 .subjfld .box{min-height:42px;border-color:#aeb7c4;border-width:1.5px}
 .subjfld .box:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(11,87,208,.12)}
@@ -702,6 +739,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793096670"></script>
+<script src="mail-c.js?v=1793098683"></script>
 </body>
 </html>

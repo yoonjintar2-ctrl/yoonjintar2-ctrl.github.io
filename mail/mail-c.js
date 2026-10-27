@@ -1288,8 +1288,13 @@ function applyFooter(id) {
 /* 첨부: 첨부 칸을 눌러 고르거나, 작성 화면 어디에든 끌어다 놓기 */
 const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
 function addFiles(list) {
-  [...list].forEach(f => cs.files.push({ name: f.name, size: f.size, file: f }));
+  const n0 = cs.files.length, arr = [...list]; if (!arr.length) return;
+  const tot0 = arr.reduce((x, f) => x + (f.size || 0), 0);
+  // '파일 첨부' 버튼: 동그라미로 줄고 → 점이 돌며 물이 차오르고 → 체크 → 다시 버튼으로 (큰 파일일수록 조금 더 길게)
+  dotMorph($('#attBtn'), 'clip', null, Math.min(1700, 900 + tot0 / 1048576 * 60)).catch(() => {});
+  arr.forEach(f => cs.files.push({ name: f.name, size: f.size, file: f }));
   renderFiles(); dirty();
+  $$('#attBox .afile').slice(n0).forEach((el, k) => { el.style.animationDelay = (0.9 + k * 0.07) + 's'; el.classList.add('pop'); });
   const tot = cs.files.reduce((x, f) => x + (f.size || 0), 0);
   if (tot > 25 * 1048576) toast(`첨부 합계가 ${fmtSize(tot)}예요. Gmail 한도(25MB)를 넘어서 이대로는 못 보내요 — 큰 파일은 드라이브 링크로`);
   else if ([...list].some(f => !f.size)) toast('크기가 0인 파일이 있어요. 폴더나 빈 파일인지 확인해 주세요');
@@ -3207,6 +3212,7 @@ async function saveAttToDrive(m, i, btn) {
     const url = f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`;
     saved[key] = url; store.set(sk, saved);
     toast(`'${a[1]}' 내 드라이브 > JIN-mail 첨부 폴더에 추가했어요`, openLink(url), '열기');
+    await dmFinish(m, i, 'drv');
   } catch (e) { toast('드라이브에 올리지 못했어요: ' + e.message); }
   finally { setAProg(m, i, 'drv', false); }
 }
@@ -3223,6 +3229,40 @@ function xhrUpload(url, ctype, body, onProg) {
     x.onerror = () => rej(new Error('네트워크 오류')); x.send(body);
   });
 }
+
+/* '점이 일한다' 진행 효과 (2026-10-27) — 동그라미 테두리를 도는 점 + 차오르는 물 + 완료 체크 */
+const DM_OK = '<svg viewBox="0 0 24 24" width="13" height="13"><path d="M5.5 12.5l4.2 4.2 8.8-9.4" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const dmRing = (f, ic) => `<span class="dm-ring${f == null ? ' dm-ind' : ''}${f != null && f >= 0.55 ? ' hi' : ''}" style="--p:${f == null ? 0.3 : Math.max(0, Math.min(1, f))}"><span class="dm-fill"><i class="dm-wave"></i></span><span class="dm-orb"><i></i></span><span class="dm-ic">${ico(ic, 12)}</span><span class="dm-ok">${DM_OK}</span></span>`;
+function dmSet(ring, f) {
+  if (f === 'ok') { ring.classList.remove('dm-ind'); ring.style.setProperty('--p', 1); ring.classList.add('hi', 'ok'); return; }
+  ring.classList.toggle('dm-ind', f == null); if (f != null) { ring.style.setProperty('--p', Math.max(0, Math.min(1, f))); ring.classList.toggle('hi', f >= 0.55); }
+}
+// 첨부 다운로드·드라이브 추가가 끝나면: 물이 꽉 차고 체크 → 잠깐 보여 준 뒤 원래 아이콘으로
+function dmFinish(m, i, kind) {
+  const btn = st.open === m.id && $(`#view [data-${kind}="${i}"]`), ring = btn && $('.dm-ring', btn);
+  if (!ring) return Promise.resolve(); dmSet(ring, 'ok'); return new Promise(z => setTimeout(z, 950));
+}
+// 알약 버튼 전체를 동그라미로 줄여 진행을 보여 주고 다시 펴기 (예: '파일 첨부'). work: 진행률 0~1을 알려 주는 콜백을 받는 함수
+async function dotMorph(btn, ic, work, minMs) {
+  if (!btn || btn.classList.contains('dotm')) return work ? work(() => {}) : undefined;
+  const w0 = btn.offsetWidth, h0 = btn.offsetHeight;
+  if (!$('.dm-lbl', btn)) { const l = document.createElement('span'); l.className = 'dm-lbl'; l.style.cssText = 'display:inline-flex;align-items:center;gap:5px;white-space:nowrap'; while (btn.firstChild) l.append(btn.firstChild); btn.append(l); }
+  btn.style.width = w0 + 'px'; btn.classList.add('dotm');
+  const tmp = document.createElement('span'); tmp.innerHTML = dmRing(0, ic); const ring = tmp.firstChild; btn.append(ring);
+  void btn.offsetWidth; btn.classList.add('shrink'); btn.style.width = h0 + 'px';
+  const t0 = Date.now(), dur = minMs || 1100; let real = 0, res, err;
+  // 실제 진행과 '보기 좋은 최소 시간' 중 느린 쪽으로 물을 채움
+  const tick = setInterval(() => { const vis = Math.min(1, (Date.now() - t0 - 250) / (dur - 250)); dmSet(ring, Math.max(0, Math.min(real, vis) * 0.94)); }, 60);
+  try { res = work ? await work(f => { real = f; }) : undefined; real = 1; } catch (e) { err = e; }
+  while (Date.now() - t0 < dur) await new Promise(z => setTimeout(z, 40));
+  clearInterval(tick);
+  if (!err) { dmSet(ring, 'ok'); await new Promise(z => setTimeout(z, 750)); }
+  btn.classList.remove('shrink'); btn.style.width = w0 + 'px';
+  ring.style.opacity = '0';
+  await new Promise(z => setTimeout(z, 340));
+  ring.remove(); btn.classList.remove('dotm'); btn.style.width = '';
+  if (err) throw err; return res;
+}
 // 첨부 진행 상황 (도넛 게이지) — key: 메일:번호:종류(dl/drv)
 const APROG = new Map();
 const donut = f => f == null ? `<svg class="donut spin" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" class="dbg"/><circle cx="10" cy="10" r="7" class="dfg" stroke-dasharray="11 44"/></svg>`
@@ -3230,14 +3270,15 @@ const donut = f => f == null ? `<svg class="donut spin" viewBox="0 0 20 20"><cir
 function attBtns(m, i, n) {
   const k = m.id + ':' + i, saved = m.real && (store.get('drive-saved', {}))[m.gid + ':' + n];
   const pd = APROG.get(k + ':dl'), pv = APROG.get(k + ':drv');
-  return `<button class="attbtn attdl${pd !== undefined ? ' busy' : ''}" data-dl="${i}" title="내 PC에 다운로드">${pd !== undefined ? donut(pd) : ico('dl', 15)}</button>`
-    + `<button class="attbtn attdrv${pv !== undefined ? ' busy' : ''}${saved ? ' done' : ''}" data-drv="${i}" title="${saved ? '드라이브에 추가됨 · 누르면 드라이브에서 열기' : '내 드라이브에 추가'}">${pv !== undefined ? donut(pv) : ico('drive', 15)}</button>`;
+  return `<button class="attbtn attdl${pd !== undefined ? ' busy' : ''}" data-dl="${i}" title="내 PC에 다운로드">${pd !== undefined ? dmRing(pd, 'dl') : ico('dl', 15)}</button>`
+    + `<button class="attbtn attdrv${pv !== undefined ? ' busy' : ''}${saved ? ' done' : ''}" data-drv="${i}" title="${saved ? '드라이브에 추가됨 · 누르면 드라이브에서 열기' : '내 드라이브에 추가'}">${pv !== undefined ? dmRing(pv, 'drive') : ico('drive', 15)}</button>`;
 }
 function setAProg(m, i, kind, f) {
   const key = m.id + ':' + i + ':' + kind;
   if (f === false) APROG.delete(key); else APROG.set(key, f);
   if (st.open !== m.id) return;
   const btn = $(`#view [data-${kind}="${i}"]`); if (!btn) return;
+  const ring = $('.dm-ring', btn); if (ring && f !== false) { dmSet(ring, f); return; }  // 진행 중엔 그 자리에서 물 높이만 (점 애니메이션이 끊기지 않게)
   const w = document.createElement('span'); w.innerHTML = attBtns(m, i, m.att[i][1]);
   btn.replaceWith(w.querySelector(`[data-${kind}]`));
 }
@@ -3271,6 +3312,7 @@ async function downloadAtt(m, a) {
     const url = URL.createObjectURL(blob), ln = document.createElement('a'); ln.href = url; ln.download = a[1]; document.body.append(ln); ln.click(); ln.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
     toast(`'${a[1]}' 다운로드 폴더에 받았어요`);
+    await dmFinish(m, i, 'dl');
   } catch (e) { toast('내려받지 못했어요: ' + e.message); }
   finally { setAProg(m, i, 'dl', false); }
 }
