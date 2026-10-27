@@ -137,7 +137,7 @@ const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const nl = s => esc(s).replace(/\n/g, '<br>');
-const isMe = p => p && p.email === ME.email;
+const isMe = p => !!p && !!p.email && p.email.toLowerCase() === (ME.email || '').toLowerCase();
 const nameOf = p => isMe(p) ? '나' : p.name;
 const fmtD = d => (d.getMonth() + 1) + '/' + d.getDate();
 function toast(t, undo, label) {
@@ -864,14 +864,16 @@ function applyReplyDrafts() { const all = store.get(rdKey(), {}); if (!Object.ke
 /* ───────── 새 메일 임시저장 (이 PC) ───────── */
 const ndKey = () => 'nd-' + (real.on ? ME.email : 'sample');
 const ndList = () => store.get(ndKey(), []);
+const ND_MEM = new Map();  // 직접 고른 첨부 파일 내용 (이 창이 열려 있는 동안만 — 저장소에는 못 넣음)
 function ndSave() {
   if (!cs.nd) cs.nd = Date.now();
+  ND_MEM.set(cs.nd, cs.files.slice());
   const d = draftNow(); d.files = d.files.filter(f => f.fwd);  // 직접 고른 파일은 브라우저 보안상 다시 첨부해야 함
   const L = ndList().filter(x => x.k !== cs.nd); L.unshift({ k: cs.nd, at: Date.now(), d, lost: cs.files.length - d.files.length });
   try { store.set(ndKey(), L); } catch (e) { d.html = d.html.replace(/src="data:[^"]{2000,}"/g, 'src=""'); try { store.set(ndKey(), L); } catch (e2) { /* 저장 공간 부족 */ } }
 }
-function ndRemove(k) { if (!k) return null; const L = ndList(); const x = L.find(y => y.k === k); store.set(ndKey(), L.filter(y => y.k !== k)); return x || null; }
-function ndRestore(x) { if (!x) return; const L = ndList().filter(y => y.k !== x.k); L.unshift(x); store.set(ndKey(), L); }
+function ndRemove(k) { if (!k) return null; const L = ndList(); const x = L.find(y => y.k === k); store.set(ndKey(), L.filter(y => y.k !== k)); if (x) x._files = ND_MEM.get(k); ND_MEM.delete(k); return x || null; }
+function ndRestore(x) { if (!x) return; const L = ndList().filter(y => y.k !== x.k); L.unshift(x); store.set(ndKey(), L); if (x._files) ND_MEM.set(x.k, x._files); }
 // 목록에 보일 모양 (id는 음수: 진짜 메일과 겹치지 않게)
 function ndMails() {
   return ndList().map(x => { const when = new Date(x.at), day = new Date(when); day.setHours(0, 0, 0, 0); const t = (x.d.html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
@@ -880,8 +882,9 @@ function ndMails() {
 function openNd(id) {
   const x = ndList().find(y => -y.k === id); if (!x) return;
   flushCompose(); st.open = null; st.ndOpen = id;
-  loadDraft(Object.assign({}, x.d, { nd: x.k, kind: 'new', mailId: null }));
-  if (x.lost) toast(`직접 첨부했던 파일 ${x.lost}개는 다시 첨부해 주세요`);
+  const mem = ND_MEM.get(x.k);  // 같은 창에서 닫았다 열면 첨부 파일도 그대로
+  loadDraft(Object.assign({}, x.d, { nd: x.k, kind: 'new', mailId: null, files: mem ? mem.slice() : x.d.files }));
+  if (x.lost && !mem) toast(`직접 첨부했던 파일 ${x.lost}개는 다시 첨부해 주세요`);
   renderList();
 }
 /* ───────── 작성 ───────── */
@@ -906,7 +909,7 @@ function fmtToolbar() {
 function renderFooterBar() {
   $('#foot').innerHTML = `풋터 ${FOOTERS.map(f => `<button class="chip${cs.footer === f.id ? ' on' : ''}" data-fid="${f.id}">${esc(f.name)}</button>`).join('')}<button class="lnk" data-set="footers">풋터 설정</button>`;
 }
-function setChips(box, people) { $$('.rc', box).forEach(x => x.remove()); const inp = $('input', box); people.forEach(p => box.insertBefore(chipEl(p), inp)); foldChips(box, true); }
+function setChips(box, people) { $$('.rc', box).forEach(x => x.remove()); const inp = $('input', box); inp.value = ''; people.forEach(p => box.insertBefore(chipEl(p), inp)); foldChips(box, true); }
 // 작성 화면: 받는사람이 20명을 넘으면 접어 두고, 칸을 누르면 모두 펼침
 function foldChips(box, on) {
   const all = $$('.rc', box), fold = on && all.length > PPL_MAX;
@@ -923,6 +926,15 @@ function chipEl(p) {
   return c;
 }
 const chipsOf = box => $$('.rc', box).map(c => ({ name: c.dataset.name, email: c.dataset.email }));
+const RCPT_RE = /^[^@\s<>,;"]+@[^@\s<>,;"]+\.[^@\s<>,;"]+$/;
+// 받는사람·참조·숨은참조에 이미 있는 주소면 알려 주고 true
+function rcptTaken(email, box) {
+  const e = (email || '').toLowerCase();
+  for (const [id, nm] of [['#toBox', '받는사람'], ['#ccBox', '참조'], ['#bccBox', '숨은참조']]) { const b = $(id); if (!b) continue; if (chipsOf(b).some(p => p.email.toLowerCase() === e)) { toast(`${email}은(는) 이미 ${nm}에 있어요`); return true; } }
+  return false;
+}
+// 받는사람 칸들에 글자로 남은 주소를 칩으로 (보내기 직전). 주소 꼴이 아닌 글자가 있으면 false
+const commitRcpts = () => ['#toBox', '#ccBox', '#bccBox'].every(id => { const b = $(id); return !b || !b._commit || b._commit(false); });
 const footerStyle = f => `font-family:'${f.font.family}',Pretendard,sans-serif;font-size:${f.font.size}pt;color:${f.font.color}`;
 // 풋터 맨 앞의 빈 줄(<br>, 빈 문단)은 떼어 냄 — 작성 칸과 풋터 사이가 너무 벌어지지 않게
 function trimLead(html) {
@@ -989,8 +1001,10 @@ function buildDraft(kind, m) {
   // 맨 위 인사말: 설정 > 일반에서 정함 (기본은 비움 — 풋터에 인사말이 있으면 겹치지 않게)
   let to = [], cc = [], subj = '', quote = '', text = SET.greeting ? SET.greeting.replace(/\n*$/, '\n') : '';
   if (m && kind !== 'new') {
-    if (kind === 'reply' || kind === 'draft') to = [m.sent ? m.to[0] : m.from];
-    if (kind === 'all') { to = m.sent ? m.to : [m.from, ...m.to.filter(p => !isMe(p))]; cc = m.cc.filter(p => !isMe(p)); }
+    const sender = m.replyTo && m.replyTo.email && !isMe(m.replyTo) ? m.replyTo : m.from;  // Reply-To가 있으면 거기로
+    const uniq = list => { const seen = new Set(); return list.filter(p => p && p.email && !seen.has(p.email.toLowerCase()) && seen.add(p.email.toLowerCase())); };
+    if (kind === 'reply' || kind === 'draft') to = [m.sent ? m.to[0] : sender].filter(Boolean);
+    if (kind === 'all') { to = uniq(m.sent ? m.to : [sender, ...m.to.filter(p => !isMe(p))]); const inTo = new Set(to.map(p => p.email.toLowerCase())); cc = uniq(m.cc.filter(p => !isMe(p) && !inTo.has(p.email.toLowerCase()))); }
     subj = (kind === 'fwd' ? 'FW: ' : 'RE: ') + m.subj.replace(/^((re|fw|fwd):\s*)+/i, '');
     // 전체 히스토리: 이 메일 + 그 이전 메일 전부를 차례로 이어 붙임
     const hdr = x => `-----원본 메일-----\n보낸 사람: ${x.from.name} <${x.from.email}>\n보낸 날짜: ${fmtD(dayOf(x))} ${x.t}\n받는 사람: ${x.to.map(p => p.name).join(', ')}${x.cc && x.cc.length ? '\n참조: ' + x.cc.map(p => p.name).join(', ') : ''}\n제목: ${m.subj}\n\n${x.body}`;
@@ -1044,8 +1058,22 @@ function caretInFooter(f) {
   return mk;
 }
 // 본문에 처음 들어올 때: Tab 등 키보드로 오면 커서 자리로, 마우스로 누른 곳이 있으면 거기 그대로
-let cbodyMouse = 0;
-document.addEventListener('mousedown', e => { if (e.target.closest && e.target.closest('#cbody')) cbodyMouse = Date.now(); }, true);
+let cbodyMouse = 0; const lastEdit = { r: null };
+document.addEventListener('input', e => { if (e.target.id === 'cbody') { const s = getSelection(); if (s.rangeCount) lastEdit.r = s.getRangeAt(0).cloneRange(); } }, true);
+document.addEventListener('mousedown', e => {
+  if (!(e.target.closest && e.target.closest('#cbody'))) return; cbodyMouse = Date.now();
+  // 본문 아래 빈 곳을 누르면 브라우저는 풋터(서명) 맨 끝에 커서를 둠 → 풋터 위 글 쓰는 자리로 옮김
+  const b = $('#cbody'), f = $('.gp-footer', b); if (e.target !== b || !f || e.button !== 0) return;
+  const fr = f.getBoundingClientRect(), q = $('.quote', b); if (e.clientY < fr.top || (q && e.clientY >= q.getBoundingClientRect().top)) return;
+  e.preventDefault(); b.focus();
+  const mk = $('#gpCaret'); if (mk) { caretAt(mk); return; }
+  const le = lastEdit.r; if (le && b.contains(le.startContainer) && !le.startContainer.parentElement.closest('.quote')) { const s0 = getSelection(); s0.removeAllRanges(); s0.addRange(le.cloneRange()); return; }  // 마지막으로 글 쓰던 자리
+  let prev = f.previousElementSibling;
+  if (!prev) { prev = document.createElement('div'); prev.innerHTML = '<br>'; f.before(prev); }
+  const r = document.createRange(); r.selectNodeContents(prev); r.collapse(false);
+  if (prev.lastChild && prev.lastChild.nodeName === 'BR') r.setStartBefore(prev.lastChild), r.collapse(true);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}, true);
 document.addEventListener('focusin', e => {
   if (e.target.id !== 'cbody') return; const mk = $('#gpCaret'); if (!mk) return;
   if (Date.now() - cbodyMouse < 400) { mk.remove(); return; }
@@ -1082,7 +1110,9 @@ function saveDraft() {
   renderList(); renderNav();
 }
 function flushCompose() { if (cs.saving) saveDraft(); }
-window.addEventListener('beforeunload', e => { if (cs.saving) { toast('임시저장 중이에요. 잠시 후 닫아 주세요'); e.preventDefault(); e.returnValue = '임시저장 중입니다'; } });
+// 새로고침·창 닫기·다른 탭으로 갈 때: 1.2초 기다리지 않고 바로 저장 (이 PC 저장소는 즉시 기록됨)
+window.addEventListener('beforeunload', () => { try { if (cs.saving) saveDraft(); } catch (e) { /* */ } });
+document.addEventListener('visibilitychange', () => { if (document.hidden) try { flushCompose(); } catch (e) { /* */ } });
 function closeCompose() {
   flushCompose();
   if (document.body.classList.contains('popmode') && !st.open) { window.close(); return; }
@@ -1143,7 +1173,9 @@ const popFeatures = 'popup,width=1000,height=880';
 function popCompose(d) {
   window.__jinPop = d;
   try { store.set('pop-draft', Object.assign({}, d, { files: (d.files || []).filter(f => f.fwd) })); } catch (e) { /* 너무 크면 저장 생략 */ }
-  window.open(location.pathname + '#compose', '_blank', popFeatures);
+  const w = window.open(location.pathname + '#compose', '_blank', popFeatures);
+  if (!w) { toast('새 창이 차단됐어요. 주소창 오른쪽의 팝업 차단 표시에서 허용해 주세요 (작성 내용은 그대로예요)'); return false; }
+  return true;
 }
 function popView(id) {
   const m = MAILS.find(x => x.id === id);
@@ -1156,7 +1188,14 @@ function popView(id) {
 const u8b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
 const strB64 = t => u8b64(new TextEncoder().encode(t));
 const wrap76 = b => b.replace(/.{1,76}/g, '$&\r\n');
-const encHdr = t => /^[\x20-\x7e]*$/.test(t) ? t : '=?UTF-8?B?' + strB64(t) + '?=';
+// 한글 등은 RFC 2047 encoded-word 로. 한 조각이 75자를 넘지 않게 나눠서(글자 중간에서 끊지 않음) 줄바꿈+공백으로 이어 붙임
+const encHdr = t => {
+  if (/^[\x20-\x7e]*$/.test(t)) return t;
+  const enc = new TextEncoder(), out = []; let cur = '';
+  for (const ch of t) { if (enc.encode(cur + ch).length > 45 && cur) { out.push(cur); cur = ''; } cur += ch; }
+  if (cur) out.push(cur);
+  return out.map(x => '=?UTF-8?B?' + strB64(x) + '?=').join('\r\n ');
+};
 const addrHdr = list => list.map(p => p.name && p.name !== p.email ? `${encHdr(p.name)} <${p.email}>` : p.email).join(', ');
 const blobB64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.onerror = rej; r.readAsDataURL(blob); });
 const fileHdrName = n => `filename="${encHdr(n)}"; filename*=UTF-8''${encodeURIComponent(n)}`;
@@ -1264,12 +1303,27 @@ function composeDraftForSend() {
   else if (cs.thread) Object.assign(d, cs.thread);
   return d;
 }
+// 작성 중인 본문에서 내가 쓴 글자만 (풋터·원본 인용 제외)
+// 풋터 안 빈 줄에 쓰는 경우도 있어서 풋터를 통째로 빼지 않고, 처음 넣은 풋터 글자와 같은 부분만 뺌
+function myBodyText() {
+  const norm = t => t.replace(/[\s\u00a0\u3000]+/g, '').trim();
+  const d = document.createElement('div'); d.innerHTML = $('#cbody').innerHTML; $$('.quote, .gp-pm, #gpCaret', d).forEach(x => x.remove());
+  const fEl = $('.gp-footer', d), f = fEl && FOOTERS.find(x => x.id === fEl.dataset.footer);
+  let all = d.textContent.replace(/[\s\u00a0\u3000]+/g, ' ').trim(), rich = !!d.querySelector('img, table');
+  if (fEl && f) { const t = document.createElement('div'); t.innerHTML = fillName(trimLead(f.html)); const pristine = norm(t.textContent);
+    if (norm(fEl.textContent) === pristine) { all = all.replace(fEl.textContent.replace(/[\s\u00a0\u3000]+/g, ' ').trim(), '').trim(); if (t.querySelector('img, table')) rich = !!$$('img, table', d).filter(x => !fEl.contains(x)).length; } }
+  return { text: all, rich };
+}
 async function sendMail() {
+  if (!commitRcpts()) return;  // 칸에 글자로 남은 주소는 칩으로, 주소 꼴이 아니면 멈춤
   const d = composeDraftForSend();
   if (!d.to.length && !d.cc.length && !(d.bcc || []).length) { toast('받는사람을 넣어 주세요'); $('#toBox input').focus(); return; }
-  const pend = $('#toBox input').value.trim() || $('#ccBox input').value.trim() || $('#bccBox input').value.trim();
-  if (pend) { toast(`'${pend}'이(가) 아직 받는사람 칸에 글자로 남아 있어요. Enter로 넣거나 지워 주세요`); return; }
   if (!d.subj.trim() && !confirm('제목 없이 보낼까요?')) return;
+  const mine = myBodyText();
+  if (!mine.text && !mine.rich && !$('#cbody .quote') && !d.files.length && !confirm('본문이 비어 있어요 (서명만 있음). 그대로 보낼까요?')) return;
+  // '첨부'라고 썼는데 파일이 없을 때 (원래 메일에 첨부가 있던 답장이면 그 얘기일 수 있으니 묻지 않음)
+  const om = MAILS.find(x => x.id === cs.mailId), omAtt = om && (om.att || []).some(a => !(a[3] && a[3].inline));
+  if (!d.files.length && !omAtt && /첨부|attach/i.test(mine.text) && !confirm('본문에 \'첨부\'라고 썼는데 첨부 파일이 없어요. 그대로 보낼까요?')) return;
   if (sendTotal(d) > 33 * 1048576) { toast('첨부가 너무 커요 (최대 약 33MB). 큰 파일은 드라이브 링크로 보내 주세요'); return; }
   if (!real.on) {  // 예시 메일 화면
     clearTimeout(cs.timer); cs.saving = false;
@@ -1315,7 +1369,7 @@ async function runSend(d, snap) {
   renderRead(true); renderList(); renderNav();
   let cancelled = false;
   // 5초 동안 '보내기 취소' 가능 → 그 뒤 실제 발송
-  toast('보내는 중… (5초 안에 취소할 수 있어요)', () => { cancelled = true; setDraft(keepDraft); if (orig0) orig0.draftD = keepD; cs.files = files; loadDraft(snap); cs.files = files; renderFiles(); renderList(); renderNav(); toast('보내기를 취소했어요'); });
+  toast('보내는 중… (5초 안에 취소할 수 있어요)', () => { cancelled = true; flushCompose(); if ($('#read').classList.contains('composing') && cs.nd !== snap.nd && cs.mailId == null && !cs.nd && myBodyText().text) ndSave(); setDraft(keepDraft); if (orig0) orig0.draftD = keepD; cs.files = files; loadDraft(snap); cs.files = files; renderFiles(); renderList(); renderNav(); toast('보내기를 취소했어요'); });
   await new Promise(z => setTimeout(z, 5000));
   if (cancelled) return;
   try {
@@ -1341,7 +1395,10 @@ function setupRcpt(box) {
   const inp = $('input', box), ac = box.nextElementSibling;
   let items = [], idx = 0;
   const close = () => { ac.classList.remove('on'); items = []; };
-  const add = p => { box.insertBefore(chipEl(p), inp); inp.value = ''; close(); dirty(); inp.focus(); };
+  const add = p => { inp.value = ''; close(); if (rcptTaken(p.email, box)) { inp.focus(); return; } box.insertBefore(chipEl(p), inp); dirty(); inp.focus(); };
+  // 칸에 남은 글자를 칩으로: 주소 꼴이면 넣고, 아니면 알려 줌 (quiet: 그냥 둠)
+  const commit = quiet => { const v = inp.value.trim().replace(/[,;]$/, ''); if (!v) return true; if (RCPT_RE.test(v)) { add({ name: v, email: v }); return true; } const ps = parseAddrs(v); if (ps.length) { inp.value = ''; ps.forEach(add); return true; } if (!quiet) toast(`'${v}'은(는) 메일 주소 꼴이 아니에요 (예: name@company.com)`); return false; };
+  box._commit = commit;
   const draw = () => {
     const q = inp.value.trim().toLowerCase();
     if (!q) { close(); return; }
@@ -1355,10 +1412,10 @@ function setupRcpt(box) {
   inp.addEventListener('input', () => { idx = 0; draw(); $$('.rc.sel', box).forEach(c => c.classList.remove('sel')); });
   inp.addEventListener('keydown', e => {
     if (ac.classList.contains('on') && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); idx = (idx + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; draw(); return; }
-    if (e.key === 'Enter' || e.key === ',' || e.key === ';' || e.key === 'Tab') {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ';' || e.key === 'Tab' || (e.key === ' ' && RCPT_RE.test(inp.value.trim()))) {
       if (items.length && ac.classList.contains('on')) { e.preventDefault(); add(items[idx]); return; }
-      const v = inp.value.trim().replace(/[,;]$/, '');
-      if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) { e.preventDefault(); add({ name: v, email: v }); }
+      if (e.key === 'Tab') { commit(true); return; }  // Tab은 다음 칸으로 넘어가면서 넣을 수 있는 것만
+      if (inp.value.trim()) { e.preventDefault(); commit(false); return; }
     }
     // 빈 칸에서 Ctrl+A → 받는사람 전체 선택, Ctrl+C → '이름 <주소>; …' 로 복사, Ctrl+X → 잘라내기
     if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !inp.value) { e.preventDefault(); $$('.rc', box).forEach(c => c.classList.add('sel')); }
@@ -1386,10 +1443,10 @@ function setupRcpt(box) {
     e.preventDefault();
     $$('.rc.sel', box).forEach(c => c.remove());  // 고른 칩이 있으면 글자처럼 바꿔 끼움
     const taken = new Set(chipsOf(box).map(p => p.email));
-    ps.forEach(p => { if (!taken.has(p.email)) { box.insertBefore(chipEl(p), inp); taken.add(p.email); } }); dirty();
+    ps.forEach(p => { if (!taken.has(p.email) && !rcptTaken(p.email, box)) { box.insertBefore(chipEl(p), inp); taken.add(p.email); } }); dirty();
   });
   ac.addEventListener('mousedown', e => { const it = e.target.closest('.it'); if (it) { e.preventDefault(); add(items[+it.dataset.i]); } });
-  inp.addEventListener('blur', () => setTimeout(close, 120));
+  inp.addEventListener('blur', () => setTimeout(() => { close(); if (inp.value.trim() && RCPT_RE.test(inp.value.trim())) { const v = inp.value.trim(); inp.value = ''; if (!rcptTaken(v, box)) { box.insertBefore(chipEl({ name: v, email: v }), inp); dirty(); } } }, 120));
   // 칩 클릭 = 선택 (Ctrl/Shift로 여러 개), 칩 위를 끌면 블록 선택
   let dragSel = null;
   box.addEventListener('mousedown', e => {
@@ -2373,6 +2430,7 @@ function parseMsg(g, full) {
   if (!plain && html) plain = new DOMParser().parseFromString(html, 'text/html').body.innerText || '';
   const when = new Date(+g.internalDate);
   return { labels: g.labelIds || null, gid: g.id, threadId: g.threadId, msgId: H['message-id'] || '', refs: H['references'] || '', when: +when, from: parsePeople(H.from)[0] || { name: '(알 수 없음)', email: '' }, to: parsePeople(H.to), cc: parsePeople(H.cc),
+    replyTo: parsePeople(H['reply-to'])[0] || null,
     subj: H.subject || '(제목 없음)', snippet: decodeEnt(g.snippet), body: full ? plain.replace(/\r/g, '').trim() : '', html: full ? html : '', att, full: !!full };
 }
 /* ───────── JIN-mail 자체 기록 (Gmail과 별개) ─────────
@@ -2425,7 +2483,7 @@ function toMail(meta, lab) {
   const when = new Date(meta.when), day = new Date(when); day.setHours(0, 0, 0, 0);
   const g = meta.gid, sent = lab.sent.has(g);
   const m = Object.assign({}, meta, { id: real.num(g), real: true, d: Math.max(0, Math.round((TODAY - day) / 86400000)), t: when.toTimeString().slice(0, 5), prev: [], draft: null, sent: sent ? 1 : 0 });
-  if (m.from.email === ME.email) m.from = ME;
+  if (isMe(m.from)) m.from = ME;
   let r = J.data && J.data.m[g];
   if (!r) {
     const isNew = !J.data || meta.when > J.data.initAt, received = !sent || lab.inbox.has(g);
@@ -2924,7 +2982,7 @@ function wire() {
   });
   $('#closeC').addEventListener('click', closeCompose);
   $('#discard').addEventListener('click', discardCompose);
-  $('#popBtn').addEventListener('click', () => { flushCompose(); popCompose(draftNow()); $('#read').classList.remove('composing'); renderRead(); });
+  $('#popBtn').addEventListener('click', () => { flushCompose(); if (!popCompose(draftNow())) return; $('#read').classList.remove('composing'); renderRead(); });
   $('#attBox').addEventListener('click', e => { if (!e.target.closest('.afile')) $('#filePick').click(); });
   $('#filePick').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
   $('#imgPick').addEventListener('change', e => {
