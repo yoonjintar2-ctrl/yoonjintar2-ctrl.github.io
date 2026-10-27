@@ -33,7 +33,7 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .ib:disabled{opacity:.35;cursor:default;background:transparent}
 
 /* ── 맨 위 ── */
-.top{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--chrome)}  /* 위 검색줄 + 왼쪽 편지함 = 같은 회색 틀(고정된 머리 부분) */
+.top{flex:none;display:flex;align-items:center;gap:8px;padding:16px 14px;background:var(--chrome)}  /* 위 검색줄 + 왼쪽 편지함 = 같은 회색 틀(고정된 머리 부분) */
 .newbtn{width:calc(var(--w-nav) - 26px);min-width:120px;flex:none;height:40px;justify-content:center;font-size:15px;border-radius:10px}
 .sbwrap{position:relative;flex:0 1 560px;min-width:200px}
 .sbox{display:flex;align-items:center;height:40px;border:1.5px solid #c9ced6;border-radius:10px;background:#fff;overflow:hidden}
@@ -89,6 +89,14 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .body{flex:1;min-height:0;display:flex;background:var(--chrome)}
 nav{width:var(--w-nav);flex:none;background:var(--chrome);overflow:auto;padding:8px 0 20px}
 nav + .split::after{background:transparent}
+/* 편지함 목록 스크롤바: 평소엔 숨기고 굴릴 때만 얇게, 화살표·흰 바탕 없이 */
+nav::-webkit-scrollbar{width:8px;background:transparent}
+nav::-webkit-scrollbar-track{background:transparent}
+nav::-webkit-scrollbar-button{display:none;width:0;height:0}
+nav::-webkit-scrollbar-corner{background:transparent}
+nav::-webkit-scrollbar-thumb{background:transparent;border-radius:8px;border:2px solid transparent;background-clip:padding-box}
+nav.scrolling::-webkit-scrollbar-thumb{background-color:rgba(60,72,88,.32)}
+nav.scrolling::-webkit-scrollbar-thumb:hover{background-color:rgba(60,72,88,.5)}
 .list{border-top-left-radius:12px;overflow:hidden}
 .split{width:7px;flex:none;cursor:col-resize;background:transparent;margin:0 -3px;position:relative;z-index:5}
 .split::after{content:"";position:absolute;top:0;bottom:0;left:3px;width:1px;background:var(--line);transition:background .12s}
@@ -588,8 +596,8 @@ body.resizing{cursor:col-resize;user-select:none}
         <span style="flex:1"></span>
         <button class="btn" id="popBtn" title="새 창에서 쓰기"></button>
         <button class="btn" id="closeC"></button>
-        <span class="sendgrp"><button class="btn pri" id="send" title="보내기 (Ctrl+Enter)">보내기</button></span>
         <button class="ib" id="discard" title="작성 중인 메일 삭제"></button>
+        <span class="sendgrp"><button class="btn pri" id="send" title="보내기 (Ctrl+Enter)">보내기</button></span>
       </div>
       <div class="fields">
         <div class="fld"><label>받는사람</label><div class="box rcpt" id="toBox"><input autocomplete="off"></div><div class="ac"></div></div>
@@ -607,6 +615,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793076068"></script>
+<script src="mail-c.js?v=1793076753"></script>
 </body>
 </html>

@@ -2986,6 +2986,8 @@ function setupDragScroll() {
   // 혹시 휠 신호가 오는 환경이면 그대로 스크롤
   document.addEventListener('wheel', e => { if (!drag) return; const el = e.target.closest && e.target.closest('#nav, #rows'); if (el) el.scrollTop += e.deltaY; }, { passive: true });
 }
+// 편지함 목록: 굴리는 동안만 스크롤바 보이기 (끝나고 0.9초 뒤 숨김)
+(() => { let t = 0; document.addEventListener('scroll', e => { if (e.target.id !== 'nav') return; const n = e.target; n.classList.add('scrolling'); clearTimeout(t); t = setTimeout(() => n.classList.remove('scrolling'), 900); }, true); })();
 function setupSplits() {
   const Wd = store.get('widths', null);
   if (Wd) { document.documentElement.style.setProperty('--w-nav', Wd.nav + 'px'); document.documentElement.style.setProperty('--w-list', Wd.list + 'px'); }
