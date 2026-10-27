@@ -141,9 +141,14 @@ const isMe = p => !!p && !!p.email && p.email.toLowerCase() === (ME.email || '')
 const nameOf = p => isMe(p) ? '나' : p.name;
 const fmtD = d => (d.getMonth() + 1) + '/' + d.getDate();
 function toast(t, undo, label) {
+  // '되돌리기'가 있는 안내(이동·삭제·보내기)는 5초 동안 다른 일반 안내에 덮이지 않게 — 일반 안내는 끝난 뒤에 보여 줌
+  if (!undo && toast.lock && Date.now() < toast.lock) { clearTimeout(toast.q); toast.q = setTimeout(() => toast(t), toast.lock - Date.now() + 50); return; }
+  const el = $('#toast');
   $('#toastT').textContent = t;
-  const u = $('#toastUndo'); u.hidden = !undo; u.textContent = label || '되돌리기'; u.onclick = () => { undo(); $('#toast').classList.remove('on'); };
-  $('#toast').classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => $('#toast').classList.remove('on'), undo ? 5000 : 2400);
+  const u = $('#toastUndo'); u.hidden = !undo; u.textContent = label || '되돌리기'; u.onclick = () => { toast.lock = 0; undo(); el.classList.remove('on'); };
+  toast.lock = undo ? Date.now() + 5000 : 0;
+  el.classList.toggle('undo', !!undo); el.classList.remove('tick'); void el.offsetWidth; if (undo) el.classList.add('tick');  // 남은 시간 막대 다시 시작
+  el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => { el.classList.remove('on'); toast.lock = 0; }, undo ? 5000 : 2400);
 }
 const childrenOf = id => BOXES.filter(b => b.parent === id);
 const descIds = id => [id, ...childrenOf(id).flatMap(c => descIds(c.id))];
@@ -398,7 +403,10 @@ function renderTop() {
   let pill = $('#srcPill'); if (!pill) { pill = document.createElement('span'); pill.id = 'srcPill'; $('#gear').before(pill); }
   const R = typeof real !== 'undefined' ? real : {};
   pill.className = 'srcpill' + (R.expired ? ' warn' : R.on ? ' real' : '');
-  pill.textContent = R.expired ? (auth.needClick ? '로그인 연장 — 화면을 한 번 눌러 주세요' : 'Gmail 다시 연결하기 (클릭)') : R.prog ? R.prog : R.on ? `Gmail · ${ME.email}` : '예시 메일';
+  pill.textContent = R.expired ? (auth.needClick ? '로그인 연장 — 화면을 한 번 눌러 주세요' : 'Gmail 다시 연결하기 (클릭)') : R.on ? `Gmail · ${ME.email}` : R.prog ? R.prog : '예시 메일';
+  // 뒤에서 하는 일(옛날 메일 저장·본문 저장 등)은 눈에 띄지 않는 회색 모래시계로만, 마우스를 올리면 내용
+  let hg = $('#bgWork'); if (!hg) { hg = document.createElement('span'); hg.id = 'bgWork'; hg.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9"/></svg>'; pill.before(hg); }
+  hg.hidden = !(R.on && R.prog && !R.expired); hg.title = R.prog || '';
   pill.title = R.expired ? '로그인이 만료됐어요. 누르면 다시 연결해요' : '';
   pill.onclick = R.expired ? () => (R.on ? renewToken().catch(e => toast('연결하지 못했어요: ' + e.message)) : loadReal(true)) : null;
   const set = (id, ic, on, tip) => { const b = $(id); b.innerHTML = ico(ic); b.classList.toggle('on', !!on); b.title = tip; };
@@ -1275,7 +1283,7 @@ function renderFiles() {
   const box = $('#attBox');
   $$('.afile', box).forEach(x => x.remove());
   const total = cs.files.reduce((a, f) => a + f.size, 0);
-  $('#attHint').textContent = cs.files.length ? `총 ${fmtSize(total)} · 클릭해서 더 첨부` : '클릭해서 파일 고르기 · 작성 화면 어디에든 끌어다 놓기';
+  $('#attHint').textContent = cs.files.length ? `총 ${fmtSize(total)}` : '또는 작성 화면 어디에든 파일을 끌어다 놓으세요';
   cs.files.forEach((f, i) => {
     const el = document.createElement('span'); el.className = 'afile'; el.draggable = true; el.title = '끌어서 순서 바꾸기';
     el.innerHTML = `${ftIcon(FT_OF[extOf(f.name)] || 'FILE', 15, f.name)}${esc(f.name)} <small>${fmtSize(f.size)}</small>${f.fwd ? '<small class="fwdtag">원본 첨부</small>' : ''}<button title="빼기">✕</button>`;
@@ -2424,8 +2432,8 @@ async function logout(wipe) {
   location.reload();
 }
 function notifyTestNow() {
-  const opt = { body: '새 메일이 오면 이렇게 알려 드려요', icon: 'appicons/notify-64.png', tag: 'jin-test' };
-  try { if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification('JIN-mail 알림 시험', opt)); else new Notification('JIN-mail 알림 시험', opt); } catch (e) { toast('알림을 보내지 못했어요: ' + e.message); }
+  const opt = { body: '새 메일이 오면 이렇게 보낸사람·제목과 본문 앞부분을 알려 드려요', tag: 'jin-test' };
+  try { if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification('보낸사람 이름 · [예시] 메일 제목', opt)); else new Notification('보낸사람 이름 · [예시] 메일 제목', opt); } catch (e) { toast('알림을 보내지 못했어요: ' + e.message); }
 }
 function openSettings(tab) {
   closeMenus();
@@ -2474,13 +2482,24 @@ function openSettings(tab) {
       let h = `<p class="desc">순서·위치는 왼쪽 목록에서 끌어서 바꿀 수 있고, 편지함에서 우클릭하거나 ⋮을 눌러도 같은 메뉴가 나와요. '자동 분류'로 조건을 정하면 새로 오는 메일이 그 편지함으로 들어가요.</p>
         <div class="opt" style="margin-bottom:8px"><button class="btn pri" id="runAllRules">${ico('where', 15)} 모든 분류 조건 지금 실행 (받은편지함 메일에 적용)</button></div>`;
       const walk = (p, dep) => childrenOf(p).forEach(b => {
-        h += `<div class="bxr" data-id="${b.id}" style="padding-left:${dep * 22}px">${ico('folder', 16)}<input type="text" value="${esc(b.name)}" data-k="name">
+        h += `<div class="bxr" data-id="${b.id}" style="padding-left:${dep * 22}px"><span class="bgrip" draggable="true" title="끌어서 순서·위치 바꾸기 (다른 편지함 가운데에 놓으면 그 안으로)">⠿</span>${ico('folder', 16)}<input type="text" value="${esc(b.name)}" data-k="name">
           <label class="opt" style="padding:0 6px;font-size:12.5px"><input type="checkbox" data-k="hide"${b.hidden ? ' checked' : ''}> 숨기기</label>
           <button class="btn" data-k="rules" style="padding:3px 8px">${ico('where', 14)} 자동 분류</button><button class="btn" data-k="sub" style="padding:3px 8px">${ico('plus', 14)} 하위</button><button class="ib" data-k="del" title="삭제">${ico('trash')}</button></div>`;
         walk(b.id, dep + 1);
       });
       walk(null, 0);
       body.innerHTML = h + `<button class="btn" id="addTop" style="margin-top:10px">${ico('plus')} 편지함 추가</button>`;
+      // 끌어서 순서·상하위 바꾸기: 줄 위쪽 1/3 → 그 위, 아래쪽 1/3 → 그 아래, 가운데 → 그 편지함 안(하위)
+      if (!body._bxDnD) { body._bxDnD = true;  // 탭을 다시 그려도 한 번만 연결
+      let bdrag = null;
+      const posOf = (row, e) => { const r = row.getBoundingClientRect(), y = (e.clientY - r.top) / r.height; return y < .3 ? 'before' : y > .7 ? 'after' : 'in'; };
+      const clr = () => $$('.bxr', body).forEach(x => x.classList.remove('drop-before', 'drop-after', 'drop-in'));
+      body.addEventListener('dragstart', e => { const g = e.target.closest('.bgrip'); if (!g) return; bdrag = g.closest('.bxr').dataset.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/x-jin-box', bdrag); g.closest('.bxr').classList.add('dragging'); });
+      body.addEventListener('dragover', e => { if (!bdrag) return; const row = e.target.closest('.bxr'); clr(); if (!row || row.dataset.id === bdrag || descIds(bdrag).includes(row.dataset.id)) return; e.preventDefault(); row.classList.add('drop-' + posOf(row, e)); });
+      body.addEventListener('dragleave', e => { if (!e.relatedTarget || !body.contains(e.relatedTarget)) clr(); });
+      body.addEventListener('drop', e => { if (!bdrag) return; const row = e.target.closest('.bxr'); e.preventDefault(); clr(); if (row && moveBox(bdrag, row.dataset.id, posOf(row, e))) { const nm = boxPath(bdrag); bdrag = null; rerender(); show('boxes'); toast(`'${nm}'(으)로 옮겼어요`); } bdrag = null; });
+      body.addEventListener('dragend', () => { bdrag = null; clr(); $$('.bxr.dragging', body).forEach(x => x.classList.remove('dragging')); });
+      }
     }
     if (t === 'app') {
       const st0 = APP.standalone(), perm = 'Notification' in window ? Notification.permission : 'unsupported';
@@ -2642,12 +2661,14 @@ function notifyNew(list) {
   const focused = document.visibilityState === 'visible' && document.hasFocus();
   // 화면을 보고 있거나 알림을 꺼 두었으면 화면 아래 짧은 안내만
   if (focused || !SET.notify || !('Notification' in window) || Notification.permission !== 'granted') { toast(`새 메일 ${list.length}통 — ${list[0].from.name || list[0].from.email}: ${list[0].subj}`); return; }
+  // 알림 모양: 큰 그림(로고) 없이 → 윈도우가 맨 위에 작은 JIN-mail 아이콘만 표시. 굵은 첫 줄 = 보낸사람·제목, 아래 = 본문 미리보기
   const one = (title, body, gid) => {
-    const opt = { body, icon: 'appicons/notify-64.png', badge: 'appicons/notify-64.png', tag: 'jin-' + gid, data: { id: gid } };
+    const opt = { body, tag: 'jin-' + gid, data: { id: gid }, silent: false };
     if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification(title, opt)).catch(() => {});
     else { try { const n = new Notification(title, opt); n.onclick = () => { window.focus(); openFromNotify(gid); n.close(); }; } catch (e) { /* */ } }
   };
-  if (list.length <= 3) list.forEach(m => one(m.from.name || m.from.email, m.subj, m.gid));
+  const peek = m => String(m.snippet || m.body || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+  if (list.length <= 3) list.forEach(m => one(`${m.from.name || m.from.email} · ${m.subj}`, peek(m), m.gid));
   else one(`새 메일 ${list.length}통`, list.slice(0, 3).map(m => `${m.from.name || m.from.email}: ${m.subj}`).join('\n'), list[0].gid);
 }
 /* ───────── 'JIN-mail 로그인 유지' 확장 프로그램 (설치돼 있으면) ─────────
@@ -3268,6 +3289,15 @@ function openWelcome(force) {
 
 /* ───────── 끌어서 놓기: 메일 → 편지함, 편지함 순서·위치 ───────── */
 let drag = null;
+// 편지함 옮기기: pos = before(위)·after(아래)·in(안으로 = 하위 편지함)
+function moveBox(dragId, targetId, pos) {
+  if (!dragId || !targetId || dragId === targetId || descIds(dragId).includes(targetId)) return false;
+  const me = boxById(dragId), tgt = boxById(targetId); if (!me || !tgt) return false;
+  BOXES = BOXES.filter(b => b !== me);
+  if (pos === 'in') { me.parent = tgt.id; BOXES.push(me); st.collapsed.delete(tgt.id); }
+  else { me.parent = tgt.parent; const i = BOXES.indexOf(tgt); BOXES.splice(pos === 'before' ? i : i + 1, 0, me); }
+  return true;
+}
 function navDrop(e, el, doIt) {
   const id = el.dataset.box;
   if (drag.kind === 'mail') { if (el.dataset.sys === 'trash') return doIt ? trashMails(drag.ids) : 'in'; if (!id) return null; return doIt ? moveTo(drag.ids, id) : 'in'; }
@@ -3276,11 +3306,7 @@ function navDrop(e, el, doIt) {
     const r = el.getBoundingClientRect(), y = (e.clientY - r.top) / r.height;
     const pos = y < .3 ? 'before' : y > .7 ? 'after' : 'in';
     if (!doIt) return pos;
-    const me = boxById(drag.id), tgt = boxById(id);
-    BOXES = BOXES.filter(b => b !== me);
-    const oldParent = me.parent;
-    if (pos === 'in') { me.parent = tgt.id; BOXES.push(me); st.collapsed.delete(tgt.id); }
-    else { me.parent = tgt.parent; const i = BOXES.indexOf(tgt); BOXES.splice(pos === 'before' ? i : i + 1, 0, me); }
+    moveBox(drag.id, id, pos);
     saveAll(); renderNav(); renderList(); renderRead();
   }
 }
@@ -3417,7 +3443,8 @@ function wire() {
   $('#closeC').addEventListener('click', closeCompose);
   $('#discard').addEventListener('click', discardCompose);
   $('#popBtn').addEventListener('click', () => { flushCompose(); if (!popCompose(draftNow())) return; $('#read').classList.remove('composing'); renderRead(); });
-  $('#attBox').addEventListener('click', e => { if (!e.target.closest('.afile')) $('#filePick').click(); });
+  $('#attBtn').innerHTML = ico('clip', 15) + ' 파일 첨부';
+  $('#attBtn').addEventListener('click', () => $('#filePick').click());  // 첨부 칸 전체가 아니라 버튼만 (끌어다 놓기는 작성 화면 어디든)
   $('#filePick').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
   $('#imgPick').addEventListener('change', e => {
     const file = e.target.files[0]; if (!file) return;

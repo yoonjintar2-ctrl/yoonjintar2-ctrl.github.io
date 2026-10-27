@@ -257,8 +257,15 @@ input.ck{width:15px;height:15px;margin:0;accent-color:var(--blue);cursor:pointer
 .bcctog{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--blue);font-size:12px;cursor:pointer;padding:2px 4px;z-index:1}
 .bcctog:hover{text-decoration:underline}
 #ccBox{padding-right:64px}
-.attbox{cursor:pointer;color:var(--mute);font-size:13px}
-.attbox:hover{border-color:var(--blue)}
+.attbox{flex:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:32px;color:var(--mute);font-size:12.5px}
+.attbox .attpick{height:30px;padding:0 12px;font-size:13px;display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #c9ced6;border-radius:8px;color:var(--ink)}
+.attbox .attpick:hover{border-color:var(--blue);color:var(--blue)}
+/* 제목: 눈에 잘 띄게 (첨부 칸과 헷갈리지 않게) */
+.subjfld .box{min-height:42px;border-color:#aeb7c4;border-width:1.5px}
+.subjfld .box:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(11,87,208,.12)}
+.subjfld label{color:var(--ink);font-weight:700}
+#subj{font-size:15.5px;font-weight:700;color:var(--ink)}
+#subj::placeholder{font-weight:500;color:#a0a6b0}
 .afile{display:inline-flex;align-items:center;gap:5px;border:1px solid #d5dae2;border-radius:6px;padding:2px 4px 2px 8px;background:#f8f9fb;font-size:12.5px;color:#3c4043}
 .afile small{color:var(--mute)}
 .afile button{border:0;background:none;color:var(--sub);padding:0 4px}
@@ -393,13 +400,30 @@ body.chipdragging,body.chipdragging *{cursor:grabbing!important}
 .ftr .ed:focus{border-color:var(--blue)}
 .ftr .ed img{max-width:100%}
 .ftr .rule{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;font-size:13px;color:var(--sub)}
-.bxr{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f1f3f5}
+.bxr{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f1f3f5;position:relative}
+.bxr .bgrip{cursor:grab;color:#9aa0a6;padding:0 2px;user-select:none}
+.bxr.dragging{opacity:.4}
+.bxr.drop-in{background:var(--blue-m);border-radius:6px}
+.bxr.drop-before::before,.bxr.drop-after::after{content:"";position:absolute;left:0;right:0;height:2px;background:var(--blue)}
+.bxr.drop-before::before{top:-1px}.bxr.drop-after::after{bottom:-1px}
 .bxr input[type=text]{width:190px;border:1px solid #c4cbd6;border-radius:6px;padding:4px 8px}
 .typo{position:fixed;z-index:70;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:8px 10px;display:flex;gap:6px;align-items:center;font-size:13px}
 .typo b{color:var(--blue)}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#202124;color:#fff;padding:10px 16px;border-radius:9px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:90;display:flex;gap:12px;align-items:center}
 .toast.on{opacity:1;pointer-events:auto}
 .toast button{border:0;background:none;color:#8ab4f8;font-weight:700}
+.toast.undo{overflow:hidden;padding-bottom:12px}
+.toast.undo::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:#8ab4f8;transform-origin:left}
+.toast.undo.tick::after{animation:toastTick 5s linear forwards}
+@keyframes toastTick{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+#bgWork{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;color:#a3a9b3;cursor:default}
+#bgWork[hidden]{display:none}
+#bgWork svg{animation:hgFlip 2.4s ease-in-out infinite}
+@keyframes hgFlip{0%,40%{transform:rotate(0)}50%,90%{transform:rotate(180deg)}100%{transform:rotate(180deg)}}
+/* 작성 화면 위 버튼: 높이·크기 통일 */
+.ctool .btn,.ctool .ib,.ctool .sendgrp .btn.pri:first-child{height:34px;min-width:84px;padding:0 14px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:13.5px}
+.ctool #discard{min-width:34px;width:34px;padding:0;border:1px solid #c9ced6;background:#fff}
+.ctool .sendgrp .btn.pri:first-child{font-weight:700}
 /* 첫 접속: 지메일 연결 */
 .welcome{width:min(520px,94vw);padding:28px 30px 22px;text-align:center}
 .welcome .logo{color:#444746;margin-bottom:8px}
@@ -633,8 +657,8 @@ body.resizing{cursor:col-resize;user-select:none}
         <div class="fld"><label>받는사람</label><div class="box rcpt" id="toBox"><input autocomplete="off"></div><div class="ac"></div></div>
         <div class="fld"><label>참조</label><div class="box rcpt" id="ccBox"><input autocomplete="off"></div><div class="ac"></div><button class="bcctog" id="bccTog" type="button" title="숨은참조 칸 열기">숨은참조</button></div>
         <div class="fld" id="bccFld" hidden><label>숨은참조</label><div class="box rcpt" id="bccBox"><input autocomplete="off"></div><div class="ac"></div></div>
-        <div class="fld"><label>제목</label><div class="box"><input id="subj" spellcheck="false"></div></div>
-        <div class="fld"><label>첨부</label><div class="box attbox" id="attBox"><span id="attHint">클릭해서 파일 고르기 · 작성 화면 어디에든 끌어다 놓기</span></div></div>
+        <div class="fld subjfld"><label>제목</label><div class="box"><input id="subj" spellcheck="false" placeholder="제목을 입력하세요"></div></div>
+        <div class="fld attfld"><label>첨부</label><div class="attbox" id="attBox"><button class="btn attpick" id="attBtn" type="button">파일 첨부</button><span id="attHint"></span></div></div>
       </div>
       <div class="fmt" id="fmt"></div>
       <div class="foot" id="foot"></div>
@@ -645,6 +669,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793093476"></script>
+<script src="mail-c.js?v=1793094080"></script>
 </body>
 </html>
