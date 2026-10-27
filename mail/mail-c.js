@@ -345,7 +345,7 @@ async function openRules(box) {
       bg.remove(); return;
     }
     const d = e.target.closest('[data-del]'); if (d) { try { await delRule(d.dataset.del); toast('조건을 지웠어요'); draw(); } catch (er) { toast('지우지 못했어요: ' + er.message); } return; }
-    if (e.target.closest('#runNow')) { runRules(null); return; }
+    if (e.target.closest('#runNow')) { dotMorph(e.target.closest('#runNow'), 'where', () => runRules(null)); return; }
     if (e.target.closest('#addRule')) {
       const btn = e.target.closest('#addRule'); if (btn.disabled) return;
       const r = { box, skipInbox: $('#skipIn', bg).checked }; $$('[data-f]', bg).forEach(i => { r[i.dataset.f] = i.value.trim(); });
@@ -2607,7 +2607,7 @@ function openSettings(tab) {
   body.addEventListener('click', async e => {
     const t = e.target.closest('button'); if (!t) return;
     const fr = t.closest('.ftr'), br = t.closest('.bxr');
-    if (t.id === 'clrCache') { if (!confirm('이 PC에 저장한 메일 목록·본문을 지울까요? (Gmail의 메일은 그대로예요. 다음에 열 때 다시 받아요)')) return; try { if (real.db) real.db.close(); real.db = null; indexedDB.deleteDatabase('jin-cache-' + ME.email); } catch (er) { /* */ } toast('저장한 메일을 비웠어요 — 새로고침하면 다시 받아요'); return; }
+    if (t.id === 'clrCache') { if (!confirm('이 PC에 저장한 메일 목록·본문을 지울까요? (Gmail의 메일은 그대로예요. 다음에 열 때 다시 받아요)')) return; dotMorph(t, 'trash', async () => { try { if (real.db) real.db.close(); real.db = null; indexedDB.deleteDatabase('jin-cache-' + ME.email); } catch (er) { /* */ } toast('저장한 메일을 비웠어요 — 새로고침하면 다시 받아요'); }, 900); return; }
     if (t.id === 'clrIgn') { IGNORE.clear(); store.set('typo-ignore', []); show('general'); runTypo(); return; }
     if (t.id === 'pickDir') {
       if (!window.showDirectoryPicker) { toast('이 브라우저에서는 폴더 고르기를 지원하지 않아요'); return; }
@@ -2618,11 +2618,11 @@ function openSettings(tab) {
     if (t.id === 'loadReal') { bg.remove(); loadReal(!real.token, real.token); return; }
     if (t.id === 'useSample') { location.reload(); return; }
     if (t.id === 'appInstall' && APP.prompt) { APP.prompt.prompt(); APP.prompt.userChoice.then(() => { APP.prompt = null; show('app'); }); return; }
-    if (t.id === 'notifyTest') { notifyTestNow(); return; }
-    if (t.id === 'copyExtUrl') { try { navigator.clipboard.writeText('chrome://extensions'); toast('주소를 복사했어요. 새 탭 주소창에 붙여넣으세요'); } catch (e) { /* */ } return; }
+    if (t.id === 'notifyTest') { dotMorph(t, 'env', async () => notifyTestNow(), 900); return; }
+    if (t.id === 'copyExtUrl') { dotMorph(t, 'link', async () => { try { await navigator.clipboard.writeText('chrome://extensions'); toast('주소를 복사했어요. 새 탭 주소창에 붙여넣으세요'); } catch (e) { toast('복사하지 못했어요. 직접 입력해 주세요'); } }, 700); return; }
     if (t.id === 'logout') { const wipe = !!($('#logoutWipe', bg) || {}).checked; logout(wipe); return; }
     if (t.id === 'addFtr') { FOOTERS.push({ id: 'f' + Date.now(), name: '새 풋터', html: '', font: { family: '맑은 고딕', size: 10, color: '#202124' }, rule: { type: 'none', kw: '' } }); saveAll(); show('footers'); renderFooterBar(); return; }
-    if (t.id === 'runAllRules') { runRules(null); return; }
+    if (t.id === 'runAllRules') { dotMorph(t, 'where', () => runRules(null)); return; }
     if (t.id === 'addTop') { const nb = { id: 'b' + Date.now(), name: '새 편지함', parent: null, }; BOXES.push(nb); rerender(); show('boxes'); return; }
     if (fr) {
       const f = FOOTERS.find(x => x.id === fr.dataset.id);
@@ -3238,7 +3238,14 @@ function dmSet(ring, f) {
   ring.classList.toggle('dm-ind', f == null); if (f != null) { ring.style.setProperty('--p', Math.max(0, Math.min(1, f))); ring.classList.toggle('hi', f >= 0.55); }
 }
 // 첨부 다운로드·드라이브 추가가 끝나면: 물이 꽉 차고 체크 → 잠깐 보여 준 뒤 원래 아이콘으로
+function dmChip(i, f) {
+  const c = $(`#view .att[data-ai="${i}"]`); if (!c) return; let r = $('.dm-ring', c);
+  if (f === false) { if (r) { const ic = c.firstChild; r.replaceWith(c._ico || ''); } return; }
+  if (!r) { const ic = c.firstElementChild; c._ico = ic; const t = document.createElement('span'); t.innerHTML = dmRing(f, 'dl'); r = t.firstChild; r.classList.add('chip'); ic.replaceWith(r); }
+  dmSet(r, f);
+}
 function dmFinish(m, i, kind) {
+  if (kind === 'dl' && st.open === m.id) dmChip(i, 'ok');
   const btn = st.open === m.id && $(`#view [data-${kind}="${i}"]`), ring = btn && $('.dm-ring', btn);
   if (!ring) return Promise.resolve(); dmSet(ring, 'ok'); return new Promise(z => setTimeout(z, 950));
 }
@@ -3247,7 +3254,7 @@ async function dotMorph(btn, ic, work, minMs) {
   if (!btn || btn.classList.contains('dotm')) return work ? work(() => {}) : undefined;
   const w0 = btn.offsetWidth, h0 = btn.offsetHeight;
   if (!$('.dm-lbl', btn)) { const l = document.createElement('span'); l.className = 'dm-lbl'; l.style.cssText = 'display:inline-flex;align-items:center;gap:5px;white-space:nowrap'; while (btn.firstChild) l.append(btn.firstChild); btn.append(l); }
-  btn.style.width = w0 + 'px'; btn.classList.add('dotm');
+  btn.style.width = w0 + 'px'; btn.style.height = h0 + 'px'; btn.style.minWidth = '0'; btn.classList.add('dotm');
   const tmp = document.createElement('span'); tmp.innerHTML = dmRing(0, ic); const ring = tmp.firstChild; btn.append(ring);
   void btn.offsetWidth; btn.classList.add('shrink'); btn.style.width = h0 + 'px';
   const t0 = Date.now(), dur = minMs || 1100; let real = 0, res, err;
@@ -3260,7 +3267,7 @@ async function dotMorph(btn, ic, work, minMs) {
   btn.classList.remove('shrink'); btn.style.width = w0 + 'px';
   ring.style.opacity = '0';
   await new Promise(z => setTimeout(z, 340));
-  ring.remove(); btn.classList.remove('dotm'); btn.style.width = '';
+  ring.remove(); btn.classList.remove('dotm'); btn.style.width = btn.style.height = btn.style.minWidth = '';
   if (err) throw err; return res;
 }
 // 첨부 진행 상황 (도넛 게이지) — key: 메일:번호:종류(dl/drv)
@@ -3278,6 +3285,7 @@ function setAProg(m, i, kind, f) {
   if (f === false) APROG.delete(key); else APROG.set(key, f);
   if (st.open !== m.id) return;
   const btn = $(`#view [data-${kind}="${i}"]`); if (!btn) return;
+  if (kind === 'dl') dmChip(i, f);  // 첨부 이름 칸의 파일 아이콘 자리에도 같은 효과
   const ring = $('.dm-ring', btn); if (ring && f !== false) { dmSet(ring, f); return; }  // 진행 중엔 그 자리에서 물 높이만 (점 애니메이션이 끊기지 않게)
   const w = document.createElement('span'); w.innerHTML = attBtns(m, i, m.att[i][1]);
   btn.replaceWith(w.querySelector(`[data-${kind}]`));
