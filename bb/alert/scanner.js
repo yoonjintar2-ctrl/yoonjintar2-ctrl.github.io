@@ -282,7 +282,7 @@
     const fresh = all.filter(c => !c.quietCard && LOUD.includes(c.g) && !(seen[key(c)] && now - seen[key(c)] < 3 * 86400e3));
     alert.fresh = fresh.map(c => c.g + '등급 ' + c.n);
     if (!fresh.length && tags.indexOf('quiet') < 0) tags.push('quiet');
-    const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: alert.title, message: body, tags, priority: (alert.sPlus || []).length ? 4 : 2 }) });
+    const r = await fetch('https://jipsa-relay.jipsa-e3839b.workers.dev/n/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: alert.title, message: body, tags, priority: (alert.sPlus || []).length ? 4 : 2 }) });
     if (r.status === 200) try { localStorage.setItem('d6lastPub', JSON.stringify({ sig, ts: Date.now() })); } catch (e) {}
     window.__berryPubStatus = r.status + ' ' + new Date().toISOString();
     // C등급 카드(상시·조건)는 글자 수 제한(3800바이트) 때문에 본문에서 빠질 수 있어 따로 한 번 더 보냄(v 없이 k:'cset' → 웹이 아래쪽에 붙임)
@@ -293,7 +293,7 @@
       while (enc.encode(b2).length > 3800 && cc2.length) { cc2.pop(); b2 = mk2(); }
       let lc = {}; try { lc = JSON.parse(localStorage.getItem('d6lastCset') || '{}'); } catch (e) {}
       const csig = JSON.stringify({ base: cb.map(c => [c.n, c.g, c.buy]), cond: cc2.map(c => [c.n, c.g, c.buy]) });
-      if (lc.sig !== csig || Date.now() - (lc.ts || 0) > 3 * 3600e3) { const r2 = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: 'C등급 카드', message: b2, tags: ['quiet', 'cset'], priority: 1 }) }); if (r2.status === 200) try { localStorage.setItem('d6lastCset', JSON.stringify({ sig: csig, ts: Date.now() })); } catch (e) {} }
+      if (lc.sig !== csig || Date.now() - (lc.ts || 0) > 3 * 3600e3) { const r2 = await fetch('https://jipsa-relay.jipsa-e3839b.workers.dev/n/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: 'C등급 카드', message: b2, tags: ['quiet', 'cset'], priority: 1 }) }); if (r2.status === 200) try { localStorage.setItem('d6lastCset', JSON.stringify({ sig: csig, ts: Date.now() })); } catch (e) {} }
     } catch (e) {}
     if (r.status === 200 && all.length) { all.forEach(c => { seen[key(c)] = now; }); for (const k in seen) if (now - seen[k] > 30 * 86400e3) delete seen[k]; try { localStorage.setItem('d6seen', JSON.stringify(seen)); } catch (e) {} }
     return r.status;
@@ -352,7 +352,7 @@
       if (kst.getUTCDay() === 6 && km >= 390 && km <= 540 && wkDone !== wk) {
         const W = await window.__weekly(); try { localStorage.setItem('wkDone', wk); } catch (e) {}
         window.__D6.weekly = W;
-        if (W.changed.length) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '주간 규칙 점검: 등급 변경 ' + W.changed.join(', '), message: '규칙 화면(i)에서 이번 주 성적표를 확인하세요. ' + W.changed.join(' · '), tags: ['info'] }) });
+        if (W.changed.length) await fetch('https://jipsa-relay.jipsa-e3839b.workers.dev/n/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '주간 규칙 점검: 등급 변경 ' + W.changed.join(', '), message: '규칙 화면(i)에서 이번 주 성적표를 확인하세요. ' + W.changed.join(' · '), tags: ['info'] }) });
       }
       window.__applyRuleCaps(window.__D6);
       window.__D6.st = window.__statsCompact();
@@ -376,7 +376,7 @@
 
   // 감시 연결 램프(2026-10-21): 감시가 살아 있으면 10분마다 berry-…-h 토픽에 짧은 신호. 사이트 오른쪽 위 램프가 15분 안 신호면 녹색, 아니면 주황
   if (!window.__berryBeat) { const who = /Mac/i.test(navigator.platform || '') ? '맥' : /Win/i.test(navigator.platform || '') ? '회사 PC' : '클라우드';
-    const send = () => { const w = window.__berryWatchState; if (!w || !w.alive) return; const ok = w.es && w.es.readyState !== 2; fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: 'berry-3059012bcc6b7db9-h', message: 'beat ' + who + (ok ? '' : ' 끊김'), tags: ['quiet'], priority: 1 }) }).catch(() => {}); };
+    const send = () => { const w = window.__berryWatchState; if (!w || !w.alive) return; const ok = w.es && w.es.readyState !== 2; fetch('https://jipsa-relay.jipsa-e3839b.workers.dev/n/', { method: 'POST', body: JSON.stringify({ topic: 'berry-3059012bcc6b7db9-h', message: 'beat ' + who + (ok ? '' : ' 끊김'), tags: ['quiet'], priority: 1 }) }).catch(() => {}); };
     window.__berryBeat = setInterval(send, 1800000); setTimeout(send, 3000); }
   window.__berryWatch = function () {
     const me = Math.random().toString(36).slice(2), KEY = 'berryWatcher';
@@ -400,12 +400,12 @@
       busy = true; lastRun = Date.now();
       // 감시가 두 곳(맥·회사 PC)에서 돌 때 한 곳만 검색(2026-10-19): 맥이 먼저, 다른 곳은 5초 기다렸다가 맥이 이미 맡았으면 건너뜀
       try { if (!/Mac/i.test(navigator.platform || '')) { await new Promise(r => setTimeout(r, /Win/i.test(navigator.platform || '') ? 5000 : 12000)); // 순서: 맥 → 회사 PC(5초) → 클라우드(12초)
-          const tx = await (await fetch('https://ntfy.sh/' + window.__BERRY.requests + '/json?poll=1&since=' + Math.max(0, (m.time || 0) - 2))).text();
+          const tx = await (await fetch('https://jipsa-relay.jipsa-e3839b.workers.dev/n/' + window.__BERRY.requests + '/json?poll=1&since=' + Math.max(0, (m.time || 0) - 2))).text();
           if (tx.split('\n').some(l => { try { const q = JSON.parse(l); return (q.message || '').startsWith('claim ' + m.id + ' ') && !(q.message || '').endsWith(' ' + me); } catch (e) { return false; } })) { busy = false; st.skipped = (st.skipped || 0) + 1; return; } }
-        if (!(/Mac/i.test(navigator.platform || '') && /^scan sched/.test(m.message || ''))) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.requests, message: 'claim ' + m.id + ' ' + me }) }); // 맥의 정시 검색은 표시 생략(ntfy 한도 아끼기)
+        if (!(/Mac/i.test(navigator.platform || '') && /^scan sched/.test(m.message || ''))) await fetch('https://jipsa-relay.jipsa-e3839b.workers.dev/n/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.requests, message: 'claim ' + m.id + ' ' + me }) }); // 맥의 정시 검색은 표시 생략(ntfy 한도 아끼기)
       } catch (e) {}
       try {
-        if (!/^scan sched/.test(m.message || '')) await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: (/Mac/i.test(navigator.platform || '') ? '맥' : /Win/i.test(navigator.platform || '') ? '회사 PC' : '클라우드') + '에서 지금 시세로 검색 중이에요 (1~2분)', tags: ['ack'] }) });
+        if (!/^scan sched/.test(m.message || '')) await fetch('https://jipsa-relay.jipsa-e3839b.workers.dev/n/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 중', message: (/Mac/i.test(navigator.platform || '') ? '맥' : /Win/i.test(navigator.platform || '') ? '회사 PC' : '클라우드') + '에서 지금 시세로 검색 중이에요 (1~2분)', tags: ['ack'] }) });
         try { (0, eval)(await window.__berryLoad('bb/alert/scanner.js')); } catch (e) {} // 항상 최신 규칙으로
         const sched = /^scan sched/.test(m.message || '');
         await window.__berryScan({ slot: sched ? new Date(Date.now() + 9 * 3600e3).getUTCHours() + '시' : '요청' });
@@ -414,10 +414,10 @@
         st.handled++; st.last = new Date().toISOString();
       } catch (e) {
         st.last = 'ERR ' + e;
-        try { await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 실패', message: '맥에서 검색하다 오류가 났어요: ' + String(e).slice(0, 200), tags: ['warn', 'req'] }) }); } catch (e2) {}
+        try { await fetch('https://jipsa-relay.jipsa-e3839b.workers.dev/n/', { method: 'POST', body: JSON.stringify({ topic: window.__BERRY.alerts, title: '검색 실패', message: '맥에서 검색하다 오류가 났어요: ' + String(e).slice(0, 200), tags: ['warn', 'req'] }) }); } catch (e2) {}
       } finally { busy = false; }
     };
-    const connect = () => { if (!st.alive) return; const es = new EventSource('https://ntfy.sh/' + window.__BERRY.requests + '/sse'); st.es = es; es.onmessage = onMsg;
+    const connect = () => { if (!st.alive) return; const es = new EventSource('https://jipsa-relay.jipsa-e3839b.workers.dev/n/' + window.__BERRY.requests + '/sse'); st.es = es; es.onmessage = onMsg;
       es.onerror = () => { st.err = new Date().toISOString(); if (es.readyState === 2) { st.reconn = (st.reconn || 0) + 1; setTimeout(connect, 5000); } }; };
     connect();
     // 혹시 onerror 없이 닫혀 있으면 1분마다 확인해 다시 연결

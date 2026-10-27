@@ -84,7 +84,7 @@
   // FRED 묶음: 맥이 올린 최신 첨부. 못 받으면 마지막으로 받은 것(3일 이내)
   const fredPack = async () => {
     try {
-      const t = await (await fetch(`https://ntfy.sh/${FTOPIC}/json?poll=1&since=12h`, { cache: 'no-store' })).text();
+      const t = await (await fetch(`https://jipsa-relay.jipsa-e3839b.workers.dev/n/${FTOPIC}/json?poll=1&since=12h`, { cache: 'no-store' })).text();
       const ms = t.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch (e) { return null; } }).filter(m => m && m.attachment && m.attachment.url);
       if (ms.length) { const m = ms[ms.length - 1]; const P = await (await fetch(m.attachment.url, { cache: 'no-store' })).json(); if (P && P.DGS10) { try { localStorage.setItem('fredpack', JSON.stringify({ t: m.time, P })); } catch (e) {} return { t: m.time, P }; } }
     } catch (e) {}
@@ -116,7 +116,7 @@
     if (!rk || rk.v == null) return [];
     let s = {}; try { s = JSON.parse(localStorage.getItem('riskAlert') || '{}'); } catch (e) {}
     const sent = [];
-    const post = async (title, message, pr) => { const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic, title, message, tags: ['warn', 'risk'], priority: pr }) }); if (r.status === 200) sent.push(title); };
+    const post = async (title, message, pr) => { const r = await fetch('https://jipsa-relay.jipsa-e3839b.workers.dev/n/', { method: 'POST', body: JSON.stringify({ topic, title, message, tags: ['warn', 'risk'], priority: pr }) }); if (r.status === 200) sent.push(title); };
     if (rk.v >= 90 && !s.hi) {
       await post(`반반도체지수 ${rk.v} · 위험 모드`, `클석진 반반도체 지수가 ${rk.v}(0~100)로 위험 모드에 들어갔어요.\n과거엔 이 구간에서 20일 안 반도체 −10% 급락 확률이 평소의 약 2.5배였어요.\nTQQQ(②③⑥)와 ⑧ 반도체주 매수 의견은 평소의 절반만 사는 걸 권해요. 레버리지 비중도 줄여 두세요.`, 4);
       s.hi = rk.d;
@@ -134,7 +134,7 @@
   window.__riskHistPush = async function () {
     const r = await window.__risk({ hist: true }); if (!r || !r.H) return 'no data';
     const body = JSON.stringify({ v: 2, d: r.d, now: { v: r.v, vr: r.vr, vc: r.vc, lv: r.lv, op: r.op, dd: r.dd, sh: r.sh }, D: r.H.D, x: r.H.v, xr: r.H.vr, xc: r.H.vc, s: r.H.sox });
-    const res = await fetch('https://ntfy.sh/berry-3059012bcc6b7db9-k', { method: 'PUT', headers: { Filename: 'banban.json', Title: 'banban ' + r.d }, body });
+    const res = await fetch('https://jipsa-relay.jipsa-e3839b.workers.dev/n/berry-3059012bcc6b7db9-k', { method: 'PUT', headers: { Filename: 'banban.json', Title: 'banban ' + r.d }, body });
     return res.status + ' ' + r.H.D.length + '일';
   };
 })();

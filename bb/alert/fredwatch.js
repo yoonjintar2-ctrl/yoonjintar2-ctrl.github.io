@@ -10,7 +10,7 @@
       out[id] = t.trim().split('\n').slice(1).map(l => l.split(',')).filter(r => r[1] && r[1] !== '.').map(r => [r[0], +r[1]]);
     }
     if (!(out.DGS10 && out.DGS10.length > 1000)) throw new Error('FRED 비어 있음');
-    const r = await fetch('https://ntfy.sh/' + TOPIC, { method: 'PUT', headers: { Filename: 'fred.json', Title: 'fred ' + new Date().toISOString().slice(0, 16) }, body: JSON.stringify(out) });
+    const r = await fetch('https://jipsa-relay.jipsa-e3839b.workers.dev/n/' + TOPIC, { method: 'PUT', headers: { Filename: 'fred.json', Title: 'fred ' + new Date().toISOString().slice(0, 16) }, body: JSON.stringify(out) });
     return r.status;
   };
   window.__fredWatch = function () {
