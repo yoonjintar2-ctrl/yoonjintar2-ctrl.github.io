@@ -1100,6 +1100,19 @@ body:not(.sopen) .top .fbtn{opacity:0;transform:translateX(-30px) scale(.4);poin
 body.sopen #fBox{transition-delay:0s}
 body.sopen #fWhere{transition-delay:.07s}
 body.sopen #fPeriod{transition-delay:.14s}
+
+/* 파란 버튼 마우스 올림: C · 오로라 대기 (푸른 빛 기류가 버튼 안을 천천히 가로지름) — 평평한 파랑 위에서만 */
+@keyframes jinAur{from{background-position:0% 0}to{background-position:100% 0}}
+@keyframes jinAur2{from{transform:translateX(-35%)}to{transform:translateX(40%)}}
+.btn.pri,.btn.convclose,.foot .chip.on{position:relative;overflow:hidden;isolation:isolate}
+.btn.pri::before,.btn.convclose::before,.foot .chip.on::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .45s ease;
+  background:linear-gradient(110deg,#0b57d0 0%,#2f7cf0 18%,#5aa0ff 30%,#1b64dc 45%,#0b57d0 60%,#3d86f4 75%,#7ab6ff 85%,#0b57d0 100%) 0 0/300% 100%}
+.btn.pri::after,.btn.convclose::after,.foot .chip.on::after{content:"";position:absolute;inset:0 -30%;z-index:-1;pointer-events:none;opacity:0;transition:opacity .45s ease;
+  background:radial-gradient(60% 140% at 30% 120%,rgba(160,210,255,.45),transparent 70%)}
+.btn.pri:not(:disabled):hover,.btn.convclose:hover,.foot .chip.on:hover{background-image:none!important;animation:none!important}
+.btn.pri:not(:disabled):hover::before,.btn.convclose:hover::before,.foot .chip.on:hover::before{opacity:1;animation:jinAur 6s ease-in-out infinite alternate}
+.btn.pri:not(:disabled):hover::after,.btn.convclose:hover::after,.foot .chip.on:hover::after{opacity:1;animation:jinAur2 5s ease-in-out infinite alternate}
+#send.fly::before,#send.fly::after{display:none}
 </style>
 </head>
 <body>
@@ -1149,6 +1162,6 @@ body.sopen #fPeriod{transition-delay:.14s}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793173343"></script>
+<script src="mail-c.js?v=1793173735"></script>
 </body>
 </html>

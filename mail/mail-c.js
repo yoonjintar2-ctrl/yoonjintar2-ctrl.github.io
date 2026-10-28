@@ -410,7 +410,7 @@ function closeMenus() { $$('.menu').forEach(m => { document.removeEventListener(
 // 검색창 오른쪽 필터 버튼(편지함·검색 범위·기간): 검색창을 누르면 그때 오른쪽으로 하나씩 튀어나옴
 function sopenSync() {
   const a = document.activeElement, fb = ['fBox', 'fWhere', 'fPeriod'];
-  const on = (a && (a.id === 'q' || fb.includes(a.id))) || (st.q || '').trim() || $('.menu') || ['fWhere', 'fPeriod'].some(id => { const b = $('#' + id); return b && b.classList.contains('on'); });
+  const on = (a && (a.id === 'q' || fb.includes(a.id))) || (st.q || '').trim() || ($('#q') && $('#q').value.trim()) || st.folder === 'srch' || $('.menu') || ['fWhere', 'fPeriod'].some(id => { const b = $('#' + id); return b && b.classList.contains('on'); });
   document.body.classList.toggle('sopen', !!on);
 }
 document.addEventListener('focusin', () => setTimeout(sopenSync));
