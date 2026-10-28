@@ -1075,6 +1075,10 @@ body.noblur .list::before,body.noblur .read::before{display:none}
 /* 풋터 고르기(외부용·내부용) 같은 작은 버튼도 같은 모양 */
 .foot .chip{background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.85);box-shadow:0 1px 3px rgba(0,0,0,.06);transition:background .3s,box-shadow .3s}
 .foot .chip.on{color:#fff}
+/* 편지함에 마우스를 올려도 안 읽은 개수는 그대로 (메뉴 ⋮ 는 개수 오른쪽에) */
+.ni:hover .n,.ni.menu-open .n{display:inline-block!important}
+.ni:hover .n:empty,.ni.menu-open .n:empty{display:none!important}
+.ni .dots{margin-left:2px;margin-right:-6px}
 </style>
 </head>
 <body>
@@ -1124,6 +1128,6 @@ body.noblur .list::before,body.noblur .read::before{display:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793170728"></script>
+<script src="mail-c.js?v=1793171401"></script>
 </body>
 </html>
