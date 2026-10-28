@@ -1003,7 +1003,8 @@ function renderRead(force) {
   attMoreCheck(); fitPpl();
   if (fr) {
     // 본문 높이: 메일 자체 CSS가 높이를 100%로 묶어 둬도 실제 내용 끝까지 (예전엔 150px로 잘려 보이던 경우)
-    const fit = () => { try { const d = fr.contentDocument, b = d.body, r = d.createRange(); r.selectNodeContents(b); const h = Math.max(d.documentElement.scrollHeight, b.scrollHeight, b.getBoundingClientRect().height, Math.ceil(r.getBoundingClientRect().bottom + (d.defaultView.scrollY || 0))); fr.style.height = h + 20 + 'px'; } catch (e) { /* */ } };
+    const fit = () => { try { const d = fr.contentDocument, b = d && d.body; if (!b) return; const r = d.createRange(); r.selectNodeContents(b); const h = Math.max(b.scrollHeight, b.getBoundingClientRect().height, Math.ceil(r.getBoundingClientRect().bottom + (d.defaultView.scrollY || 0))) + 20; if (h > 40 && Math.abs(fr.offsetHeight - h) > 2) fr.style.height = h + 'px'; } catch (e) { /* */ } };
+    { let n = 0; const iv = setInterval(() => { if (!fr.isConnected || ++n > 40) { clearInterval(iv); return; } fit(); }, 250); }
     fr.addEventListener('load', () => { try {
       const d = fr.contentDocument, W = fr.clientWidth, sw = d.documentElement.scrollWidth;
       ['pointerdown', 'keydown'].forEach(ev => d.addEventListener(ev, authGesture, true));  // 메일 본문을 눌러도 로그인 연장
