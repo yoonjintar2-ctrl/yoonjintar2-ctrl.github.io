@@ -901,6 +901,11 @@ body.painting #cbody{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
 .imgsz input[type=number]{width:62px;height:24px;border:1px solid #c9d5ea;border-radius:6px;padding:0 6px;font-size:12px}
 .imgsz .lk input{margin:0}
 .imgsz button{height:24px;padding:0 9px;border:1.5px solid var(--lq-line);border-radius:999px;background:#fff;font-size:12px;cursor:pointer}
+
+/* 걸린 필터 바로 풀기 ✕ */
+.lfilt .tf .tfclr{flex:none;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin:0 -4px 0 3px;border-radius:50%;font-size:9px;font-weight:700;color:var(--blue);background:#d3e2fd;cursor:pointer}
+.lfilt .tf .tfclr:hover{background:var(--blue);color:#fff}
+.lfilt .tf{flex-shrink:0;max-width:150px}
 </style>
 </head>
 <body>
@@ -950,6 +955,6 @@ body.painting #cbody{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793156900"></script>
+<script src="mail-c.js?v=1793156992"></script>
 </body>
 </html>

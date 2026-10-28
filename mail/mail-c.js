@@ -431,10 +431,11 @@ function renderTop() {
   const a = f.att.k === 'any' ? '전체' : f.att.k === 'no' ? '없음' : '있음' + (f.att.types.length ? '(' + f.att.types.map(t => ATYPES.find(x => x[0] === t)[1]).join('·') + ')' : '');
   // 목록 위 글자 버튼 (보낸사람·받는사람·첨부파일·읽음/안읽음)
   const pname = e => { if (!e) return ''; if (e === (ME.email || '').toLowerCase()) return '나'; const p = rcptPeople().find(x => x.email === e); return p ? p.name : e; };
-  const tf = (id, on, label, tip) => { const b = $(id); b.innerHTML = '<span class="tl">' + esc(label) + '</span><span class="cv">▾</span>'; b.classList.toggle('on', !!on); b.title = tip; };
-  tf('#fFrom', f.from, f.from ? '보낸사람: ' + pname(f.from) : '보낸사람', '보낸사람: ' + (f.from || '전체'));
-  tf('#fTo', f.to, f.to ? '받는사람: ' + pname(f.to) : '받는사람', '받는사람(참조 포함): ' + (f.to || '전체'));
-  tf('#fAtt', f.att.k !== 'any', f.att.k === 'any' ? '첨부파일' : '첨부: ' + a, '첨부: ' + a);
+  // 필터가 걸린 버튼은 ▾ 대신 작은 ✕ — 누르면 그 필터만 바로 풀기
+  const tf = (id, on, label, tip) => { const b = $(id); b.innerHTML = '<span class="tl">' + esc(label) + '</span>' + (on ? `<span class="tfclr" data-clr="${id.slice(2).toLowerCase()}" title="이 필터 풀기">✕</span>` : '<span class="cv">▾</span>'); b.classList.toggle('on', !!on); b.title = tip; };
+  tf('#fFrom', f.from, f.from ? '보낸 ' + pname(f.from) : '보낸사람', '보낸사람: ' + (f.from || '전체'));
+  tf('#fTo', f.to, f.to ? '받는 ' + pname(f.to) : '받는사람', '받는사람(참조 포함): ' + (f.to || '전체'));
+  tf('#fAtt', f.att.k !== 'any', f.att.k === 'any' ? '첨부파일' : '첨부 ' + a, '첨부: ' + a);
   tf('#fRead', f.readf !== 'all', { all: '읽음/안읽음', unread: '안 읽은 메일', read: '읽은 메일' }[f.readf], '읽음 여부: ' + { all: '전체', unread: '안 읽은 메일', read: '읽은 메일' }[f.readf]);
   const sb = $('#fStar'); if (sb) { sb.innerHTML = STAR_SVG; sb.classList.toggle('on', !!f.star); sb.title = f.star ? '별표한 메일만 보는 중 (누르면 해제)' : '별표한 메일만 보기'; }
   const any4 = f.from || f.to || f.att.k !== 'any' || f.readf !== 'all' || f.star;
@@ -3778,6 +3779,9 @@ function wire() {
   $('#fClear').addEventListener('click', () => { Object.assign(st.f, { from: null, to: null, att: { k: 'any', types: [] }, readf: 'all', star: false }); renderTop(); renderList(); });
   $('#refBtn').addEventListener('click', refreshNow);
   $('#fStar').addEventListener('click', () => { st.f.star = !st.f.star; renderTop(); renderList(); });
+  $('#lfilt').addEventListener('click', e => { const x = e.target.closest('[data-clr]'); if (!x) return; e.preventDefault(); e.stopPropagation(); closeMenus();
+    const k = x.dataset.clr; if (k === 'from') st.f.from = null; if (k === 'to') st.f.to = null; if (k === 'att') st.f.att = { k: 'any', types: [] }; if (k === 'read') st.f.readf = 'all';
+    renderTop(); renderList(); }, true);
   // 검색
   const q = $('#q');
   // 검색은 기본적으로 모든 편지함에서 (보던 편지함과 상관없이). 검색 중 왼쪽 편지함을 누르면 그 안에서만. 검색어를 지우면 보던 편지함으로
