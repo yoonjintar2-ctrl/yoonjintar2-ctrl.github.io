@@ -1103,6 +1103,83 @@ function warmSearch() {
   const step = dl => { const end = performance.now() + 5; while (i < MAILS.length && performance.now() < end && (!dl || dl.timeRemaining() > 1)) hayOf(MAILS[i++]);  /* 한 번에 5ms까지만 (글자 입력이 끊기지 않게) */ if (i < MAILS.length) (window.requestIdleCallback || setTimeout)(step); else warmSearch.on = false; };
   (window.requestIdleCallback || setTimeout)(step);
 }
+// 여러 줄을 골라 들여쓰기: <br>로만 나뉜 줄들도 줄마다 따로 묶어서, 고른 줄에만 적용 (같은 덩어리의 다른 줄까지 밀리던 문제)
+const LINE_BLOCK = /^(DIV|P|LI|H[1-6])$/, ANY_BLOCK = /^(DIV|P|UL|OL|LI|TABLE|BLOCKQUOTE|HR|H[1-6]|PRE)$/;
+function linesInRange(r) {
+  const b = $('#cbody');
+  const ms = document.createElement('span'), me = document.createElement('span');
+  const r2 = r.cloneRange(); r2.collapse(false); r2.insertNode(me); const r1 = r.cloneRange(); r1.collapse(true); r1.insertNode(ms);
+  const topOf = n => { while (n && n.parentNode !== b) n = n.parentNode; return n; };
+  const a = topOf(ms), z = topOf(me); if (!a || !z) { ms.remove(); me.remove(); return []; }
+  const tops = []; for (let n = a; n; n = n.nextSibling) { tops.push(n); if (n === z) break; }
+  const skip = el => el.nodeType === 1 && (el.classList.contains('gp-footer') || el.tagName === 'TABLE' || el.tagName === 'HR');
+  // 1) 본문 바로 아래 흩어진 글자·<br> 묶음은 한 덩어리 <div>로
+  let run = [];
+  const wrapRun = () => { if (!run.length) return; const d = document.createElement('div'); run[0].before(d); run.forEach(x => d.append(x)); run = []; };
+  tops.forEach(n => { if (n.nodeType === 1 && ANY_BLOCK.test(n.tagName)) wrapRun(); else run.push(n); }); wrapRun();
+  // 2) <br>가 섞인 덩어리는 줄마다 <div>로 나눔
+  const split = el => {
+    if (skip(el) || !LINE_BLOCK.test(el.tagName) && el.tagName !== 'BLOCKQUOTE') return;
+    const kids = [...el.childNodes]; if (!kids.some(k => k.nodeName === 'BR') && !kids.some(k => k.nodeType === 1 && ANY_BLOCK.test(k.tagName))) return;
+    if (!kids.some(k => k.nodeName === 'BR')) { kids.forEach(k => { if (k.nodeType === 1) split(k); }); return; }
+    const out = []; let cur = null;
+    const line = () => { if (!cur) { cur = document.createElement('div'); out.push(cur); } return cur; };
+    kids.forEach(k => {
+      if (k.nodeName === 'BR') { const d = line(); if (!d.firstChild || d.textContent === '' && !d.querySelector('img,span')) d.append(document.createElement('br')); cur = null; k.remove(); return; }
+      if (k.nodeType === 1 && ANY_BLOCK.test(k.tagName)) { cur = null; out.push(k); split(k); return; }
+      line().append(k);
+    });
+    el.replaceChildren(...out);
+  };
+  const b2 = $('#cbody'); const tops2 = []; for (let n = topOf(ms); n; n = n.nextSibling) { tops2.push(n); if (n === topOf(me)) break; }
+  tops2.forEach(n => { if (n.nodeType === 1) split(n); });
+  // 3) 고른 범위에 걸친 '줄' 덩어리들 (안에 다른 줄 덩어리가 없는 것)
+  const rr = document.createRange(); rr.setStartBefore(ms); rr.setEndAfter(me);
+  const lines = [];
+  tops2.forEach(t => { if (t.nodeType !== 1 || skip(t)) return; const cand = LINE_BLOCK.test(t.tagName) ? [t, ...t.querySelectorAll('div,p,li,h1,h2,h3,h4,h5,h6')] : [...t.querySelectorAll('div,p,li')];
+    cand.forEach(el => { if (el.closest('.gp-footer, table') || [...el.children].some(c => LINE_BLOCK.test(c.tagName))) return; if (rr.intersectsNode(el) && !(el.contains(me) && !el.textContent.trim() && !el.contains(ms))) lines.push(el); }); });
+  // 끝 표시가 다음 줄 맨 앞에 있으면 그 줄은 빼기 (줄 끝까지 끌어 고르면 흔히 생김)
+  const last = lines[lines.length - 1]; if (last && last.contains(me) && !last.contains(ms)) { const t = document.createRange(); t.setStart(last, 0); t.setEndBefore(me); if (!t.toString().trim()) lines.pop(); }
+  const sel = getSelection(), nr = document.createRange(); nr.setStartAfter(ms); nr.setEndBefore(me); ms.remove(); me.remove();
+  if (lines.length) { nr.setStart(lines[0], 0); nr.setEnd(lines[lines.length - 1], lines[lines.length - 1].childNodes.length); }
+  sel.removeAllRanges(); sel.addRange(nr); savedRange = nr.cloneRange();
+  return lines;
+}
+// 서식 복사 붓(엑셀·파워포인트처럼): 한 번 누르면 다음에 고르는 글자 한 번, 두 번 누르면 Esc 전까지 계속
+const painter = { on: false, sticky: false };
+function painterStart(sticky) {
+  copyFormat(); if (!fmtClip) return;
+  painter.on = true; painter.sticky = !!sticky; $('#fPaint').classList.add('on'); document.body.classList.add('painting');
+}
+function painterStop() { painter.on = false; painter.sticky = false; const b = $('#fPaint'); if (b) b.classList.remove('on'); document.body.classList.remove('painting'); }
+// 그림 크기: 그림을 누르면 아래에 가로·세로(px) 칸 — 비율 고정 켜면 한쪽만 바꿔도 다른 쪽이 따라감
+function imgSizeBox() {
+  let bx = $('#imgsz'); if (!selImg) { if (bx) bx.remove(); return; }
+  if (!bx) {
+    bx = document.createElement('div'); bx.id = 'imgsz'; bx.className = 'imgsz';
+    bx.innerHTML = '<label>가로<input type="number" id="imgW" min="10" max="3000"></label><label>세로<input type="number" id="imgH" min="10" max="3000"></label><label class="lk"><input type="checkbox" id="imgLock" checked>비율 고정</label><button id="imgOrig" title="원래 크기로">원본</button>';
+    document.body.append(bx);
+    const W = $('#imgW', bx), H = $('#imgH', bx), L = $('#imgLock', bx);
+    const apply = which => { if (!selImg) return; const r = selImg.getBoundingClientRect(), ratio = r.height / r.width || 1; let w = +W.value, h = +H.value;
+      if (which === 'w' && w > 0) { if (L.checked) h = Math.round(w * ratio); } else if (which === 'h' && h > 0) { if (L.checked) w = Math.round(h / ratio); } else return;
+      selImg.style.maxWidth = 'none'; selImg.style.width = w + 'px'; selImg.style.height = L.checked ? 'auto' : h + 'px'; if (!L.checked) selImg.setAttribute('height', h); W.value = w; H.value = h; posImgSel(); dirty(); };
+    W.addEventListener('change', () => apply('w')); H.addEventListener('change', () => apply('h'));
+    [W, H].forEach(x => x.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); apply(x === W ? 'w' : 'h'); } }));
+    $('#imgOrig', bx).addEventListener('click', () => { if (!selImg) return; selImg.style.width = ''; selImg.style.height = ''; selImg.removeAttribute('width'); selImg.removeAttribute('height'); selImg.style.maxWidth = '100%'; posImgSel(); dirty(); });
+    bx.addEventListener('mousedown', e => e.stopPropagation());
+  }
+  const r = selImg.getBoundingClientRect();
+  if (document.activeElement !== $('#imgW') && document.activeElement !== $('#imgH')) { $('#imgW').value = Math.round(r.width); $('#imgH').value = Math.round(r.height); }
+  bx.style.left = Math.max(8, r.left) + 'px'; bx.style.top = Math.min(innerHeight - 44, r.bottom + 8) + 'px';
+}
+// 받는사람 칩 이름: 'C3-KR-B-3'처럼 코드 같은 이름이거나 같은 이름이 둘 이상이면 메일 주소 앞부분을 같이 보여 줌
+function chipLabel(p, all) {
+  const nm = p.name || '', loc = (p.email || '').split('@')[0];
+  if (!nm || nm === p.email) return p.email;
+  const codey = !/[가-힣]/.test(nm) && /[\d_]|-[A-Z0-9]/.test(nm) && !/\s/.test(nm.trim());
+  const dup = (all || []).filter(x => x !== p && (x.name || '') === nm).length > 0;
+  return codey || dup ? `${nm} · ${loc}` : nm;
+}
 function fmtToolbar() {
   const b = (cmd, ic, t, txt) => `<button class="ib" data-cmd="${cmd}" title="${t}">${txt ? `<span style="${txt[1]}">${txt[0]}</span>` : ico(ic, 17)}</button>`;
   $('#fmt').innerHTML = `
@@ -1117,7 +1194,7 @@ function fmtToolbar() {
     <span class="sep"></span>
     ${b('insertUnorderedList', 'ul', '글머리 기호')}${b('insertOrderedList', 'ol', '번호 매기기')}${b('outdent', 'outd', '내어쓰기')}${b('indent', 'ind', '들여쓰기 (한글 한 글자)')}
     <span class="sep"></span>
-    <button class="ib" id="fTable" title="표 넣기">${ico('table', 17)}</button>${b('image', 'image', '그림 넣기')}${b('hr', 'hr', '가로선')}${b('link', 'link', '링크')}${b('removeFormat', 'clear', '서식 지우기')}`;
+    <button class="ib" id="fTable" title="표 넣기">${ico('table', 17)}</button>${b('image', 'image', '그림 넣기')}${b('hr', 'hr', '가로선')}${b('link', 'link', '링크')}${b('removeFormat', 'clear', '서식 지우기')}<button class="ib" id="fPaint" title="서식 복사 — 한 번 누르면 다음에 고른 글자에 한 번, 두 번 누르면 Esc 전까지 계속 (Ctrl+Shift+C / V)"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M18 5.5h1.5a1 1 0 0 1 1 1V10a1 1 0 0 1-1 1H12v2.5"/><path d="M10.5 13.5h3v7a1.5 1.5 0 0 1-3 0z"/></svg></button>`;
 }
 function renderFooterBar() {
   $('#foot').innerHTML = `풋터 ${FOOTERS.map(f => `<button class="chip${cs.footer === f.id ? ' on' : ''}" data-fid="${f.id}">${esc(f.name)}</button>`).join('')}<button class="lnk" data-set="footers">풋터 설정</button>`;
@@ -1142,7 +1219,7 @@ function nicePerson(p) {
 function chipEl(p) {
   p = nicePerson(p);
   const c = document.createElement('span'); c.className = 'rc'; c.style.cssText = chipStyle(p.email); c.title = p.email; c.dataset.email = p.email; c.dataset.name = p.name;
-  c.append(document.createTextNode(p.name === p.email ? p.email : p.name));
+  c.append(document.createTextNode(chipLabel(p)));
   const x = document.createElement('button'); x.textContent = '✕'; x.title = '빼기'; x.addEventListener('click', () => { c.remove(); dirty(); }); c.append(x);
   return c;
 }
@@ -2111,6 +2188,11 @@ function fmtCmd(cmd) {
   if (cmd === 'image') { $('#imgPick').click(); return; }
   if (cmd === 'hr') document.execCommand('insertHTML', false, '<hr style="border:0;border-top:1px solid #bfbfbf;margin:8px 0"><br>');
   else if (cmd === 'link') { linkMenu(); return; }
+  else if ((cmd === 'indent' || cmd === 'outdent') && !getSelection().isCollapsed && getSelection().rangeCount) {
+    // 여러 줄을 골랐으면 고른 줄마다 따로 (같은 덩어리의 다른 줄은 그대로)
+    const lines = linesInRange(getSelection().getRangeAt(0));
+    lines.forEach(el => { const cur = parseFloat(el.style.marginLeft) || 0, step = Math.round(parseFloat(getComputedStyle(el).fontSize) || 13); const v = Math.max(0, cur + (cmd === 'indent' ? step : -step)); el.style.marginLeft = v ? v + 'px' : ''; });
+  }
   else if (cmd === 'indent' || cmd === 'outdent') {
     const s = getSelection(); let el = s.anchorNode; el = el && (el.nodeType === 1 ? el : el.parentElement);
     while (el && el !== b && !/^(DIV|P|LI)$/.test(el.tagName)) el = el.parentElement;
@@ -2160,10 +2242,11 @@ function selectImg(img) {
 }
 function posImgSel() {
   const ov = $('#imgsel'); if (!ov) return;
-  if (!selImg || !document.contains(selImg) || !$('#read').classList.contains('composing')) { ov.remove(); selImg = null; return; }
+  if (!selImg || !document.contains(selImg) || !$('#read').classList.contains('composing')) { ov.remove(); selImg = null; imgSizeBox(); return; }
   const r = selImg.getBoundingClientRect();
   Object.assign(ov.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
   $('b', ov).textContent = `${Math.round(r.width)} × ${Math.round(r.height)}`;
+  imgSizeBox();
 }
 /* ───────── 서식 복사·붙여넣기 ───────── */
 let fmtClip = null;
@@ -3846,6 +3929,7 @@ function wire() {
     if (e.target.closest('#fColor')) { e.preventDefault(); applyTextColor(recentColor('color')); return; }
     if (e.target.closest('#fHiDd')) { e.preventDefault(); paletteMenu(e.target.closest('.splitb'), PALETTE, recentColor('hi'), applyHilite, '색 없음'); return; }
     if (e.target.closest('#fHi')) { e.preventDefault(); applyHilite(recentColor('hi')); return; }
+    if (e.target.closest('#fPaint')) { e.preventDefault(); if (e.detail >= 2) { painter.on = true; painter.sticky = true; $('#fPaint').classList.add('on'); document.body.classList.add('painting'); return; } if (painter.on) { painterStop(); return; } painterStart(false); return; }
     if (e.target.closest('#fSzUp')) { e.preventDefault(); stepSize(1); return; }
     if (e.target.closest('#fSzDn')) { e.preventDefault(); stepSize(-1); return; }
   });
@@ -3859,6 +3943,13 @@ function wire() {
     bodyKeydown(e);
   });
   body.addEventListener('beforeinput', bodyBeforeInput);
+  // 서식 복사 붓: 글자를 고르고 마우스를 떼면(또는 낱말을 누르면) 그 글자에 입힘
+  body.addEventListener('mouseup', () => { if (!painter.on) return; setTimeout(() => { if (!painter.on) return; pasteFormat(); if (!painter.sticky) painterStop(); }, 0); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && painter.on) { painterStop(); e.stopPropagation(); } }, true);
+  // 받는사람 칸: 같은 이름이 둘 이상이면 주소 앞부분을 같이 보여 줌
+  const relabel = () => { const all = ['#toBox', '#ccBox', '#bccBox'].flatMap(id => $(id) ? $$('.rc', $(id)) : []), ps = all.map(c => ({ name: c.dataset.name, email: c.dataset.email }));
+    all.forEach((c, i) => { const t = chipLabel(ps[i], ps); if (c.firstChild && c.firstChild.nodeType === 3 && c.firstChild.nodeValue !== t) c.firstChild.nodeValue = t; }); };
+  ['#toBox', '#ccBox', '#bccBox'].forEach(id => { if ($(id)) new MutationObserver(() => { clearTimeout(relabel.t); relabel.t = setTimeout(relabel, 30); }).observe($(id), { childList: true }); });
   // 붙여넣기: 그림만(캡처 등) → 커서 위치에 그림 / 글자·표 등 → 서식 그대로 + 옵션 버튼
   body.addEventListener('paste', e => {
     const cd = e.clipboardData; if (!cd) return;
