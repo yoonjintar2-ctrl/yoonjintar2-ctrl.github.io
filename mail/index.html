@@ -575,8 +575,9 @@ body.resizing{cursor:col-resize;user-select:none}
 /* 본문 불러오는 동안: 흐리게 + 가운데 도는 고리 (덜 그려진 화면이 에러처럼 보이지 않게) */
 .rbody.loading{position:relative;min-height:300px}
 .rbody.loading > *{filter:blur(3px);opacity:.45;pointer-events:none;user-select:none}
-.rbody.loading::before{content:"";position:sticky;top:120px;display:block;width:30px;height:30px;margin:60px auto -90px;border-radius:50%;border:3px solid #d6dbe3;border-top-color:var(--blue);animation:jspin .8s linear infinite;z-index:3}
-.rbody.loading::after{content:"메일 불러오는 중…";position:absolute;left:0;right:0;top:100px;text-align:center;font-size:12.5px;color:var(--sub);z-index:3}
+.rbody.loading::before{content:"";position:sticky;top:40px;display:block;width:76px;height:46px;margin:52px auto -98px;z-index:3;-webkit-mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%224%2020%2055%2033%22%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M18.5%2035.5Q18.5%2046%2033.5%2046Q48.5%2046%2048.5%2035.5Z%22%2F%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M24%2034Q24%2026.5%2033.5%2026.5Q43%2026.5%2043%2034Z%22%2F%3E%3Ccircle%20fill%3D%22%23000%22%20cx%3D%2233.5%22%20cy%3D%2224.2%22%20r%3D%222.4%22%2F%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M20.5%2041.5C13%2041.5%209.5%2036%205.5%2030.5Q5%2029.5%206.3%2029.6L8.6%2029.8C12.5%2034.5%2015.5%2036.3%2020.5%2036.3Z%22%2F%3E%3Cpath%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20d%3D%22M47.5%2033.6C55.5%2031.8%2057.8%2041.8%2046.4%2041.8%22%2F%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M28.5%2045.5H38.5L40.5%2050.5Q40.7%2051.5%2039.6%2051.5H27.4Q26.3%2051.5%2026.5%2050.5Z%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%224%2020%2055%2033%22%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M18.5%2035.5Q18.5%2046%2033.5%2046Q48.5%2046%2048.5%2035.5Z%22%2F%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M24%2034Q24%2026.5%2033.5%2026.5Q43%2026.5%2043%2034Z%22%2F%3E%3Ccircle%20fill%3D%22%23000%22%20cx%3D%2233.5%22%20cy%3D%2224.2%22%20r%3D%222.4%22%2F%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M20.5%2041.5C13%2041.5%209.5%2036%205.5%2030.5Q5%2029.5%206.3%2029.6L8.6%2029.8C12.5%2034.5%2015.5%2036.3%2020.5%2036.3Z%22%2F%3E%3Cpath%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20d%3D%22M47.5%2033.6C55.5%2031.8%2057.8%2041.8%2046.4%2041.8%22%2F%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M28.5%2045.5H38.5L40.5%2050.5Q40.7%2051.5%2039.6%2051.5H27.4Q26.3%2051.5%2026.5%2050.5Z%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat;background:linear-gradient(to top,var(--blue) 50%,#dde3ec 50%) 0 0/100% 200%;animation:lampRise 2.6s cubic-bezier(.4,0,.3,1) infinite}
+@keyframes lampRise{0%{background-position:0 0}80%{background-position:0 100%}100%{background-position:0 100%}}
+.rbody.loading::after{content:"메일 불러오는 중…";position:absolute;left:0;right:0;top:112px;text-align:center;font-size:12.5px;color:var(--sub);z-index:3}
 @keyframes jspin{to{transform:rotate(360deg)}}
 .mbody .acct{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fafbfc}
 .mbody .acct .dot{width:9px;height:9px;border-radius:50%;background:#c4c9d2;flex:none}
@@ -878,6 +879,8 @@ body.resizing{cursor:col-resize;user-select:none}
 .qhint b{color:var(--blue)}
 .qhint svg{color:var(--blue);flex:none}
 @keyframes qhIn{from{opacity:0;transform:translate(-50%,6px)}}
+.sugg .sload{color:var(--blue)}
+.sugg .sload::after{content:"";display:inline-block;width:10px;height:10px;margin-left:6px;border-radius:50%;border:2px solid #cfdcf4;border-top-color:var(--blue);vertical-align:-1px;animation:jspin .7s linear infinite}
 </style>
 </head>
 <body>
@@ -927,6 +930,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793154485"></script>
+<script src="mail-c.js?v=1793154838"></script>
 </body>
 </html>

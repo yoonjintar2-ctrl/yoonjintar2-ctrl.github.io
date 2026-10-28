@@ -677,16 +677,31 @@ function suggPeople() {
 }
 // 아직 엔터 전(입력 중)인 검색어로 자동완성에 띄울 메일 6통만 (목록은 그대로)
 function draftMails(q) { return MAILS.filter(m => !m.deleted && queryMatch(m, q)).sort((a, b) => a.d - b.d || (a.t < b.t ? 1 : a.t > b.t ? -1 : 0)).slice(0, 6); }
+// 자동완성(입력 중): 글자 입력을 막지 않게 — 제목·보낸사람·첨부 이름만 가볍게, 잘게 나눠서 쉬는 틈에 찾음 (본문까지는 Enter 때)
+const lightHay = m => (m._lhS === m.subj && m._lhA === m.att ? m._lh : (m._lhS = m.subj, m._lhA = m.att, m._lh = [m.subj || '', m.from.name || '', m.from.email || '', (m.att || []).map(a => a[1]).join(' ')].join('\n').toLowerCase()));
+let suggJob = 0;
+function suggSearch(q, done) {
+  const job = ++suggJob, ws = q.toLowerCase().split(/\s+/).filter(Boolean), out = [], src = MAILS; let i = 0;
+  const step = () => {
+    if (job !== suggJob) return;  // 그사이 글자를 더 쳤으면 이 검색은 버림
+    const end = performance.now() + 5;
+    while (i < src.length && performance.now() < end) { const m = src[i++]; if (m.deleted) continue; const h = lightHay(m); if (ws.every(w => h.includes(w))) out.push(m); }
+    if (i < src.length) setTimeout(step, 0); else done(out.sort((a, b) => a.d - b.d || (a.t < b.t ? 1 : a.t > b.t ? -1 : 0)).slice(0, 6));
+  };
+  setTimeout(step, 0);
+}
 function renderSugg(list, draft) {
   const q = (draft != null ? draft : st.q).trim(), box = $('#sugg');
-  if (!q || st.suggOff || document.activeElement !== $('#q')) { box.classList.remove('on'); return; }
-  if (draft != null) list = draftMails(q);
+  if (!q || st.suggOff || document.activeElement !== $('#q')) { suggJob++; box.classList.remove('on'); return; }
   const hl = s => { const i = s.toLowerCase().indexOf(q.toLowerCase()); return i < 0 ? esc(s) : esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length)); };
   const ppl = suggPeople().filter(p => personMatch(p, q)).slice(0, 3);
-  const mails = (list || visible()).slice(0, 6);
-  box.innerHTML = (ppl.length ? '<div class="sh">사람 — 누르면 보낸사람으로 거르기</div>' + ppl.map(p => `<div class="si" data-p="${esc(p.email)}">${ico('me', 16)}<span class="s1">${hl(p.name)} <small style="color:var(--mute)">${hl(p.email)}</small></span></div>`).join('') : '') +
-    (mails.length ? `<div class="sh">메일 · ${draft != null ? '모든 편지함' : esc(folderName(st.folder))}</div>` + mails.map(m => `<div class="si" data-id="${m.id}">${ico('env', 16)}<span class="s1">${hl(m.subj)}</span><span class="s2">${esc(m.from.name)} · ${dateLabel(m)}</span></div>`).join('') : '<div class="sh">맞는 메일이 없어요</div>');
-  box.classList.add('on');
+  const draw = (mails, where) => {
+    box.innerHTML = (ppl.length ? '<div class="sh">사람 — 누르면 보낸사람으로 거르기</div>' + ppl.map(p => `<div class="si" data-p="${esc(p.email)}">${ico('me', 16)}<span class="s1">${hl(p.name)} <small style="color:var(--mute)">${hl(p.email)}</small></span></div>`).join('') : '') +
+      (mails == null ? '<div class="sh sload">메일 찾는 중…</div>' : mails.length ? `<div class="sh">메일 · ${where}</div>` + mails.map(m => `<div class="si" data-id="${m.id}">${ico('env', 16)}<span class="s1">${hl(m.subj)}</span><span class="s2">${esc(m.from.name)} · ${dateLabel(m)}</span></div>`).join('') : '<div class="sh">제목·보낸사람에 맞는 메일이 없어요 · Enter를 누르면 본문까지 찾아요</div>');
+    box.classList.add('on');
+  };
+  if (draft != null) { draw(null); suggSearch(q, mails => { if ($('#q').value.trim() === q && !st.suggOff) draw(mails, '모든 편지함 · 제목·보낸사람'); }); return; }
+  suggJob++; draw((list || visible()).slice(0, 6), esc(folderName(st.folder)));
 }
 
 /* ───────── 가운데: 목록 ───────── */
@@ -928,7 +943,8 @@ function renderRead(force) {
   const fr = $('#view iframe.mailhtml');
   attMoreCheck(); fitPpl();
   if (fr) {
-    const fit = () => { try { const d = fr.contentDocument; fr.style.height = Math.max(d.documentElement.scrollHeight, d.body.getBoundingClientRect().height) + 20 + 'px'; } catch (e) { /* */ } };
+    // 본문 높이: 메일 자체 CSS가 높이를 100%로 묶어 둬도 실제 내용 끝까지 (예전엔 150px로 잘려 보이던 경우)
+    const fit = () => { try { const d = fr.contentDocument, b = d.body, r = d.createRange(); r.selectNodeContents(b); const h = Math.max(d.documentElement.scrollHeight, b.scrollHeight, b.getBoundingClientRect().height, Math.ceil(r.getBoundingClientRect().bottom + (d.defaultView.scrollY || 0))); fr.style.height = h + 20 + 'px'; } catch (e) { /* */ } };
     fr.addEventListener('load', () => { try {
       const d = fr.contentDocument, W = fr.clientWidth, sw = d.documentElement.scrollWidth;
       ['pointerdown', 'keydown'].forEach(ev => d.addEventListener(ev, authGesture, true));  // 메일 본문을 눌러도 로그인 연장
@@ -936,12 +952,12 @@ function renderRead(force) {
       if (sw > W + 4) { const z = W / sw; if (z >= 0.9) d.body.style.zoom = z.toFixed(3); }  // 10% 넘게 줄여야 하면 그대로 두고 옆으로 스크롤 (글자가 작아지지 않게)
       fit();
       // 그림이 늦게 뜨면서 본문이 길어져도 잘리지 않게 높이 다시 맞춤
-      try { new ResizeObserver(fit).observe(d.body); } catch (e) { /* */ } $$('img', d).forEach(im => { if (!im.complete) im.addEventListener('load', fit, { once: true }); });
+      try { const ro = new ResizeObserver(fit); ro.observe(d.body); ro.observe(d.documentElement); } catch (e) { /* */ } setTimeout(fit, 300); setTimeout(fit, 1500); $$('img', d).forEach(im => { if (!im.complete) im.addEventListener('load', fit, { once: true }); });
     } catch (e) { fr.style.height = '70vh'; }
       // 다 그린 뒤에 흐림·로딩 표시 걷어냄. 그림 받기가 오래 걸리면 1.2초 뒤엔 글부터 보여 줌 (그림 자리엔 도는 고리)
       const rb = fr.closest('.rbody'); if (rb) { if (fr._final) rb.classList.remove('loading'); else setTimeout(() => rb.classList.remove('loading'), 1200); }
     });
-    const css = '<base target="_blank"><style>html{overflow-x:auto;overflow-y:hidden}body{margin:0;font:14.5px/1.65 Pretendard,"Malgun Gothic",sans-serif;color:#1f1f1f;word-break:break-word}img[data-jl]{object-fit:none;background:#f3f5f8;min-width:28px;min-height:28px;border-radius:4px}</style>';
+    const css = '<base target="_blank"><style>html{overflow-x:auto;overflow-y:hidden}html,body{height:auto!important;min-height:0!important;max-height:none!important}body{overflow:visible!important}body{margin:0;font:14.5px/1.65 Pretendard,"Malgun Gothic",sans-serif;color:#1f1f1f;word-break:break-word}img[data-jl]{object-fit:none;background:#f3f5f8;min-width:28px;min-height:28px;border-radius:4px}</style>';
     const show = (h, fin) => { if ($('#view iframe.mailhtml') === fr) { fr._final = !!fin; fr.srcdoc = css + h; } };
     if (m.htmlReady) show(m.htmlReady, true);
     else { show(m.html.replace(/src=["']?cid:[^"'\s>]+["']?/gi, `src="${IMG_SPIN}" data-jl="1"`)); resolveInline(m).then(h => show(h, true)).catch(() => show(m.html, true)); }
@@ -1074,7 +1090,7 @@ function cellUpDown(e) {
 // 검색 준비: 처음 검색창을 누르면 쉬는 틈에 메일마다 검색용 글자를 미리 만들어 둠 (첫 검색이 느리지 않게)
 function warmSearch() {
   if (warmSearch.on) return; warmSearch.on = true; let i = 0;
-  const step = dl => { const end = Date.now() + 8; while (i < MAILS.length && (dl ? dl.timeRemaining() > 2 : Date.now() < end)) hayOf(MAILS[i++]); if (i < MAILS.length) (window.requestIdleCallback || setTimeout)(step); else warmSearch.on = false; };
+  const step = dl => { const end = performance.now() + 5; while (i < MAILS.length && performance.now() < end && (!dl || dl.timeRemaining() > 1)) hayOf(MAILS[i++]);  /* 한 번에 5ms까지만 (글자 입력이 끊기지 않게) */ if (i < MAILS.length) (window.requestIdleCallback || setTimeout)(step); else warmSearch.on = false; };
   (window.requestIdleCallback || setTimeout)(step);
 }
 function fmtToolbar() {
@@ -3631,7 +3647,7 @@ function wire() {
   };
   const applyQ = () => { clearTimeout(qT); qPend(false); if (st.q !== q.value) setQuery(q.value); };
   $('.list').addEventListener('click', e => { if (e.target.closest('#qhint')) { applyQ(); suggClose(); } });
-  let qT = 0; q.addEventListener('input', () => { st.suggOff = false; clearTimeout(qT); qT = setTimeout(preview, 90); });
+  let qT = 0; q.addEventListener('input', () => { st.suggOff = false; clearTimeout(qT); qT = setTimeout(preview, 60); });
   const suggClose = () => { st.suggOff = true; $('#sugg').classList.remove('on'); };
   let outT = 0; document.addEventListener('mousemove', e => {
     if (!$('#sugg').classList.contains('on')) { clearTimeout(outT); outT = 0; return; }
