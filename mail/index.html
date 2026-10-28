@@ -1081,6 +1081,16 @@ body.noblur .list::before,body.noblur .read::before{display:none}
 .ni .dots{margin-left:2px;margin-right:-6px}
 .row .rpl{flex:none;display:inline-flex;align-items:center;margin-right:3px;color:#a0a4ab}
 .row .rpl svg{width:13px;height:13px}
+
+/* 안 읽은 메일 / 읽은 메일 구분: 안 읽음 = 왼쪽 파란 점 + 진한 글자 + 밝은 줄, 읽음 = 글자를 한 톤 옅게 */
+.row{position:relative}
+.row.unread::before{content:"";position:absolute;left:4px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 2px rgba(255,255,255,.8)}
+.row.unread{background:rgba(255,255,255,.5)!important}
+.row.unread .who,.row.unread .subj{color:#111!important}
+.row:not(.unread) .who,.row:not(.unread) .subj{color:#5f6368!important;font-weight:400!important}
+.row:not(.unread) .snip{color:#9aa0a6!important}
+.row:not(.unread).open .who,.row:not(.unread).open .subj{color:#2b2b2b!important}
+.row.open{background:rgba(255,255,255,.97)!important}
 </style>
 </head>
 <body>
@@ -1130,6 +1140,6 @@ body.noblur .list::before,body.noblur .read::before{display:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793172020"></script>
+<script src="mail-c.js?v=1793172100"></script>
 </body>
 </html>
