@@ -775,6 +775,32 @@ body.resizing{cursor:col-resize;user-select:none}
 .squish{animation:lqSquish .45s cubic-bezier(.3,1.5,.5,1)}
 @keyframes lqSquish{0%{transform:scale(1)}30%{transform:scale(1.07,.88)}55%{transform:scale(.96,1.05)}80%{transform:scale(1.02,.98)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.squish{animation:none}}
+
+/* ── 마우스를 올린 곳만 살짝 진하게 (2026-10-28) ──
+   평소 글자는 아주 약간 톤 다운, 올린 메일·편지함은 글자·아이콘이 진해지고 편지함은 바탕도 살짝 파랗게 */
+.row .who,.row .subj,.row .snip,.row .dt,.row .snip .atti,.ni .nm,.ni .ic,.ni .n{transition:color .15s,opacity .15s}
+.row .who,.row .subj{color:#4d535b}
+.row .snip{color:#979ca5}
+.row .dt{color:#8f959e}
+.row .snip .atti{opacity:.8}
+.row.unread .who,.row.unread .subj{color:#1e2531}
+.row:hover .who,.row:hover .subj{color:#16191e}
+.row:hover .snip{color:#666c75}
+.row:hover .dt{color:#5f6570}
+.row:hover .snip .atti{opacity:1}
+.row.unread:hover .who,.row.unread:hover .subj{color:#04070c}
+.row.unread .dt{color:var(--blue)}
+.row:hover .starb:not(.on) svg{stroke:#a3a9b2}
+.row:hover .convb.has{color:#5f6570}
+.ni{color:#3b414a;transition:background .15s}
+.ni .ic{color:#848b95}
+.ni .n{color:#6f7680}
+.ni:not(.on):hover{background:rgba(11,87,208,.075)}
+.ni:not(.on):hover .nm{color:#0f1216}
+.ni:not(.on):hover .ic{color:#2f3a4a}
+.ni:not(.on):hover .n{color:#3c4350}
+.ni.on .ic,.ni.on .n{color:var(--blue)}
+.ni.on:hover{background:#dfe9fd}
 </style>
 </head>
 <body>
@@ -824,6 +850,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793111135"></script>
+<script src="mail-c.js?v=1793148606"></script>
 </body>
 </html>
