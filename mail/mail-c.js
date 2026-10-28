@@ -1329,7 +1329,7 @@ function fmtToolbar() {
     <span class="sep"></span>
     ${b('insertUnorderedList', 'ul', '글머리 기호')}${b('insertOrderedList', 'ol', '번호 매기기')}${b('outdent', 'outd', '내어쓰기')}${b('indent', 'ind', '들여쓰기 (한글 한 글자)')}
     <span class="sep"></span>
-    <button class="ib" id="fTable" title="표 넣기">${ico('table', 17)}</button>${b('image', 'image', '그림 넣기')}${b('hr', 'hr', '가로선')}${b('link', 'link', '링크')}${b('removeFormat', 'clear', '서식 지우기')}<button class="ib" id="fPaint" title="서식 복사 — 한 번 누르면 다음에 고른 글자에 한 번, 두 번 누르면 Esc 전까지 계속 (Ctrl+Shift+C / V)"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M18 5.5h1.5a1 1 0 0 1 1 1V10a1 1 0 0 1-1 1H12v2.5"/><path d="M10.5 13.5h3v7a1.5 1.5 0 0 1-3 0z"/></svg></button><button class="ib" id="fPasteF" title="서식 붙여넣기 — 복사해 둔 서식을 지금 고른(블록) 글자에 입히기"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" fill="currentColor" fill-opacity=".18"/><path d="M18 5.5h1.5a1 1 0 0 1 1 1V10a1 1 0 0 1-1 1H12v2.5"/><path d="M10.5 13.5h3v7a1.5 1.5 0 0 1-3 0z"/><path d="M15.5 18.5l2 2 3.5-4" stroke-width="1.9"/></svg></button>`;
+    <button class="ib" id="fTable" title="표 넣기">${ico('table', 17)}</button>${b('image', 'image', '그림 넣기')}${b('hr', 'hr', '가로선')}${b('link', 'link', '링크')}${b('removeFormat', 'clear', '서식 지우기')}<button class="ib" id="fPaint" title="서식 복사 — 한 번 누르면 다음에 고른 글자에 한 번, 두 번 누르면 Esc 전까지 계속 (Ctrl+Shift+C / V)"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M18 5.5h1.5a1 1 0 0 1 1 1V10a1 1 0 0 1-1 1H12v2.5"/><path d="M10.5 13.5h3v7a1.5 1.5 0 0 1-3 0z"/></svg></button><button class="ib" id="fPasteF" title="서식 붙여넣기 — 복사해 둔 서식을 지금 고른(블록) 글자에 입히기"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M8.5 4.5H6.5a1.5 1.5 0 0 0-1.5 1.5v13.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5h-2"/><rect x="8.5" y="3" width="7" height="3.2" rx="1" fill="currentColor" fill-opacity=".18"/><path d="M9 17l3-8 3 8M10.1 14.2h3.8" stroke-width="1.6"/></svg></button>`;
 }
 function renderFooterBar() {
   $('#foot').innerHTML = `풋터 ${FOOTERS.map(f => `<button class="chip${cs.footer === f.id ? ' on' : ''}" data-fid="${f.id}">${esc(f.name)}</button>`).join('')}<button class="lnk" data-set="footers">풋터 설정</button>`;
@@ -3215,16 +3215,13 @@ const loadGis = () => gisReady || (gisReady = new Promise((res, rej) => { const 
 async function refreshNow() {
   const b = $('#refBtn'); if (b && b.classList.contains('spin')) return; if (b) b.classList.add('spin');
   // 램프를 문지르는 동안 버튼이 동그래지고 물이 차오름 → 다 되면 체크 → 다시 램프 버튼으로
-  let ring = null, p = 0.06, tick = null;
-  if (b) { const t = document.createElement('span'); t.innerHTML = dmRing(p, 'dl'); ring = t.firstChild; ring.classList.add('rfr'); $('.dm-ic', ring).remove(); b.append(ring);
-    tick = setInterval(() => { p += (0.86 - p) * 0.12; dmSet(ring, p); b.classList.toggle('hi', p >= 0.55); }, 80); }
-  const q = [...SENDQ]; q.forEach(x => x.fire()); if (q.length) p = Math.max(p, 0.3);
+  const L = b ? jpLoop(b) : null;
+  const q = [...SENDQ]; q.forEach(x => x.fire());
   let n = null; const t0 = Date.now();
   try { n = real.poll ? await Promise.race([real.poll(), new Promise(z => setTimeout(() => z(null), 15000))]) : null; } catch (e) { /* */ }
   setTimeout(async () => {
-    if (!b) return; clearInterval(tick);
-    if (n != null || q.length) { dmSet(ring, 'ok'); b.classList.add('hi', 'ok'); await new Promise(z => setTimeout(z, 700)); }
-    b.classList.remove('spin', 'hi', 'ok'); ring.style.opacity = '0'; setTimeout(() => ring.remove(), 300);
+    if (!b) return;
+    L.stop(n != null || !!q.length); b.classList.remove('spin', 'hi', 'ok');
   }, Math.max(0, 1000 - (Date.now() - t0)));
   if (q.length) return;  // 보낸 메일은 '보냈어요' 안내가 따로 뜸
   if (!real.on) toast(real.loading ? '메일을 불러오는 중이에요' : '예시 화면이에요');
@@ -3841,23 +3838,11 @@ function dmFinish(m, i, kind) {
 }
 // 알약 버튼 전체를 동그라미로 줄여 진행을 보여 주고 다시 펴기 (예: '파일 첨부'). work: 진행률 0~1을 알려 주는 콜백을 받는 함수
 async function dotMorph(btn, ic, work, minMs) {
-  if (!btn || btn.classList.contains('dotm')) return work ? work(() => {}) : undefined;
-  const w0 = btn.offsetWidth, h0 = btn.offsetHeight;
-  if (!$('.dm-lbl', btn)) { const l = document.createElement('span'); l.className = 'dm-lbl'; l.style.cssText = 'display:inline-flex;align-items:center;gap:5px;white-space:nowrap'; while (btn.firstChild) l.append(btn.firstChild); btn.append(l); }
-  btn.style.width = w0 + 'px'; btn.style.height = h0 + 'px'; btn.style.minWidth = '0'; btn.classList.add('dotm');
-  const tmp = document.createElement('span'); tmp.innerHTML = dmRing(0, ic); const ring = tmp.firstChild; btn.append(ring);
-  void btn.offsetWidth; btn.classList.add('shrink'); btn.style.width = h0 + 'px';
-  const t0 = Date.now(), dur = minMs || 1100; let real = 0, res, err;
-  // 실제 진행과 '보기 좋은 최소 시간' 중 느린 쪽으로 물을 채움
-  const tick = setInterval(() => { const vis = Math.min(1, (Date.now() - t0 - 250) / (dur - 250)); dmSet(ring, Math.max(0, Math.min(real, vis) * 0.94)); }, 60);
-  try { res = work ? await work(f => { real = f; }) : undefined; real = 1; } catch (e) { err = e; }
+  if (!btn || btn._jpl) return work ? work(() => {}) : undefined;
+  const L = jpLoop(btn), t0 = Date.now(), dur = Math.min(minMs || 700, 900); let res, err;
+  try { res = work ? await work(() => {}) : undefined; } catch (e) { err = e; }
   while (Date.now() - t0 < dur) await new Promise(z => setTimeout(z, 40));
-  clearInterval(tick);
-  if (!err) { dmSet(ring, 'ok'); await new Promise(z => setTimeout(z, 750)); }
-  btn.classList.remove('shrink'); btn.style.width = w0 + 'px';
-  ring.style.opacity = '0';
-  await new Promise(z => setTimeout(z, 340));
-  ring.remove(); btn.classList.remove('dotm'); btn.style.width = btn.style.height = btn.style.minWidth = '';
+  L.stop(!err);
   if (err) throw err; return res;
 }
 // 첨부 진행 상황 (도넛 게이지) — key: 메일:번호:종류(dl/drv)
@@ -4000,7 +3985,7 @@ function setupDragScroll() {
 // 편지함 목록: 굴리는 동안만 스크롤바 보이기 (끝나고 0.9초 뒤 숨김)
 (() => { const T = new WeakMap(); document.addEventListener('scroll', e => { const n = e.target; if (!n.classList || !(n.id === 'nav' || n.id === 'rows' || n.classList.contains('rscroll'))) return; n.classList.add('scrolling'); clearTimeout(T.get(n)); T.set(n, setTimeout(() => n.classList.remove('scrolling'), 900)); }, true); })();
 // 좁은 폭: 왼쪽 편지함이 좁으면 '새 메일'은 연필 아이콘만, 읽기 화면이 낮거나 좁으면 받는사람을 한 줄만
-function narrowCheck() { const nv = $('nav'); if (nv) document.body.classList.toggle('navnarrow', nv.getBoundingClientRect().width < 172); }
+function narrowCheck() { const nb = $('#newMail'); if (nb) document.body.classList.toggle('navnarrow', nb.getBoundingClientRect().width < 104); }  // 새 메일 버튼이 '연필+새 메일'을 못 담을 만큼 좁을 때만 글자 숨김
 function setupSplits() {
   const Wd = store.get('widths', null);
   if (Wd) { document.documentElement.style.setProperty('--w-nav', Wd.nav + 'px'); document.documentElement.style.setProperty('--w-list', Wd.list + 'px'); }
@@ -4366,14 +4351,49 @@ function uhKey(e) {
   uhFlush();
 }
 /* ───────── 시작 ───────── */
-// 버튼을 누르면 테두리 빛 한 바퀴 + 훑는 빛 (모든 버튼 공통)
+// 보고 있는 메일: 목록 칸 밖까지 살짝 튀어나온 판 (목록은 스크롤 칸이라 위에 따로 띄움 — 클릭은 아래 실제 줄로 그대로 감)
+const SELF = { el: null, src: null, sig: '' };
+function selFloat() {
+  const r = document.body.classList.contains('popmode') ? null : $('#rows .row.open');
+  if (!r || !r.offsetParent) { if (SELF.el) SELF.el.hidden = true; return; }
+  if (!SELF.el) { SELF.el = document.createElement('div'); SELF.el.className = 'selfloat'; document.body.append(SELF.el); }
+  const f = SELF.el, sig = r.outerHTML + (($('.ck', r) || {}).checked ? 1 : 0);
+  if (SELF.src !== r || SELF.sig !== sig) { const c = r.cloneNode(true); c.removeAttribute('data-id'); c.querySelectorAll('[id]').forEach(x => x.removeAttribute('id')); const ck = $('.ck', c); if (ck) ck.checked = !!($('.ck', r) || {}).checked; c.classList.toggle('hv', r.matches(':hover')); f.replaceChildren(Object.assign(document.createElement('div'), { className: 'plate' }), c); SELF.src = r; SELF.sig = sig; }
+  const b = r.getBoundingClientRect(), L = $('#rows').getBoundingClientRect();
+  if (b.bottom < L.top || b.top > L.bottom) { f.hidden = true; return; }
+  f.hidden = false; Object.assign(f.style, { left: b.left + 'px', top: b.top + 'px', width: b.width + 'px', height: b.height + 'px' });
+  // 목록 칸 위·아래로 스크롤돼 나간 부분은 잘라냄 (옆으로는 살짝 튀어나오게 둠)
+  f.style.clipPath = `inset(${Math.max(-6, L.top - b.top)}px -14px ${Math.max(-6, b.bottom - L.bottom)}px -14px)`;
+}
+(() => {
+  let q = 0; const kick = () => { if (q) return; q = requestAnimationFrame(() => { q = 0; selFloat(); }); };
+  const hook = () => { const rows = $('#rows'); if (!rows || rows._sf) return; rows._sf = 1;
+    rows.addEventListener('scroll', kick, { passive: true });
+    new MutationObserver(kick).observe(rows, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'checked'] });
+    rows.addEventListener('mouseover', e => { const r = e.target.closest('.row'); if (SELF.el && SELF.el.lastChild && SELF.el.lastChild.classList) SELF.el.lastChild.classList.toggle('hv', !!r && r === SELF.src); });
+    rows.addEventListener('mouseleave', () => { if (SELF.el && SELF.el.lastChild && SELF.el.lastChild.classList) SELF.el.lastChild.classList.remove('hv'); });
+    rows.addEventListener('change', kick, true);
+    try { new ResizeObserver(kick).observe(rows); } catch (e) { /* */ } };
+  window.addEventListener('resize', kick); setInterval(() => { hook(); kick(); }, 400); setTimeout(hook);
+})();
+// 버튼을 누르면 테두리 빛 한 바퀴 + 훑는 빛 (모든 버튼 공통) — 버튼 모양은 그대로
+function jpHost(b) { if (getComputedStyle(b).position === 'static') b.style.position = 'relative'; }
+function jpFire(b) {
+  if (!b || !b.isConnected) return; jpHost(b);
+  const old = b.querySelector(':scope > .jp:not(.jploop)'); if (old) old.remove();
+  const j = document.createElement('i'); j.className = 'jp'; j.innerHTML = '<i class="jp-orb"></i><i class="jp-clip"><i class="jp-sw"></i></i>';
+  b.append(j); j.querySelector('.jp-sw').addEventListener('animationend', () => j.remove()); setTimeout(() => j.remove(), 3000);
+}
+// 일하는 동안: 테두리를 빛이 계속 돎 → 끝나면 한 번 훑고 사라짐
+function jpLoop(b) {
+  if (!b) return { stop() {} }; jpHost(b);
+  const j = document.createElement('i'); j.className = 'jp jploop'; j.innerHTML = '<i class="jp-orb"></i>'; b.append(j); b._jpl = (b._jpl || 0) + 1;
+  return { stop(ok) { j.remove(); b._jpl = Math.max(0, (b._jpl || 1) - 1); if (ok !== false) jpFire(b); } };
+}
 document.addEventListener('pointerdown', e => {
   if (e.button !== 0) return;
   const b = e.target.closest('.btn, .tf, .fbtn, .refbtn, .attpick, .foot .chip, .ib, #srcPill.avatar, .sbox .go'); if (!b || b.disabled || b.closest('.menu, .modal, #cbody')) return;
-  if (getComputedStyle(b).position === 'static') b.style.position = 'relative';
-  const old = b.querySelector(':scope > .jp'); if (old) old.remove();
-  const j = document.createElement('i'); j.className = 'jp'; j.innerHTML = '<i class="jp-orb"></i><i class="jp-clip"><i class="jp-sw"></i></i>';
-  b.append(j); j.querySelector('.jp-sw').addEventListener('animationend', () => j.remove()); setTimeout(() => j.remove(), 3000);
+  jpFire(b);
 }, true);
 // 메일 쓰기 버튼들(휴지통·닫기·새 창·보내기)은 받는사람 줄 오른쪽에, 저장 상태 글은 첨부 줄 오른쪽에
 (() => { const ct = $('.ctool'), to = $('#toBox') && $('#toBox').closest('.fld'); if (ct && to) to.append(ct); const sv = $('#saveState'), af = $('.attfld'); if (sv && af) af.append(sv); })();
