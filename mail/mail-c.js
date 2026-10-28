@@ -950,9 +950,8 @@ function renderRead(force) {
       <div class="racts">
           <div class="bar">
             <button class="btn" data-act="reply">${ico('reply', 16)} 답장</button><button class="btn" data-act="all">${ico('replyall', 16)} 전체답장</button><button class="btn" data-act="fwd">${ico('fwd', 16)} 전달</button>
-            <button class="ib" data-act="more" title="이동·삭제">${ico('more', 18)}</button><button class="ib" data-act="popview" title="새 창에서 보기">${ico('pop')}</button>
           </div>
-          <span class="when">${m.d === 0 ? '오늘 ' + fmtDW(dayOf(m)) : fmtDW(dayOf(m))} ${m.t}</span>
+          <div class="bar2"><span class="when">${m.d === 0 ? '오늘 ' + fmtDW(dayOf(m)) : fmtDW(dayOf(m))} ${m.t}</span><button class="ib" data-act="more" title="이동·삭제">${ico('more', 18)}</button><button class="ib" data-act="popview" title="새 창에서 보기">${ico('pop')}</button></div>
         </div>
     </div>
     <div class="rscroll">
