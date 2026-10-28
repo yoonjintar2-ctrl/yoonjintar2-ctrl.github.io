@@ -881,6 +881,16 @@ body.resizing{cursor:col-resize;user-select:none}
 @keyframes qhIn{from{opacity:0;transform:translate(-50%,6px)}}
 .sugg .sload{color:var(--blue)}
 .sugg .sload::after{content:"";display:inline-block;width:10px;height:10px;margin-left:6px;border-radius:50%;border:2px solid #cfdcf4;border-top-color:var(--blue);vertical-align:-1px;animation:jspin .7s linear infinite}
+.mi .pme{display:inline-block;font-weight:700;color:var(--blue);background:var(--blue-l);border-radius:4px;padding:0 6px}
+
+/* 검색 범위 추천: 모든 편지함 ↔ 보던 편지함 */
+.scopebar{flex:none;display:flex;align-items:center;gap:6px;padding:7px 10px;background:#f5f8ff;border-bottom:1px solid #e3e9f4;font-size:12px;color:var(--sub);overflow:hidden;white-space:nowrap}
+.scopebar .k{flex:none;color:var(--mute)}
+.scopebar button{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;height:26px;padding:0 11px;border:1.5px solid var(--lq-line);border-radius:999px;background:#fff;color:var(--lq-ink);font-size:12px;cursor:pointer}
+.scopebar button.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.scopebar button.rec{border-color:var(--lq-on-line);color:var(--blue);animation:recPulse 1.6s ease-out 2}
+.scopebar button i{font-style:normal;font-size:10px;font-weight:700;background:#fde293;color:#7a5200;border-radius:999px;padding:0 5px;margin-right:4px}
+@keyframes recPulse{0%{box-shadow:0 0 0 0 rgba(11,87,208,.35)}100%{box-shadow:0 0 0 7px rgba(11,87,208,0)}}
 </style>
 </head>
 <body>
@@ -930,6 +940,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793154838"></script>
+<script src="mail-c.js?v=1793155428"></script>
 </body>
 </html>
