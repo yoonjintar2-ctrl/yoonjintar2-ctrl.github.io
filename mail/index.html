@@ -1183,6 +1183,9 @@ body{background:url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.or
 .btn.pri:not(:disabled):hover::before,.btn.convclose:hover::before,.foot .chip.on:hover::before{opacity:.5!important}
 .btn.pri:not(:disabled):hover::after,.btn.convclose:hover::after,.foot .chip.on:hover::after{opacity:.7!important}
 #send.fly{background:rgba(8,72,214,.85)!important}
+/* 메일 쓰기 입력 칸: 유리 위에서도 칸이 보이게 (옅은 회색 테두리 + 흰 반투명) */
+.fld .box{background:rgba(255,255,255,.62)!important;border:1px solid rgba(0,0,0,.11)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.7),0 1px 2px rgba(0,0,0,.03)!important}
+.fld .box:focus-within{border-color:var(--blue)!important;box-shadow:0 0 0 1px var(--blue)!important;background:rgba(255,255,255,.85)!important}
 </style>
 </head>
 <body>
@@ -1232,6 +1235,6 @@ body{background:url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.or
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793186282"></script>
+<script src="mail-c.js?v=1793195288"></script>
 </body>
 </html>
