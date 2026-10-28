@@ -3901,14 +3901,16 @@ async function downloadAtt(m, a) {
 }
 
 // 로딩 배경: 흰 화면에서 배경 그림의 곡선들이 흐르는 방향을 따라 하나씩 그려짐 (처음엔 진하게 → 다 불러오면 밝아지며 칸들이 펼쳐짐)
-const BOOT_PATHS = [['M-40 640 C150 420 330 250 560 -40', 250, 0], ['M200 -40 C120 200 60 380 -40 560', 210, .35], ['M520 250 C420 300 420 520 520 560 C700 640 900 480 1000 420', 240, .45], ['M480 260 C600 180 800 160 1000 110', 230, .6], ['M650 -40 C760 60 880 80 1000 60', 200, .8], ['M260 640 C330 520 420 470 520 520', 210, .95]];
+const BOOT_PATHS = [['M-40 640 C150 420 330 250 560 -40', 250, 0], ['M200 -40 C120 200 60 380 -40 560', 210, .3], ['M520 250 C420 300 420 520 520 560 C700 640 900 480 1000 420', 240, .5], ['M480 260 C600 180 800 160 1000 110', 230, .75], ['M650 -40 C760 60 880 80 1000 60', 200, .95], ['M260 640 C330 520 420 470 520 520', 210, 1.1]];
+// 곡선마다 결을 따라 여러 가닥의 선 (리본의 양쪽 가장자리·가운데 결)
+const BOOT_LINES = BOOT_PATHS.flatMap(([d, w, dl]) => [-.5, -.22, 0, .22, .5].map((o, n) => [d, o * w * .62, dl + n * .07]));
 function bootArt() {
   const W = innerWidth, H = innerHeight, urls = (getComputedStyle(document.body).backgroundImage.match(/url\("?(.*?)"?\)(?=,|$)/g) || []).map(u => u.replace(/^url\("?|"?\)$/g, ''));
   const bg = urls[urls.length - 1] || '', tl = urls.length > 2 ? urls[0] : '', tr = urls.length > 2 ? urls[1] : '';
   const k = Math.max(W / 960, H / 600), tx = (W - 960 * k) / 2, ty = (H - 600 * k) / 2;
-  const mk = BOOT_PATHS.map(([d, w, dl]) => `<path pathLength="1" stroke-width="${w}" d="${d}" style="animation-delay:${dl}s"/>`).join('');
-  const tr2 = BOOT_PATHS.map(([d, w, dl]) => `<path pathLength="1" d="${d}" style="animation-delay:${dl}s"/>`).join('');
-  return `<svg class="bootart" width="${W}" height="${H}" aria-hidden="true"><defs><filter id="bsf" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="22"/></filter>
+  const mk = BOOT_PATHS.map(([d, w, dl]) => `<path pathLength="1" stroke-width="${w}" d="${d}" style="animation-delay:${(dl + .55).toFixed(2)}s"/>`).join('');
+  const tr2 = BOOT_LINES.map(([d, o, dl]) => `<path pathLength="1" d="${d}" transform="translate(${(o * .7).toFixed(1)} ${(o * .7).toFixed(1)})" style="animation-delay:${dl.toFixed(2)}s"/>`).join('');
+  return `<svg class="bootart" width="${W}" height="${H}" aria-hidden="true"><defs><filter id="bsf" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
 <mask id="bmk" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><g class="mk" filter="url(#bsf)" transform="translate(${tx} ${ty}) scale(${k})">${mk}<rect class="mkall" x="-200" y="-200" width="1360" height="1000" fill="#fff"/></g></mask></defs>
 <g class="art" mask="url(#bmk)"><image href="${bg}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice"/>${tl ? `<image href="${tl}" x="0" y="0" width="600" height="243.75"/>` : ''}${tr ? `<image href="${tr}" x="${W - 560}" y="0" width="560" height="280"/>` : ''}</g>
 <g class="trace" transform="translate(${tx} ${ty}) scale(${k})">${tr2}</g></svg>`;
@@ -4379,8 +4381,10 @@ function selFloat() {
   const b = r.getBoundingClientRect(), L = $('#rows').getBoundingClientRect();
   if (b.bottom < L.top || b.top > L.bottom) { f.hidden = true; return; }
   f.hidden = false; Object.assign(f.style, { left: b.left + 'px', top: b.top + 'px', width: b.width + 'px', height: b.height + 'px' });
+  // 판은 목록 칸(스크롤 막대 자리 포함) 양옆으로 똑같이 조금씩 튀어나오게
+  const pl = f.firstChild; if (pl && pl.classList.contains('plate')) Object.assign(pl.style, { left: (L.left - b.left - 6) + 'px', right: (b.right - L.right - 6) + 'px' });
   // 목록 칸 위·아래로 스크롤돼 나간 부분은 잘라냄 (옆으로는 살짝 튀어나오게 둠)
-  f.style.clipPath = `inset(${Math.max(-6, L.top - b.top)}px -14px ${Math.max(-6, b.bottom - L.bottom)}px -14px)`;
+  f.style.clipPath = `inset(${Math.max(-30, L.top - b.top)}px ${b.right - L.right - 40}px ${Math.max(-30, b.bottom - L.bottom)}px ${L.left - b.left - 40}px)`;
 }
 (() => {
   let q = 0; const kick = () => { if (q) return; q = requestAnimationFrame(() => { q = 0; selFloat(); }); };
