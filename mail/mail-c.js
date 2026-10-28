@@ -1133,14 +1133,28 @@ function linesInRange(r) {
   const topOf = n => { while (n && n.parentNode !== b) n = n.parentNode; return n; };
   const a = topOf(ms), z = topOf(me); if (!a || !z) { ms.remove(); me.remove(); return []; }
   const tops = []; for (let n = a; n; n = n.nextSibling) { tops.push(n); if (n === z) break; }
-  const skip = el => el.nodeType === 1 && (el.classList.contains('gp-footer') || el.tagName === 'TABLE' || el.tagName === 'HR');
+  // 풋터 안에 쓴 글(인사말 풋터 사이에 본문을 쓴 경우)도 줄마다 들여쓰기 — 예전엔 풋터 안이면 아무 반응이 없었음
+  const skip = el => el.nodeType === 1 && (el.tagName === 'TABLE' || el.tagName === 'HR');
   // 1) 본문 바로 아래 흩어진 글자·<br> 묶음은 한 덩어리 <div>로
   let run = [];
   const wrapRun = () => { if (!run.length) return; const d = document.createElement('div'); run[0].before(d); run.forEach(x => d.append(x)); run = []; };
   tops.forEach(n => { if (n.nodeType === 1 && ANY_BLOCK.test(n.tagName)) wrapRun(); else run.push(n); }); wrapRun();
   // 2) <br>가 섞인 덩어리는 줄마다 <div>로 나눔
+  // 굵게·글자색 같은 꾸밈 안에 <br>이 들어 있으면(<b>줄1<br>줄2</b>) 꾸밈을 줄마다 나눠서 <br>을 바깥으로 꺼냄 → 줄 단위로 나눌 수 있게
+  const hoistBr = el => {
+    for (let guard = 0; guard < 500; guard++) {
+      const br = [...el.querySelectorAll('br')].find(x => x.parentElement !== el && !ANY_BLOCK.test(x.parentElement.tagName) && x.parentElement.closest('div,p,li,h1,h2,h3,h4,h5,h6,blockquote,td,th') === el);
+      if (!br) return;
+      const par = br.parentElement, left = par.cloneNode(false), right = par.cloneNode(false);
+      while (par.firstChild && par.firstChild !== br) left.append(par.firstChild);
+      br.remove(); while (par.firstChild) right.append(par.firstChild);
+      const out = []; if (left.childNodes.length) out.push(left); out.push(br); if (right.childNodes.length) out.push(right);
+      par.replaceWith(...out);
+    }
+  };
   const split = el => {
     if (skip(el) || !LINE_BLOCK.test(el.tagName) && el.tagName !== 'BLOCKQUOTE') return;
+    hoistBr(el);
     const kids = [...el.childNodes]; if (!kids.some(k => k.nodeName === 'BR') && !kids.some(k => k.nodeType === 1 && ANY_BLOCK.test(k.tagName))) return;
     if (!kids.some(k => k.nodeName === 'BR')) { kids.forEach(k => { if (k.nodeType === 1) split(k); }); return; }
     const out = []; let cur = null;
@@ -1158,7 +1172,7 @@ function linesInRange(r) {
   const rr = document.createRange(); rr.setStartBefore(ms); rr.setEndAfter(me);
   const lines = [];
   tops2.forEach(t => { if (t.nodeType !== 1 || skip(t)) return; const cand = LINE_BLOCK.test(t.tagName) ? [t, ...t.querySelectorAll('div,p,li,h1,h2,h3,h4,h5,h6')] : [...t.querySelectorAll('div,p,li')];
-    cand.forEach(el => { if (el.closest('.gp-footer, table') || [...el.children].some(c => LINE_BLOCK.test(c.tagName))) return; if (rr.intersectsNode(el) && !(el.contains(me) && !el.textContent.trim() && !el.contains(ms))) lines.push(el); }); });
+    cand.forEach(el => { if (el.closest('table') || [...el.children].some(c => LINE_BLOCK.test(c.tagName))) return; if (rr.intersectsNode(el) && !(el.contains(me) && !el.textContent.trim() && !el.contains(ms))) lines.push(el); }); });
   // 끝 표시가 다음 줄 맨 앞에 있으면 그 줄은 빼기 (줄 끝까지 끌어 고르면 흔히 생김)
   const last = lines[lines.length - 1]; if (last && last.contains(me) && !last.contains(ms)) { const t = document.createRange(); t.setStart(last, 0); t.setEndBefore(me); if (!t.toString().trim()) lines.pop(); }
   const sel = getSelection(), nr = document.createRange(); nr.setStartAfter(ms); nr.setEndBefore(me); ms.remove(); me.remove();
@@ -2089,7 +2103,52 @@ function typoAtCaret() {
 
 /* ───────── 작성 본문: 서식·표·그림 ───────── */
 let lastSpace = 0;
+// 지울 수 없던 가로줄: 원본 메일에 있는 '테두리로 그린 줄'(아웃룩 구분선 등)·<hr>
+const LINE_SKIP = /^(TABLE|TBODY|THEAD|TR|TD|TH|IMG)$/;
+const bwOf = (cs, side) => parseFloat(cs['border' + side + 'Width']) > 0 && cs['border' + side + 'Style'] !== 'none' && cs['border' + side + 'Style'] !== 'hidden';
+function lineAt(x, y) {
+  const b = $('#cbody'); const seen = new Set();
+  for (const dy of [0, -3, 3, -5, 5]) for (const el of document.elementsFromPoint(x, y + dy)) {
+    if (el === b || !b.contains(el) || seen.has(el)) continue; seen.add(el);
+    if (el.tagName === 'HR') return { el, side: 'hr' };
+    if (LINE_SKIP.test(el.tagName) || el.classList.contains('gp-footer')) continue;
+    const r = el.getBoundingClientRect(), cs = getComputedStyle(el); if (r.width < 40) continue;
+    if (bwOf(cs, 'Top') && Math.abs(y - r.top) <= 4) return { el, side: 'Top' };
+    if (bwOf(cs, 'Bottom') && Math.abs(y - r.bottom) <= 4) return { el, side: 'Bottom' };
+  }
+  return null;
+}
+function dropLine(hit) {
+  if (!hit) return false;
+  if (hit.side === 'hr') hit.el.remove(); else { hit.el.style['border' + hit.side] = 'none'; hit.el.style['padding' + hit.side] = '0'; }
+  dirty(); return true;
+}
+function linePop(e) {
+  const old = $('#lnpop'); if (old) old.remove();
+  const hit = lineAt(e.clientX, e.clientY); if (!hit) return;
+  const bt = document.createElement('button'); bt.id = 'lnpop'; bt.className = 'lnpop'; bt.textContent = '이 가로줄 지우기';
+  Object.assign(bt.style, { left: Math.min(innerWidth - 130, e.clientX + 8) + 'px', top: (e.clientY + 10) + 'px' });
+  bt.addEventListener('mousedown', ev => { ev.preventDefault(); ev.stopPropagation(); dropLine(hit); bt.remove(); });
+  document.body.append(bt); setTimeout(() => { const x = $('#lnpop'); if (x === bt) bt.remove(); }, 4000);
+}
+// Backspace(줄 바로 아래 맨 앞) / Delete(줄 바로 위 맨 끝)로도 지워짐
+function lineKey(e) {
+  if (e.key !== 'Backspace' && e.key !== 'Delete') return;
+  const s = getSelection(); if (!s.rangeCount || !s.isCollapsed) return;
+  const b = $('#cbody'), r = s.getRangeAt(0), back = e.key === 'Backspace';
+  let n = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement; if (!b.contains(n)) return;
+  const edge = el => { const t = document.createRange(); t.selectNodeContents(el); if (back) t.setEnd(r.startContainer, r.startOffset); else t.setStart(r.startContainer, r.startOffset); return !t.toString().replace(/[\u200b]/g, '').length && !t.cloneContents().querySelector('img,table'); };
+  const sideOf = el => { if (!el || el.nodeType !== 1 || LINE_SKIP.test(el.tagName)) return null; if (el.tagName === 'HR') return { el, side: 'hr' }; const cs = getComputedStyle(el); return bwOf(cs, back ? 'Bottom' : 'Top') ? { el, side: back ? 'Bottom' : 'Top' } : null; };
+  for (let el = n; el && el !== b; el = el.parentElement) {
+    if (LINE_SKIP.test(el.tagName) || !edge(el)) break;
+    const cs = getComputedStyle(el);
+    if (bwOf(cs, back ? 'Top' : 'Bottom')) { e.preventDefault(); dropLine({ el, side: back ? 'Top' : 'Bottom' }); return; }
+    let sib = back ? el.previousSibling : el.nextSibling; while (sib && sib.nodeType === 3 && !sib.nodeValue.trim()) sib = back ? sib.previousSibling : sib.nextSibling;
+    const h = sideOf(sib); if (h) { e.preventDefault(); dropLine(h); return; }
+  }
+}
 function bodyKeydown(e) {
+  lineKey(e); if (e.defaultPrevented) return;
   if (e.key === 'Tab') { const td = cellAtCaret(); if (td) { e.preventDefault(); moveCell(td, e.shiftKey ? -1 : 1); } }
   cellUpDown(e);
 }
@@ -2621,6 +2680,37 @@ function rectCells(a, b) {
   for (let grow = true; grow;) { grow = false; g.forEach(p => { if (p.r <= r1 && p.r2 >= r0 && p.c <= c1 && p.c2 >= c0) { if (p.r < r0) { r0 = p.r; grow = true; } if (p.r2 > r1) { r1 = p.r2; grow = true; } if (p.c < c0) { c0 = p.c; grow = true; } if (p.c2 > c1) { c1 = p.c2; grow = true; } } }); }
   const out = []; g.forEach((p, c) => { if (p.r <= r1 && p.r2 >= r0 && p.c <= c1 && p.c2 >= c0) out.push(c); });
   return out.sort((x, y) => (g.get(x).r - g.get(y).r) || (g.get(x).c - g.get(y).c));
+}
+// 엑셀에서 여러 칸을 복사해 표에 붙여넣기: 고른 칸(또는 커서가 있는 칸)부터 칸마다 값이 들어감 (엑셀처럼)
+function tsvGrid(t) {
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < t.length; i++) { const ch = t[i];
+    if (q) { if (ch === '"') { if (t[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; continue; }
+    if (ch === '"' && cur === '') { q = true; continue; }
+    if (ch === '\t') { row.push(cur); cur = ''; } else if (ch === '\n' || ch === '\r') { if (ch === '\r' && t[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; } else cur += ch; }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+function setCellText(cell, v) {
+  let el = cell; while (el.children.length === 1 && !/^(BR|IMG|TABLE)$/.test(el.firstElementChild.tagName) && el.textContent === el.firstElementChild.textContent) el = el.firstElementChild;
+  el.textContent = v; if (!v) el.append(document.createElement('br'));
+}
+function gridPaste(cd) {
+  const txt = cd.getData('text/plain') || ''; if (!txt) return false;
+  const multi = TS.multi && TS.cells.filter(c => c.isConnected).length > 1;
+  const caretTd = cellAtCaret(), anchor0 = multi ? TS.cells.find(c => c.isConnected) : caretTd; if (!anchor0) return false;
+  const G = tsvGrid(txt), nR = G.length, nC = Math.max(...G.map(r => r.length));
+  if (nR * nC <= 1 && !multi) return false;  // 한 칸짜리는 평소처럼
+  const t = anchor0.closest('table'), g = tableGrid(t), at = new Map(); g.forEach((p, c) => at.set(p.r + ':' + p.c, c));
+  let done = 0;
+  if (multi && nR * nC === 1) { TS.cells.filter(c => c.isConnected).forEach(c => { setCellText(c, G[0][0] || ''); done++; }); }
+  else {
+    const sel = multi ? TS.cells.filter(c => c.isConnected) : [anchor0];
+    const r0 = Math.min(...sel.map(c => g.get(c).r)), c0 = Math.min(...sel.map(c => g.get(c).c));
+    for (let i = 0; i < nR; i++) for (let j = 0; j < nC; j++) { const c = at.get((r0 + i) + ':' + (c0 + j)); if (c) { setCellText(c, (G[i][j] || '').trim()); done++; } }
+  }
+  if (!done) return false;
+  dirty(); toast(`${done}칸에 붙여넣었어요`); return true;
 }
 // 커서가 칸 안에 있으면 그 칸에 옅은 음영 (여러 칸을 끌어서 골랐을 땐 그대로 유지)
 function syncTdSel() {
@@ -4016,6 +4106,7 @@ function wire() {
     } finally { b.disabled = false; }
   });
   // 작성 화면 링크: 아래 원본 메일(스레드)의 링크는 그냥 눌러도 새 탭으로 열림, 내가 쓴 부분은 Ctrl(⌘)+클릭으로 (글자 고치기와 안 겹치게)
+  $('#cbody').addEventListener('click', linePop);
   $('#cbody').addEventListener('click', e => {
     const a = e.target.closest('a[href]'); if (!a || !$('#cbody').contains(a)) return;
     if (!a.closest('.quote') && !e.ctrlKey && !e.metaKey) return;
@@ -4086,6 +4177,7 @@ function wire() {
     if (docs.length && !hasText) { e.preventDefault(); addFiles(docs); return; }
     if (img && !hasText) { e.preventDefault(); readImage(img.getAsFile()).then(insertImage); return; }
     if (!hasText) return;
+    if (gridPaste(cd)) { e.preventDefault(); return; }
     e.preventDefault(); doPaste(cd);
   });
   // 옵션 버튼은 계속 쓰거나 다른 데를 누르면 사라짐 (붙여넣은 내용은 그대로)
