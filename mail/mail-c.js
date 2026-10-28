@@ -1920,28 +1920,40 @@ function typoAtCaret() {
 /* ───────── 작성 본문: 서식·표·그림 ───────── */
 let lastSpace = 0;
 function bodyKeydown(e) {
-  // 스페이스 두 번 → 한글 한 글자 너비 들여쓰기(전각 공백, 백스페이스 한 번에 지워짐)
-  if (e.key === ' ' && !e.ctrlKey && !e.altKey && !e.isComposing) {
-    const s = getSelection(), now = Date.now();
-    if (s.isCollapsed && now - lastSpace < 500) {
-      const n = s.anchorNode, o = s.anchorOffset;
-      if (n && n.nodeType === 3 && o > 0 && /[  ]/.test(n.nodeValue[o - 1])) { e.preventDefault(); document.execCommand('delete'); document.execCommand('insertText', false, '　'); lastSpace = 0; return; }
-    }
-    lastSpace = now; return;
-  }
-  lastSpace = 0;
-  // 아웃룩처럼 자동 바꾸기: -> 는 →, => 는 ⇒
-  if (e.key === '>' && !e.ctrlKey && !e.altKey && !e.isComposing) {
-    const s = getSelection(), n = s.anchorNode, o = s.anchorOffset;
-    if (s.isCollapsed && n && n.nodeType === 3 && o > 0 && (n.nodeValue[o - 1] === '-' || n.nodeValue[o - 1] === '=') && !(o > 1 && n.nodeValue[o - 2] === '<')) {
-      e.preventDefault(); const arrow = n.nodeValue[o - 1] === '-' ? '→' : '⇒'; document.execCommand('delete'); document.execCommand('insertText', false, arrow); dirty(); return;
-    }
-  }
-  // --- (하이픈 3개 이상)만 있는 줄에서 Enter → 가로선
-  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.isComposing && hrOnEnter(e)) return;
   if (e.key === 'Tab') { const td = cellAtCaret(); if (td) { e.preventDefault(); moveCell(td, e.shiftKey ? -1 : 1); } }
   cellUpDown(e);
-  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.isComposing) keepIndentOnEnter(e);
+}
+// 자동 바꾸기·들여쓰기는 '실제로 글자가 들어가기 직전'(beforeinput)에서 처리
+// → 한글 입력기가 켜져 있어 Enter·스페이스가 'Process' 키로 오는 윈도우에서도 동작 (keydown으로는 놓치던 문제)
+let fixing = false;
+function bodyBeforeInput(e) {
+  if (fixing || e.isComposing) return;
+  const t = e.inputType, s = getSelection();
+  fixing = true;
+  try {
+    if (t === 'insertText' && e.data === ' ') {
+      // 스페이스 두 번 → 한글 한 글자 너비 들여쓰기(전각 공백, 백스페이스 한 번에 지워짐)
+      const now = Date.now();
+      if (s.isCollapsed && now - lastSpace < 500) {
+        const n = s.anchorNode, o = s.anchorOffset;
+        if (n && n.nodeType === 3 && o > 0 && /[  ]/.test(n.nodeValue[o - 1])) { e.preventDefault(); document.execCommand('delete'); document.execCommand('insertText', false, '　'); lastSpace = 0; dirty(); return; }
+      }
+      lastSpace = now; return;
+    }
+    lastSpace = 0;
+    if (t === 'insertText' && e.data === '>') {
+      // 아웃룩처럼: -> 는 →, => 는 ⇒ (<= 처럼 부등호는 그대로)
+      const n = s.anchorNode, o = s.anchorOffset;
+      if (s.isCollapsed && n && n.nodeType === 3 && o > 0 && (n.nodeValue[o - 1] === '-' || n.nodeValue[o - 1] === '=') && !(o > 1 && n.nodeValue[o - 2] === '<')) {
+        e.preventDefault(); const arrow = n.nodeValue[o - 1] === '-' ? '→' : '⇒'; document.execCommand('delete'); document.execCommand('insertText', false, arrow); dirty(); return;
+      }
+      return;
+    }
+    if (t === 'insertParagraph') {
+      if (hrOnEnter(e)) return;   // --- (하이픈 3개 이상)만 있는 줄 → 가로선
+      keepIndentOnEnter(e);       // 들여쓰기 이어가기 / 빈 줄이면 풀기
+    }
+  } finally { fixing = false; }
 }
 // 커서가 있는 한 줄(앞뒤 <br> 사이)을 <div>로 묶어 돌려줌
 function wrapLine(container, s) {
@@ -2237,11 +2249,12 @@ function textImgHtml(html, keepImg = true) {
         return;
       }
       const block = /^(P|DIV|LI|H[1-6]|TR|BLOCKQUOTE|PRE|UL|OL|SECTION|ARTICLE)$/.test(n.tagName);
-      if (block && line) flush();
+      // 문단 사이의 빈칸·줄바꿈 글자(HTML 소스 들여쓰기)는 버림 → 문단마다 빈 줄이 하나씩 더 생기던 문제
+      if (block) { if (line.trim()) flush(); else line = ''; }
       n.childNodes.forEach(walk);
-      if (block && line) flush();
+      if (block && line !== '') flush();  // <p>&nbsp;</p> 같은 일부러 넣은 빈 줄은 한 줄로 살림
     };
-    [...nodes].forEach(walk); if (line) flush();
+    [...nodes].forEach(walk); if (line.trim()) flush();
     return out.map((x, k) => x.startsWith('<table') || (out[k + 1] || '').startsWith('<table') ? x : x + '<br>').join('').replace(/<br>$/, '');
   };
   return conv(d.body.childNodes);
@@ -2318,7 +2331,7 @@ async function htmlToPng(r) {
 function doPaste(cd) {
   const html = cd.getData('text/html'), text = cd.getData('text/plain');
   const imgItem = [...cd.items].find(i => i.kind === 'file' && i.type.startsWith('image/')), imgFile = imgItem ? imgItem.getAsFile() : null;
-  const v = { rich: html ? cleanHtml(html) : textToHtml(text), plain: html && /<table\b/i.test(html) ? textImgHtml(html, false) : textToHtml(text || (html ? new DOMParser().parseFromString(html, 'text/html').body.innerText : '')), ti: html ? textImgHtml(html) : textToHtml(text) };
+  const v = { rich: html ? cleanHtml(html) : textToHtml(text), plain: html ? textImgHtml(html, false) : textToHtml(text || ''),  /* 서식 있는 글은 클립보드의 글자판 대신 HTML에서 직접 (문단마다 빈 줄이 두 번씩 들어가던 문제) */ ti: html ? textImgHtml(html) : textToHtml(text) };
   const complex = !!html && /<(table|img)\b/i.test(html);  // 표·그림이 있으면 '그림으로' 고를 수 있게
   v._html = html; pasteOpt.v = v;
   if (complex) v.img = '';
@@ -3845,6 +3858,7 @@ function wire() {
     if (selImg && e.key !== 'Shift') { selImg = null; posImgSel(); }
     bodyKeydown(e);
   });
+  body.addEventListener('beforeinput', bodyBeforeInput);
   // 붙여넣기: 그림만(캡처 등) → 커서 위치에 그림 / 글자·표 등 → 서식 그대로 + 옵션 버튼
   body.addEventListener('paste', e => {
     const cd = e.clipboardData; if (!cd) return;
