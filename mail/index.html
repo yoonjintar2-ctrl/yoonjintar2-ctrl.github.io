@@ -813,6 +813,11 @@ body.resizing{cursor:col-resize;user-select:none}
 .refbtn .rfr,.refbtn .rfr .dm-fill{border-radius:50%}
 .refbtn .rfr{inset:-1.5px}
 .refbtn .rfr .dm-orb i{offset-path:path("M21.5 0A21.5 21.5 0 1 1 21.49 0Z")}
+
+/* 메일 목록: 마우스를 올리면 날짜 왼쪽에 휴지통 */
+.row .rdel{display:none;flex:none;align-items:center;justify-content:center;width:24px;height:24px;margin:-3px 0;border:0;border-radius:50%;background:transparent;color:#7d848e;padding:0;cursor:pointer}
+.row:hover .rdel{display:inline-flex}
+.row .rdel:hover{background:#fde8e6;color:#d93025}
 </style>
 </head>
 <body>
@@ -862,6 +867,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793149744"></script>
+<script src="mail-c.js?v=1793149812"></script>
 </body>
 </html>

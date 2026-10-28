@@ -746,7 +746,7 @@ function renderList() {
     const who = m.sent ? esc('받는사람: ' + m.to.map(nameOf).join(', ')) : `${esc(m.from.name)}${m.from.email && m.from.email.includes('@') ? ` <span class="dom">${esc(m.from.email.split('@')[1])}</span>` : ''}` + boxTag(m);
     h += `<div class="row${m.unread ? ' unread' : ''}${st.open === m.id || (m.nd && st.ndOpen === m.id && $('#read').classList.contains('composing')) ? ' open' : ''}${st.picked.has(m.id) ? ' picked' : ''}" data-id="${m.id}" draggable="true">
       <input type="checkbox" class="ck"${st.picked.has(m.id) ? ' checked' : ''}><div class="mid">
-      <div class="l1"><span class="who">${who}</span><span class="dt">${dateLabel(m)}</span></div>
+      <div class="l1"><span class="who">${who}</span>${m.deleted || m.nd ? '' : `<button class="rdel" data-del="${m.id}" title="지운 편지함으로">${ico('trash', 15)}</button>`}<span class="dt">${dateLabel(m)}</span></div>
       <div class="subj">${m.deleted ? '<span class="deltag">삭제됨</span> ' : ''}${m.draft ? '<span class="draft">작성 중</span> ' : ''}${esc(m.subj)}</div>
       <div class="snip">${attIcons(m)}${esc(snipOf(m)) || '&nbsp;'}</div>
     </div>${(() => { const n = convCount(m); return `<button class="convb${n > 1 ? ' has' : ''}" data-conv="${m.id}" title="이 메일과 이어진 대화 ${n}통 보기">${ico('conv', 15)}${n > 1 ? n : ''}</button>`; })()}<button class="starb${m.star ? ' on' : ''}" data-star="${m.id}" title="${m.star ? '즐겨찾기 해제' : '즐겨찾기 (별표)'}">${STAR_SVG}</button></div>`;
@@ -3523,6 +3523,7 @@ function wire() {
   rows.addEventListener('click', e => {
     const cb = e.target.closest('[data-conv]'); if (cb) { e.stopPropagation(); openConv(+cb.dataset.conv); return; }
     const sb = e.target.closest('[data-star]'); if (sb) { e.stopPropagation(); toggleStar(+sb.dataset.star); return; }
+    const db = e.target.closest('[data-del]'); if (db) { e.stopPropagation(); const id = +db.dataset.del, keep = [...st.picked].filter(x => x !== id); trashMails([id]); keep.forEach(x => st.picked.add(x)); if (keep.length) renderList(); return; }
     const r = e.target.closest('.row'); if (!r) return; const id = +r.dataset.id;
     if (e.target.classList.contains('ck') || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) { if (!e.target.classList.contains('ck')) e.preventDefault(); pickClick(id, e); return; }
     st.anchor = id; openMail(id);
