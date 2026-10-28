@@ -771,8 +771,8 @@ function renderHead(list) {
     : st.q.trim() ? `<span class="cnt">${esc(folderName(st.folder))} 안 · ${list.length}통</span>`
     : '<span class="cnt"></span>';  // 평소엔 편지함 이름·통수 표시 안 함 (왼쪽에서 이미 보임)
   lh.innerHTML = `<input type="checkbox" class="ck" id="ckAll" title="모두 선택"${all ? ' checked' : ''}>
-    ${label}
-    <button class="btn" data-b="move" title="편지함으로 이동"${dis}>${ico('move', 15)}<span class="lx2"> 이동</span></button><button class="btn" data-b="read"${dis}>읽음<span class="lx"> 처리</span></button><button class="btn" data-b="unread"${dis}>안읽음<span class="lx"> 처리</span></button>${st.folder === 'trash' ? `<button class="btn" data-b="restore"${dis}>되살리기</button>` : `<button class="ib" data-b="del" title="삭제"${dis}>${ico('trash', 17)}</button>`}`;
+    <button class="btn" data-b="move" title="편지함으로 이동"${dis}>${ico('move', 15)}<span class="lx2"> 이동</span></button><button class="btn" data-b="read"${dis}>읽음<span class="lx"> 처리</span></button><button class="btn" data-b="unread"${dis}>안읽음<span class="lx"> 처리</span></button>${st.folder === 'trash' ? `<button class="btn" data-b="restore"${dis}>되살리기</button>` : `<button class="ib" data-b="del" title="삭제"${dis}>${ico('trash', 17)}</button>`}
+    ${label}`;
   const ca = $('#ckAll'); if (ca) ca.indeterminate = n > 0 && !all;
 }
 function pickClick(id, e) {
