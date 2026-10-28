@@ -826,6 +826,24 @@ body.resizing{cursor:col-resize;user-select:none}
 .lhead .cnt{order:9;text-align:right;margin-left:auto}
 .lhead .convt{order:9;margin-left:auto}
 .lhead .ck{margin-right:4px}
+
+/* 색 버튼: 왼쪽 = 최근 색 바로 적용, 오른쪽 ▾ = 다른 색 */
+.splitb{display:inline-flex;align-items:center;border-radius:999px;flex:none}
+.splitb .ib{border-radius:0}
+.splitb .sbm{border-radius:999px 0 0 999px;width:30px}
+.splitb .sbd{width:17px;border-radius:0 999px 999px 0;color:#4d5560;position:relative}
+.splitb .sbd svg{width:10px;height:10px}
+.splitb:hover{box-shadow:inset 0 0 0 1px #d3d9e2}
+.splitb .sbd::before{content:"";position:absolute;left:0;top:7px;bottom:7px;border-left:1px solid #dfe3ea}
+.splitb:hover{background:rgba(31,45,61,.05)}
+.fmt .splitb .sbm .sw{left:6px;right:6px}
+.tbar .splitb .sbm .sw{left:6px;right:6px}
+/* 글자 1pt 키우기·줄이기 */
+.szstep{display:inline-flex;align-items:center;gap:0;margin-left:2px}
+.szstep .ib{width:24px;height:26px;position:relative;color:#3c4350}
+.szstep .ib b{font-size:12px;font-weight:700}
+.szstep .ib i{position:absolute;right:2px;top:2px;font-style:normal;font-size:10px;font-weight:700;line-height:1}
+#fSzDn b{font-size:10.5px}
 </style>
 </head>
 <body>
@@ -875,6 +893,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793151676"></script>
+<script src="mail-c.js?v=1793152563"></script>
 </body>
 </html>

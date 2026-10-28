@@ -644,23 +644,32 @@ function openCalendar() {
 const reEsc = w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const QRE = new Map();
 function qRegs(key, make) { let r = QRE.get(key); if (!r) { if (QRE.size > 200) QRE.clear(); r = make(); QRE.set(key, r); } return r; }
-function queryMatch(m, raw) {
-  const f = st.f; const q = (raw || '').trim();
-  // 기본 검색엔 첨부파일 이름도 포함 (본문 속 그림은 제외). 메일마다 한 번만 만들어 둠
-  const attN = m._attN != null && m._attK === m.att ? m._attN : (m._attK = m.att, m._attN = (m.att || []).filter(a => !(a[3] && a[3].inline)).map(a => a[1]).join(' '));
-  const fields = f.where === 'subj' ? [m.subj || ''] : [m.subj || '', m.from.name || '', m.from.email || '', attN, m.body || m.snippet || ''];
-  if (f.exclude) { const ex = qRegs('x|' + f.exclude, () => f.exclude.split(/[,，]/).map(s => s.trim()).filter(Boolean).map(w => new RegExp(reEsc(w), 'i'))); if (ex.some(re => fields.some(x => re.test(x)))) return false; }
-  if (!q) return true;
-  if (f.exact) return fields.some(x => x.includes(q));
-  const ws = qRegs('q|' + q, () => q.split(/\s+/).filter(Boolean).map(w => new RegExp(reEsc(w), 'i')));
-  return ws.every(re => fields.some(x => re.test(x)));
+// 검색용 글자 덩어리: 메일마다 한 번만 소문자로 만들어 두고 재사용 (글자 칠 때마다 정규식으로 다시 훑지 않게)
+function hayOf(m) {
+  const body = m.body || m.snippet || '';
+  if (m._hs != null && m._hsB === body && m._hsA === m.att && m._hsS === m.subj) return m._hs;
+  const attN = (m.att || []).filter(a => !(a[3] && a[3].inline)).map(a => a[1]).join(' ');  // 기본 검색엔 첨부파일 이름도 포함 (본문 속 그림은 제외)
+  m._hsB = body; m._hsA = m.att; m._hsS = m.subj;
+  return (m._hs = [m.subj || '', m.from.name || '', m.from.email || '', attN, body].join('\n').toLowerCase());
 }
-function renderSugg() {
+const subjOf = m => (m._slK === m.subj ? m._sl : (m._slK = m.subj, m._sl = (m.subj || '').toLowerCase()));
+function queryMatch(m, raw) {
+  const f = st.f; const q = (raw || '').trim().toLowerCase();
+  if (!q && !f.exclude) return true;
+  const hay = f.where === 'subj' ? subjOf(m) : hayOf(m);
+  if (f.exclude) { const ex = qRegs('x|' + f.exclude, () => f.exclude.split(/[,，]/).map(s => s.trim().toLowerCase()).filter(Boolean)); if (ex.some(w => hay.includes(w))) return false; }
+  if (!q) return true;
+  if (f.exact) return hay.includes(q);
+  const ws = qRegs('q|' + q, () => q.split(/\s+/).filter(Boolean));
+  return ws.every(w => hay.includes(w));
+}
+// 자동완성: 글자를 치는 동안만. 엔터·돋보기를 누르거나 마우스가 검색창·자동완성 밖으로 0.2초 넘게 나가면 닫고, 다시 칠 때까지 안 띄움
+function renderSugg(list) {
   const q = st.q.trim(), box = $('#sugg');
-  if (!q || document.activeElement !== $('#q')) { box.classList.remove('on'); return; }
+  if (!q || st.suggOff || document.activeElement !== $('#q')) { box.classList.remove('on'); return; }
   const hl = s => { const i = s.toLowerCase().indexOf(q.toLowerCase()); return i < 0 ? esc(s) : esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length)); };
   const ppl = peopleFromMails('from').filter(p => personMatch(p, q)).slice(0, 3);
-  const mails = visible().slice(0, 6);
+  const mails = (list || visible()).slice(0, 6);
   box.innerHTML = (ppl.length ? '<div class="sh">사람 — 누르면 보낸사람으로 거르기</div>' + ppl.map(p => `<div class="si" data-p="${esc(p.email)}">${ico('me', 16)}<span class="s1">${hl(p.name)} <small style="color:var(--mute)">${hl(p.email)}</small></span></div>`).join('') : '') +
     (mails.length ? `<div class="sh">메일 · ${esc(folderName(st.folder))}</div>` + mails.map(m => `<div class="si" data-id="${m.id}">${ico('env', 16)}<span class="s1">${hl(m.subj)}</span><span class="s2">${esc(m.from.name)} · ${dateLabel(m)}</span></div>`).join('') : '<div class="sh">맞는 메일이 없어요</div>');
   box.classList.add('on');
@@ -671,12 +680,12 @@ function visible() {
   const f = st.f;
   if (st.folder === 'conv') return MAILS.filter(folderFn('conv')).sort((a, b) => (b.when || 0) - (a.when || 0) || a.d - b.d || b.t.localeCompare(a.t));  // 대화 보기도 최근 메일이 위
   return (st.folder === 'draft' ? ndMails().concat(MAILS) : MAILS).filter(folderFn(st.folder)).filter(m => {
-    const p = f.period, day = dayOf(m);
-    if (p.k === 'range') { if (day < p.from || day > p.to) return false; } else if (p.k !== 'all' && m.d > +p.k) return false;
-    const A = attsOf(m);
-    if (f.att.k === 'yes' && !A.length) return false;
-    if (f.att.k === 'no' && A.length) return false;
-    if (f.att.types.length && !A.some(([a]) => f.att.types.includes(a[0]))) return false;
+    const p = f.period;
+    if (p.k === 'range') { const day = dayOf(m); if (day < p.from || day > p.to) return false; } else if (p.k !== 'all' && m.d > +p.k) return false;
+    if (f.att.k !== 'any' || f.att.types.length) { const A = attsOf(m);
+      if (f.att.k === 'yes' && !A.length) return false;
+      if (f.att.k === 'no' && A.length) return false;
+      if (f.att.types.length && !A.some(([a]) => f.att.types.includes(a[0]))) return false; }
     // 지금 열어 둔 메일은 읽음 상태가 바뀌어도 목록에 남김 (다른 메일을 누르면 그때 필터 적용)
     if (f.star && !m.star && m.id !== st.open) return false;
     if (f.readf === 'unread' && !m.unread && m.id !== st.open) return false;
@@ -684,7 +693,7 @@ function visible() {
     if (f.from && m.from.email !== f.from) return false;
     if (f.to && ![...m.to, ...m.cc].some(p => p.email === f.to)) return false;
     return queryMatch(m, st.q);
-  }).sort((a, b) => a.d - b.d || b.t.localeCompare(a.t));
+  }).sort((a, b) => a.d - b.d || (a.t < b.t ? 1 : a.t > b.t ? -1 : 0));
 }
 const grpName = (d, m) => d === 0 ? '오늘' : d === 1 ? '어제' : d <= 7 ? '이번 주' : d <= 31 ? '이번 달' : (m ? (dayOf(m).getFullYear() !== TODAY.getFullYear() ? dayOf(m).getFullYear() + '년 ' : '') + (dayOf(m).getMonth() + 1) + '월' : '이전');
 // 목록 미리보기 한 줄: 본문 앞부분 (인용·빈 줄 제외)
@@ -733,11 +742,11 @@ const ftBadges = list => {
 function renderList() {
   const list = visible();
   const sig = [st.folder, st.conv ? st.conv.seed : '', st.q, JSON.stringify(st.f)].join('|');
-  if (sig !== st.listSig) { st.listSig = sig; st.limit = 200; const r = $('#rows'); if (r) r.scrollTop = 0; }
-  const shown = list.slice(0, st.limit || 200);
+  if (sig !== st.listSig) { st.listSig = sig; st.limit = 100; const r = $('#rows'); if (r) r.scrollTop = 0; }
+  const shown = list.slice(0, st.limit || 100);
   [...st.picked].forEach(id => { if (!list.some(m => m.id === id)) st.picked.delete(id); });
   renderHead(list);
-  renderSugg();
+  renderSugg(list);
   if (!list.length) { $('#rows').innerHTML = '<div class="empty">조건에 맞는 메일이 없어요</div>'; return; }
   let g = '', h = '';
   shown.forEach(m => {
@@ -997,15 +1006,66 @@ function openNd(id) {
 /* ───────── 작성 ───────── */
 const cs = { mailId: null, kind: null, saving: false, timer: null, footer: null, files: [], sched: null };
 const SIZES = Array.from({ length: 15 }, (_, i) => i + 6);
+// 최근에 쓴 색 (글자색·형광펜·칸 음영) — 왼쪽 버튼은 이 색을 바로 적용, 오른쪽 ▾는 다른 색 고르기
+const RC_DEF = { color: '#d93025', hi: '#ffff00', fill: '#ffff00' };
+const recentColor = k => store.get('rc-' + k, null) || RC_DEF[k];
+const CARET = '<svg viewBox="0 0 10 10" width="9" height="9"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function applyTextColor(c) { const run = () => { document.execCommand('styleWithCSS', false, true); document.execCommand('foreColor', false, c || '#000000'); }; if (!cellsDo(run)) { restoreSel(); run(); } if (c) { store.set('rc-color', c); $('#fColor .sw').style.background = c; } dirty(); }
+function applyHilite(c) { const run = () => { document.execCommand('styleWithCSS', false, true); document.execCommand('hiliteColor', false, c || 'transparent'); }; if (!cellsDo(run)) { restoreSel(); run(); } if (c) { store.set('rc-hi', c); $('#fHi .sw').style.background = c; } dirty(); }
+// 글자 1pt 키우기·줄이기: 고른 글자마다 지금 크기에서 ±1 (크기가 섞여 있어도 각자)
+function stepSize(d) {
+  const b = $('#cbody'); restoreSel(); const sel = getSelection(); if (!sel.rangeCount || !b.contains(sel.anchorNode)) return;
+  const r = sel.getRangeAt(0); const ptOf = el => Math.round(parseFloat(getComputedStyle(el).fontSize) * 0.75 * 2) / 2, clamp = v => Math.max(6, Math.min(72, v));
+  if (r.collapsed) { const el = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement; setSizePt(clamp(ptOf(el) + d)); return; }
+  const root = r.commonAncestorContainer.nodeType === 1 ? r.commonAncestorContainer : r.commonAncestorContainer.parentElement;
+  const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), nodes = [];
+  for (let n = tw.nextNode(); n; n = tw.nextNode()) if (r.intersectsNode(n) && n.nodeValue.length) nodes.push(n);
+  const sc = r.startContainer, so = r.startOffset, ec = r.endContainer, eo = r.endOffset, made = [];
+  nodes.forEach(n => {
+    const s0 = n === sc ? so : 0, e0 = n === ec ? eo : n.nodeValue.length; if (s0 >= e0) return;
+    const pt = clamp(ptOf(n.parentElement) + d);
+    if (e0 < n.nodeValue.length) n.splitText(e0);
+    const mid = s0 > 0 ? n.splitText(s0) : n;
+    const sp = document.createElement('span'); sp.style.fontSize = pt + 'pt'; mid.replaceWith(sp); sp.append(mid); made.push(sp);
+  });
+  if (made.length) { const nr = document.createRange(); nr.setStartBefore(made[0]); nr.setEndAfter(made[made.length - 1]); sel.removeAllRanges(); sel.addRange(nr); savedRange = nr.cloneRange(); }
+  dirty(); syncFmt();
+}
+// 표 안에서 ↑↓: 칸의 첫 줄/마지막 줄에서 누르면 바로 위·아래 칸으로 (같은 세로줄)
+function cellUpDown(e) {
+  if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.isComposing) return;
+  const s = getSelection(); if (!s.rangeCount || !s.isCollapsed) return;
+  const an = s.anchorNode && (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement);
+  const td = an && $('#cbody').contains(an) ? an.closest('td,th') : null; if (!td) return;
+  const down = e.key === 'ArrowDown', cr = td.getBoundingClientRect(), cs = getComputedStyle(td), lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.5 || 18;
+  const rg = s.getRangeAt(0), rects = [...rg.getClientRects()].filter(x => x.height > 0); const rc = rects.length ? rects[rects.length - 1] : null;
+  // 칸 안에 아래(위) 줄이 더 있으면 칸 안에서 움직임
+  if (rc && (down ? rc.bottom + lh * 0.6 < cr.bottom - parseFloat(cs.paddingBottom) : rc.top - lh * 0.6 > cr.top + parseFloat(cs.paddingTop))) return;
+  const table = td.closest('table'), rows = [...table.rows], ri = rows.indexOf(td.parentElement) + (down ? (td.rowSpan || 1) : -1);
+  const row = rows[ri]; if (!row) return;  // 표 맨 위/아래면 원래대로 표 밖으로
+  const x = rc ? rc.left : cr.left + cr.width / 2;
+  const tgt = [...row.cells].find(c => { const b = c.getBoundingClientRect(); return x >= b.left - 1 && x <= b.right + 1; }) || row.cells[Math.min(td.cellIndex, row.cells.length - 1)]; if (!tgt) return;
+  e.preventDefault();
+  const tb = tgt.getBoundingClientRect(), tcs = getComputedStyle(tgt), y = down ? tb.top + parseFloat(tcs.paddingTop) + lh / 2 : tb.bottom - parseFloat(tcs.paddingBottom) - lh / 2;
+  let nr = document.caretRangeFromPoint ? document.caretRangeFromPoint(Math.min(Math.max(x, tb.left + 3), tb.right - 3), y) : null;
+  if (!nr || !tgt.contains(nr.startContainer)) { nr = document.createRange(); nr.selectNodeContents(tgt); nr.collapse(down); }
+  s.removeAllRanges(); s.addRange(nr); tgt.scrollIntoView({ block: 'nearest' });
+}
+// 검색 준비: 처음 검색창을 누르면 쉬는 틈에 메일마다 검색용 글자를 미리 만들어 둠 (첫 검색이 느리지 않게)
+function warmSearch() {
+  if (warmSearch.on) return; warmSearch.on = true; let i = 0;
+  const step = dl => { const end = Date.now() + 8; while (i < MAILS.length && (dl ? dl.timeRemaining() > 2 : Date.now() < end)) hayOf(MAILS[i++]); if (i < MAILS.length) (window.requestIdleCallback || setTimeout)(step); else warmSearch.on = false; };
+  (window.requestIdleCallback || setTimeout)(step);
+}
 function fmtToolbar() {
   const b = (cmd, ic, t, txt) => `<button class="ib" data-cmd="${cmd}" title="${t}">${txt ? `<span style="${txt[1]}">${txt[0]}</span>` : ico(ic, 17)}</button>`;
   $('#fmt').innerHTML = `
     <select id="fFont" title="글꼴">${FONT_LIST.map(f => `<option>${f}</option>`).join('')}</select>
-    <select id="fSize" title="글자 크기">${SIZES.map(s => `<option value="${s}"${s === 10 ? ' selected' : ''}>${s}pt</option>`).join('')}</select>
+    <select id="fSize" title="글자 크기">${SIZES.map(s => `<option value="${s}"${s === 10 ? ' selected' : ''}>${s}pt</option>`).join('')}</select><span class="szstep"><button class="ib" id="fSzUp" title="글자 1pt 키우기"><b>가</b><i>+</i></button><button class="ib" id="fSzDn" title="글자 1pt 줄이기"><b>가</b><i>−</i></button></span>
     <span class="sep"></span>
     ${b('bold', '', '굵게 (Ctrl+B)', ['B', 'font-weight:800'])}${b('italic', '', '기울임 (Ctrl+I)', ['I', 'font-style:italic;font-family:serif;font-size:15px'])}${b('underline', '', '밑줄 (Ctrl+U)', ['U', 'text-decoration:underline'])}${b('strikeThrough', '', '취소선', ['S', 'text-decoration:line-through'])}
-    <button class="ib" id="fColor" title="글자색"><span style="font-weight:800">가</span><span class="sw" style="background:#d93025"></span></button>
-    <button class="ib" id="fHi" title="형광펜">${ico('mark', 17)}<span class="sw" style="background:#ffff00"></span></button>
+    <span class="splitb"><button class="ib sbm" id="fColor" title="글자색 — 누르면 최근 색 바로 적용"><span style="font-weight:800">가</span><span class="sw" style="background:${recentColor('color')}"></span></button><button class="ib sbd" id="fColorDd" title="다른 글자색 고르기">${CARET}</button></span>
+    <span class="splitb"><button class="ib sbm" id="fHi" title="형광펜 — 누르면 최근 색 바로 적용">${ico('mark', 17)}<span class="sw" style="background:${recentColor('hi')}"></span></button><button class="ib sbd" id="fHiDd" title="다른 형광펜 색 고르기">${CARET}</button></span>
     <span class="sep"></span>
     ${b('justifyLeft', 'alL', '왼쪽 정렬')}${b('justifyCenter', 'alC', '가운데 정렬')}${b('justifyRight', 'alR', '오른쪽 정렬')}
     <span class="sep"></span>
@@ -1825,6 +1885,7 @@ function bodyKeydown(e) {
   }
   lastSpace = 0;
   if (e.key === 'Tab') { const td = cellAtCaret(); if (td) { e.preventDefault(); moveCell(td, e.shiftKey ? -1 : 1); } }
+  cellUpDown(e);
   if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.isComposing) keepIndentOnEnter(e);
 }
 // 커서가 있는 한 줄(앞뒤 <br> 사이)을 <div>로 묶어 돌려줌
@@ -2303,7 +2364,7 @@ function tableBar() {
       + `${tb('merge', 'merge', '합치기', '고른 칸 합치기 (여러 칸을 끌어서 고른 뒤)')}${tb('split', 'split', '나누기', '합친 칸 다시 나누기')}<span class="sep"></span>`
       + `<span class="lb">행</span>${tb('rowA', 'rowA', '위', '선택한 칸 위에 행 넣기')}${tb('rowB', 'rowB', '아래', '선택한 칸 아래에 행 넣기')}${tb('rowX', 'minus', '삭제', '선택한 행 지우기', 'del')}<span class="sep"></span>`
       + `<span class="lb">열</span>${tb('colL', 'colL', '왼쪽', '선택한 칸 왼쪽에 열 넣기')}${tb('colR', 'colR', '오른쪽', '선택한 칸 오른쪽에 열 넣기')}${tb('colX', 'minus', '삭제', '선택한 열 지우기', 'del')}<span class="sep"></span>`
-      + `${b('fill', 'fill', '칸 음영(배경색)', '<span class="sw" id="tbFill" style="background:#ffff00"></span>')}${b('bcolor', 'bcolor', '테두리 색', `<span class="sw" id="tbBc" style="background:${TBS.color}"></span>`)}${b('bstyle', 'bstyle', '테두리 모양')}<span class="sep"></span>`
+      + `<span class="splitb">${b('fill', 'fill', '칸 음영 — 누르면 최근 색 바로 적용', `<span class="sw" id="tbFill" style="background:${recentColor('fill')}"></span>`)}<button class="ib sbd" data-ta="fillDd" title="다른 음영 색 고르기">${CARET}</button></span>${b('bcolor', 'bcolor', '테두리 색', `<span class="sw" id="tbBc" style="background:${TBS.color}"></span>`)}${b('bstyle', 'bstyle', '테두리 모양')}<span class="sep"></span>`
       + `${tb('tstyle', 'tstyle', '스타일', '표 스타일 (머리글·줄무늬 등)')}${b('selall', 'selall', '표 전체 선택')}${b('tblX', 'trash', '표 삭제')}<span class="tinfo" id="tbInfo"></span>`;
     bar.addEventListener('mousedown', e => { e.preventDefault(); const x = e.target.closest('[data-ta]'); if (x) tblAct(x.dataset.ta, x); });
     document.body.append(bar);
@@ -2402,7 +2463,9 @@ async function tblAct(a, btn) {
   if (a === 'split') splitCell(td);
   if (a === 'tstyle') { menuAt(btn, TSTYLES.map(([k, l, sw]) => ({ html: `<span class="tsw">${sw}</span>${l}`, act: () => { applyTStyle(table, k); dirty(); keepIn([td]); } }))); return; }
   if (a === 'selall') { tdSel($$('td,th', table).filter(c => c.closest('table') === table), true); }
-  if (a === 'fill') { paletteMenu(btn, PALETTE, null, c => { cells.forEach(x => { x.style.backgroundColor = c || ''; delete x.dataset.tsbg; }); keepIn(cells); if (c) $('#tbFill').style.background = c; dirty(); }, '음영 없음'); return; }
+  const fillWith = c => { cells.forEach(x => { x.style.backgroundColor = c || ''; delete x.dataset.tsbg; }); keepIn(cells); if (c) { store.set('rc-fill', c); $('#tbFill').style.background = c; } dirty(); };
+  if (a === 'fill') { fillWith(recentColor('fill')); return; }
+  if (a === 'fillDd') { paletteMenu(btn.closest('.splitb') || btn, PALETTE, recentColor('fill'), fillWith, '음영 없음'); return; }
   if (a === 'bcolor') { paletteMenu(btn, PALETTE, TBS.color, c => { TBS.color = c || '#000000'; $('#tbBc').style.background = TBS.color; if (TBS.style === 'none') { TBS.style = 'solid'; TBS.w = '1px'; } setBorder(cells, TBS); keepIn(cells); }, '기본 (검정)'); return; }
   if (a === 'bstyle') {
     menuAt(btn, BSTYLES.map(([st2, w, l]) => ({ on: TBS.style === st2 && TBS.w === w, html: `<span class="bsamp" style="border-top:${st2 === 'none' ? '1px dashed #dadce0' : `${w === '1px' && st2 !== 'solid' ? '2px' : w} ${st2} #202124`}"></span>${l}`, act: () => { TBS.style = st2; TBS.w = w; setBorder(cells, TBS); keepIn(cells); } })));
@@ -3510,12 +3573,22 @@ function wire() {
     renderNav(); renderTop(); renderList();
   };
   // 글자를 칠 때마다 바로 다시 찾지 않고, 잠깐(0.15초) 멈추면 찾음 — 한글 조합 중 자모마다 검색하던 것도 줄어듦
-  let qT = 0; q.addEventListener('input', () => { clearTimeout(qT); qT = setTimeout(() => { if (st.q !== q.value) setQuery(q.value); }, 150); });
+  let qT = 0; q.addEventListener('input', () => { st.suggOff = false; clearTimeout(qT); qT = setTimeout(() => { if (st.q !== q.value) setQuery(q.value); }, 120); });
+  const suggClose = () => { st.suggOff = true; $('#sugg').classList.remove('on'); };
+  let outT = 0; document.addEventListener('mousemove', e => {
+    if (!$('#sugg').classList.contains('on')) { clearTimeout(outT); outT = 0; return; }
+    if (e.target.closest && e.target.closest('.sbwrap')) { clearTimeout(outT); outT = 0; return; }
+    if (!outT) outT = setTimeout(() => { outT = 0; suggClose(); }, 200);
+  }, { passive: true });
+  // 메일 본문(iframe) 위로 가면 바깥 문서엔 mousemove가 안 오므로, 검색 영역을 벗어나는 순간도 따로 잡음
+  const sbw = $('.sbwrap'), outStart = () => { if ($('#sugg').classList.contains('on') && !outT) outT = setTimeout(() => { outT = 0; suggClose(); }, 200); };
+  sbw.addEventListener('mouseleave', outStart); sbw.addEventListener('mouseenter', () => { clearTimeout(outT); outT = 0; });
+  document.addEventListener('mouseout', e => { if (!e.relatedTarget || e.relatedTarget.tagName === 'IFRAME') outStart(); });
   q.addEventListener('compositionend', () => { clearTimeout(qT); qT = setTimeout(() => { if (st.q !== q.value) setQuery(q.value); }, 60); });
-  q.addEventListener('focus', renderSugg);
+  q.addEventListener('focus', () => { renderSugg(); warmSearch(); });
   q.addEventListener('blur', () => setTimeout(() => $('#sugg').classList.remove('on'), 150));
-  q.addEventListener('keydown', e => { if (e.key === 'Enter' && st.q !== q.value) { clearTimeout(qT); setQuery(q.value); } if (e.key === 'Enter') { $('#sugg').classList.remove('on'); const first = visible()[0]; if (first) openMail(first.id); } if (e.key === 'Escape') { clearTimeout(qT); q.value = ''; setQuery(''); } });
-  $('#goSearch').addEventListener('click', () => { clearTimeout(qT); $('#sugg').classList.remove('on'); setQuery(q.value); });
+  q.addEventListener('keydown', e => { if (e.key === 'Enter' && st.q !== q.value) { clearTimeout(qT); setQuery(q.value); } if (e.key === 'Enter') { suggClose(); const first = visible()[0]; if (first) openMail(first.id); } if (e.key === 'Escape') { clearTimeout(qT); q.value = ''; setQuery(''); } });
+  $('#goSearch').addEventListener('click', () => { clearTimeout(qT); suggClose(); setQuery(q.value); });
   $('#sugg').addEventListener('mousedown', e => { e.preventDefault(); const si = e.target.closest('.si'); if (!si) return; if (si.dataset.id) openMail(+si.dataset.id); if (si.dataset.p) { st.f.from = si.dataset.p; q.value = ''; setQuery(''); } $('#sugg').classList.remove('on'); });
   // 왼쪽
   const nav = $('#nav');
@@ -3624,8 +3697,12 @@ function wire() {
   $('#fmt').addEventListener('mousedown', e => {
     const b = e.target.closest('[data-cmd]'); if (b) { e.preventDefault(); fmtCmd(b.dataset.cmd); return; }
     if (e.target.closest('#fTable')) { e.preventDefault(); tablePicker(); return; }
-    if (e.target.closest('#fColor')) { e.preventDefault(); paletteMenu($('#fColor'), PALETTE, null, c => { const run = () => { document.execCommand('styleWithCSS', false, true); document.execCommand('foreColor', false, c || '#000000'); }; if (!cellsDo(run)) { restoreSel(); run(); } $('#fColor .sw').style.background = c || '#000'; dirty(); }, '자동 (검정)'); return; }
-    if (e.target.closest('#fHi')) { e.preventDefault(); paletteMenu($('#fHi'), PALETTE, null, c => { const run = () => { document.execCommand('styleWithCSS', false, true); document.execCommand('hiliteColor', false, c || 'transparent'); }; if (!cellsDo(run)) { restoreSel(); run(); } $('#fHi .sw').style.background = c || 'transparent'; dirty(); }, '색 없음'); }
+    if (e.target.closest('#fColorDd')) { e.preventDefault(); paletteMenu(e.target.closest('.splitb'), PALETTE, recentColor('color'), applyTextColor, '자동 (검정)'); return; }
+    if (e.target.closest('#fColor')) { e.preventDefault(); applyTextColor(recentColor('color')); return; }
+    if (e.target.closest('#fHiDd')) { e.preventDefault(); paletteMenu(e.target.closest('.splitb'), PALETTE, recentColor('hi'), applyHilite, '색 없음'); return; }
+    if (e.target.closest('#fHi')) { e.preventDefault(); applyHilite(recentColor('hi')); return; }
+    if (e.target.closest('#fSzUp')) { e.preventDefault(); stepSize(1); return; }
+    if (e.target.closest('#fSzDn')) { e.preventDefault(); stepSize(-1); return; }
   });
   $('#fFont').addEventListener('change', e => { if (e.target.value === '__multi') return; const v = e.target.value; e.target.blur(); applyFontProp('font-family', `'${v}', sans-serif`); });
   $('#fSize').addEventListener('change', e => { if (e.target.value === '__multi') return; const v = +e.target.value; e.target.blur(); setSizePt(v); });
