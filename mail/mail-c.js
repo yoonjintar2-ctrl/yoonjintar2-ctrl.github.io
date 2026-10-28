@@ -448,7 +448,7 @@ function renderTop() {
   if (rb && hg.nextElementSibling !== rb) hg.after(rb);  // 새로 고침 버튼은 오른쪽 모래시계 바로 옆
   hg.hidden = !(R.on && R.prog && !R.expired); hg.className = 'tip'; hg.dataset.tip = R.prog || '';  // 마우스를 올리는 즉시 내용
   pill.title = R.expired ? '로그인이 만료됐어요. 누르면 다시 연결해요' : '';
-  if (avatar) { pill.style.background = '#4a4d53'; pill.dataset.tip = `${ME.name || ''}\n${ME.email}\nGmail 연결됨${extAuth.ok ? ' · 로그인 자동 연장 중' : ''}\n(누르면 계정 설정)`; } else { pill.style.background = ''; delete pill.dataset.tip; }
+  if (avatar) { pill.style.background = ''; pill.dataset.tip = `${ME.name || ''}\n${ME.email}\nGmail 연결됨${extAuth.ok ? ' · 로그인 자동 연장 중' : ''}\n(누르면 계정 설정)`; } else { pill.style.background = ''; delete pill.dataset.tip; }
   pill.onclick = R.expired ? () => (R.on ? renewToken().catch(e => toast('연결하지 못했어요: ' + e.message)) : loadReal(true)) : avatar ? () => openSettings('account') : null;
   const set = (id, ic, on, tip) => { const b = $(id); b.innerHTML = ico(ic); b.classList.toggle('on', !!on); b.title = tip; };
   setTimeout(sopenSync);
