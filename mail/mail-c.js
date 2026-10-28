@@ -1444,7 +1444,7 @@ function loadDraft(d) {
   cs.initial = null; setTimeout(() => { cs.initial = composeSig(); });
   // 새 메일·전달은 받는사람부터. 커서 자리 표시는 남겨 두고, 나중에 Tab으로 본문에 오면 그 자리로
   if (d.kind === 'new' || d.kind === 'fwd' || !d.to.length) $('#toBox input').focus(); else caretAt(mk);
-  runTypo();
+  runTypo(); uhReset();
 }
 // 작성 칸 기본 글꼴 (설정 > 일반)
 function applyBaseFont() {
@@ -1504,7 +1504,7 @@ function setSave(s) { const el = $('#saveState'); el.textContent = s; el.classLi
 // 풋터 끝에서 Enter를 치면 브라우저가 풋터 칸을 통째로 복제함 → 두 번째부터는 평범한 줄로
 function dedupeFooter() { const fs = $$('#cbody .gp-footer'); fs.slice(1).forEach(x => { x.removeAttribute('class'); x.removeAttribute('data-footer'); x.removeAttribute('spellcheck'); }); }
 function dirty() {
-  dedupeFooter();
+  dedupeFooter(); uhSchedule();
   if (!$('#read').classList.contains('composing')) return;
   cs.saving = true; setSave('저장 중…');
   clearTimeout(cs.timer); cs.timer = setTimeout(saveDraft, 1200);
@@ -2118,7 +2118,7 @@ function lineAt(x, y) {
   }
   return null;
 }
-function dropLine(hit) {
+function dropLine(hit) { uhFlush();
   if (!hit) return false;
   if (hit.side === 'hr') hit.el.remove(); else { hit.el.style['border' + hit.side] = 'none'; hit.el.style['padding' + hit.side] = '0'; }
   dirty(); return true;
@@ -2330,7 +2330,7 @@ function cellsToggle(cmd) {
   let want = null;
   return cellsDo((c, i) => { document.execCommand('styleWithCSS', false, true); if (i === 0) want = !document.queryCommandState(cmd); if (document.queryCommandState(cmd) !== want) document.execCommand(cmd, false, null); });
 }
-function fmtCmd(cmd) {
+function fmtCmd(cmd) { uhFlush();
   if (TS.multi) {
     if (TOGGLES.test(cmd) && cellsToggle(cmd)) { syncFmt(); return; }
     if (/^justify(Left|Center|Right)$/.test(cmd)) { TS.cells.forEach(c => { c.style.textAlign = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right' }[cmd]; }); dirty(); return; }
@@ -2478,6 +2478,8 @@ function textImgHtml(html, keepImg = true) {
       if (n.tagName === 'TABLE') {
         if (line) flush();
         const rows = [...n.rows].filter(r => r.closest('table') === n);
+        // 엑셀 한 칸만 복사한 것(1×1 표)은 표 없이 글자만
+        if (rows.length === 1 && rows[0].cells.length === 1) { [...rows[0].cells[0].childNodes].forEach(walk); line = line.replace(/^\s+|\s+$/g, ''); return; }
         out.push('<table style="border-collapse:collapse;margin:4px 0">' + rows.map(r => '<tr>' + [...r.cells].map(c => {
           const sp = (c.colSpan > 1 ? ` colspan="${c.colSpan}"` : '') + (c.rowSpan > 1 ? ` rowspan="${c.rowSpan}"` : '');
           return `<td${sp} style="border:1px solid #bfbfbf;padding:2px 6px;vertical-align:top">${conv(c.childNodes).replace(/^(<br>)+|(<br>)+$/g, '') || '&nbsp;'}</td>`;
@@ -2564,8 +2566,8 @@ async function htmlToPng(r) {
     return `<img src="${c.toDataURL('image/png')}" width="${W}" style="max-width:100%">`;
   } catch (e) { return null; }
 }
-function doPaste(cd) {
-  const html = cd.getData('text/html'), text = cd.getData('text/plain');
+function doPaste(cd) { uhFlush();
+  const html = officeFix(cd.getData('text/html')), text = cd.getData('text/plain');
   const imgItem = [...cd.items].find(i => i.kind === 'file' && i.type.startsWith('image/')), imgFile = imgItem ? imgItem.getAsFile() : null;
   const v = { rich: html ? cleanHtml(html) : textToHtml(text), plain: html ? textImgHtml(html, false) : textToHtml(text || ''),  /* 서식 있는 글은 클립보드의 글자판 대신 HTML에서 직접 (문단마다 빈 줄이 두 번씩 들어가던 문제) */ ti: html ? textImgHtml(html) : textToHtml(text) };
   const complex = !!html && /<(table|img)\b/i.test(html);  // 표·그림이 있으면 '그림으로' 고를 수 있게
@@ -2691,11 +2693,27 @@ function tsvGrid(t) {
   if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
   return rows;
 }
+// 엑셀 회계 서식 숫자는 앞뒤에 칸 채움용 빈칸·밑줄(_)이 붙어 옴 → 숫자처럼 보이면 떼어 냄
+const NUMISH = /^[\s\u00a0_]*[-+(]?[₩$\\]?[\s\u00a0_]*[\d.,]+\)?%?[\s\u00a0_]*$|^[\s\u00a0_]*-[\s\u00a0_]*$/;
+const cleanNum = v => NUMISH.test(v) ? v.replace(/^[\s\u00a0_]+|[\s\u00a0_]+$/g, '') : v.trim();
+// 엑셀·워드에서 온 HTML: 칸 채움용 숨은 글자(visibility:hidden — 그냥 붙이면 밑줄로 보임)는 빼고, 숫자 칸 앞뒤 빈칸·밑줄 정리
+function officeFix(html) {
+  if (!html || !/<t[dh]\b|visibility/i.test(html)) return html;
+  const d = new DOMParser().parseFromString(html, 'text/html');
+  d.querySelectorAll('[style]').forEach(el => { if (/visibility\s*:\s*hidden|mso-ignore\s*:\s*visibility/i.test(el.getAttribute('style'))) el.remove(); });
+  d.querySelectorAll('td, th').forEach(c => {
+    if (!NUMISH.test(c.textContent) || !/[\d-]/.test(c.textContent)) return;
+    const tw = d.createTreeWalker(c, NodeFilter.SHOW_TEXT), T = []; for (let n = tw.nextNode(); n; n = tw.nextNode()) T.push(n);
+    for (const n of T) { n.nodeValue = n.nodeValue.replace(/^[\s\u00a0_]+/, ''); if (n.nodeValue) break; }
+    for (const n of T.reverse()) { n.nodeValue = n.nodeValue.replace(/[\s\u00a0_]+$/, ''); if (n.nodeValue) break; }
+  });
+  return '<!DOCTYPE html>' + d.documentElement.outerHTML;
+}
 function setCellText(cell, v) {
   let el = cell; while (el.children.length === 1 && !/^(BR|IMG|TABLE)$/.test(el.firstElementChild.tagName) && el.textContent === el.firstElementChild.textContent) el = el.firstElementChild;
   el.textContent = v; if (!v) el.append(document.createElement('br'));
 }
-function gridPaste(cd) {
+function gridPaste(cd) { uhFlush();
   const txt = cd.getData('text/plain') || ''; if (!txt) return false;
   const multi = TS.multi && TS.cells.filter(c => c.isConnected).length > 1;
   const caretTd = cellAtCaret(), anchor0 = multi ? TS.cells.find(c => c.isConnected) : caretTd; if (!anchor0) return false;
@@ -2703,11 +2721,11 @@ function gridPaste(cd) {
   if (nR * nC <= 1 && !multi) return false;  // 한 칸짜리는 평소처럼
   const t = anchor0.closest('table'), g = tableGrid(t), at = new Map(); g.forEach((p, c) => at.set(p.r + ':' + p.c, c));
   let done = 0;
-  if (multi && nR * nC === 1) { TS.cells.filter(c => c.isConnected).forEach(c => { setCellText(c, G[0][0] || ''); done++; }); }
+  if (multi && nR * nC === 1) { TS.cells.filter(c => c.isConnected).forEach(c => { setCellText(c, cleanNum(G[0][0] || '')); done++; }); }
   else {
     const sel = multi ? TS.cells.filter(c => c.isConnected) : [anchor0];
     const r0 = Math.min(...sel.map(c => g.get(c).r)), c0 = Math.min(...sel.map(c => g.get(c).c));
-    for (let i = 0; i < nR; i++) for (let j = 0; j < nC; j++) { const c = at.get((r0 + i) + ':' + (c0 + j)); if (c) { setCellText(c, (G[i][j] || '').trim()); done++; } }
+    for (let i = 0; i < nR; i++) for (let j = 0; j < nC; j++) { const c = at.get((r0 + i) + ':' + (c0 + j)); if (c) { setCellText(c, cleanNum(G[i][j] || '')); done++; } }
   }
   if (!done) return false;
   dirty(); toast(`${done}칸에 붙여넣었어요`); return true;
@@ -2814,7 +2832,7 @@ function askConfirm(msg, ok) {
 }
 const BSTYLES = [['solid', '1px', '실선'], ['solid', '2px', '굵은 실선'], ['dotted', '1px', '점선'], ['dashed', '1px', '파선'], ['double', '3px', '이중선'], ['none', '0', '테두리 없음']];
 const setBorder = (cells, o) => { cells.forEach(c => { c.style.border = o.style === 'none' ? 'none' : `${o.w} ${o.style} ${o.color}`; }); dirty(); };
-async function tblAct(a, btn, given) {
+async function tblAct(a, btn, given) { uhFlush();
   const cells = given || selCells(); const td = cells[0]; if (!td) return;
   const tr = td.parentElement, table = td.closest('table'), ci = td.cellIndex;
   const newTd = ref => { const x = (ref || td).cloneNode(false); x.classList.remove('tdsel'); if (!x.className) x.removeAttribute('class'); x.removeAttribute('rowspan'); x.removeAttribute('colspan'); x.innerHTML = '<br>'; return x; };
@@ -3951,7 +3969,7 @@ function setupDragScroll() {
   document.addEventListener('wheel', e => { if (!drag) return; const el = e.target.closest && e.target.closest('#nav, #rows'); if (el) el.scrollTop += e.deltaY; }, { passive: true });
 }
 // 편지함 목록: 굴리는 동안만 스크롤바 보이기 (끝나고 0.9초 뒤 숨김)
-(() => { let t = 0; document.addEventListener('scroll', e => { if (e.target.id !== 'nav') return; const n = e.target; n.classList.add('scrolling'); clearTimeout(t); t = setTimeout(() => n.classList.remove('scrolling'), 900); }, true); })();
+(() => { const T = new WeakMap(); document.addEventListener('scroll', e => { const n = e.target; if (!n.classList || !(n.id === 'nav' || n.id === 'rows' || n.classList.contains('rscroll'))) return; n.classList.add('scrolling'); clearTimeout(T.get(n)); T.set(n, setTimeout(() => n.classList.remove('scrolling'), 900)); }, true); })();
 // 좁은 폭: 왼쪽 편지함이 좁으면 '새 메일'은 연필 아이콘만, 읽기 화면이 낮거나 좁으면 받는사람을 한 줄만
 function narrowCheck() { const nv = $('nav'); if (nv) document.body.classList.toggle('navnarrow', nv.getBoundingClientRect().width < 172); }
 function setupSplits() {
@@ -4158,6 +4176,11 @@ function wire() {
     bodyKeydown(e);
   });
   body.addEventListener('beforeinput', bodyBeforeInput);
+  // 되돌리기: 키(캡처 단계라 다른 처리보다 먼저)·메뉴의 되돌리기 모두 지니메일 방식으로
+  body.addEventListener('keydown', uhKey, true);
+  body.addEventListener('beforeinput', e => { if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') { e.preventDefault(); uhGo(e.inputType === 'historyUndo' ? -1 : 1); } }, true);
+  body.addEventListener('compositionend', () => uhSchedule());
+  document.addEventListener('mousedown', () => { if (UH.pend) uhCommit(); }, true);
   body.addEventListener('scroll', drawTdBox, { passive: true }); window.addEventListener('resize', drawTdBox); new MutationObserver(() => { if (TS.multi) { clearTimeout(drawTdBox.t); drawTdBox.t = setTimeout(drawTdBox, 20); } }).observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'colspan', 'rowspan'] });
   // 서식 복사 붓: 글자를 고르고 마우스를 떼면(또는 낱말을 누르면) 그 글자에 입힘
   body.addEventListener('mouseup', () => { if (!painter.on) return; setTimeout(() => { if (!painter.on) return; pasteFormat(); if (!painter.sticky) painterStop(); }, 0); });
@@ -4256,6 +4279,63 @@ function deselect() {
   renderNav(); renderList(); renderRead(true); return true;
 }
 
+
+/* ───────── 작성 칸 되돌리기(Ctrl+Z)·다시 하기(Ctrl+Y) ─────────
+   표 편집·엑셀 붙여넣기·가로줄 지우기처럼 지니메일이 직접 바꾼 것은 브라우저 기본 되돌리기에 안 잡혀서,
+   본문 상태를 단계마다 기억해 두고 직접 되돌림 (글자 입력은 0.5초 쉬는 단위로 한 단계) */
+const UH = { st: [], i: -1, t: 0, pend: false, cache: new WeakMap(), mo: null, moFor: null, restoring: false };
+function uhParts() {
+  const b = $('#cbody');
+  return [...b.childNodes].map(n => { let h = UH.cache.get(n); if (h == null) { h = n.nodeType === 1 ? n.outerHTML : n.nodeType === 3 ? esc(n.nodeValue).replace(/"/g, '"') : ''; UH.cache.set(n, h); } return h; });
+}
+function uhSel() {
+  const b = $('#cbody'), s = getSelection(); if (!s.rangeCount || !b.contains(s.anchorNode)) return null;
+  const path = (n, o) => { const p = []; for (let x = n; x && x !== b; x = x.parentNode) p.unshift([...x.parentNode.childNodes].indexOf(x)); return { p, o }; };
+  const r = s.getRangeAt(0); return { a: path(r.startContainer, r.startOffset), z: path(r.endContainer, r.endOffset) };
+}
+function uhPut(sel) {
+  const b = $('#cbody'); if (!sel) return;
+  const find = q => { let n = b; for (const i of q.p) { if (!n.childNodes[i]) return null; n = n.childNodes[i]; } return [n, Math.min(q.o, n.nodeType === 3 ? n.length : n.childNodes.length)]; };
+  try { const A = find(sel.a), Z = find(sel.z); if (!A) return; const r = document.createRange(); r.setStart(A[0], A[1]); if (Z) r.setEnd(Z[0], Z[1]); else r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } catch (e) { /* */ }
+}
+function uhCommit() {
+  clearTimeout(UH.t); UH.pend = false;
+  if (UH.restoring || !$('#read').classList.contains('composing')) return;
+  const a = uhParts(), cur = UH.st[UH.i];
+  if (cur && cur.a.length === a.length && cur.a.every((x, k) => x === a[k])) { cur.sel = uhSel(); return; }
+  if (cur && cur.a.join('') === a.join('')) { cur.a = a; cur.sel = uhSel(); return; }
+  UH.st.length = UH.i + 1; UH.st.push({ a, sel: uhSel() });
+  if (UH.st.length > 60) UH.st.shift(); UH.i = UH.st.length - 1;
+}
+function uhSchedule() { if (UH.restoring) return; UH.pend = true; clearTimeout(UH.t); UH.t = setTimeout(uhCommit, 500); }
+function uhFlush() { if (UH.pend) uhCommit(); }
+function uhReset() {
+  const b = $('#cbody'); UH.st = []; UH.i = -1; UH.pend = false; clearTimeout(UH.t); UH.cache = new WeakMap();
+  if (UH.moFor !== b) {
+    UH.moFor = b;
+    UH.mo = new MutationObserver(recs => recs.forEach(r => { let n = r.target; if (n === b) return; while (n && n.parentNode !== b) n = n.parentNode; if (n) UH.cache.delete(n); }));
+    UH.mo.observe(b, { subtree: true, childList: true, characterData: true, attributes: true });
+  }
+  uhCommit();
+}
+function uhGo(d) {
+  uhFlush(); const k = UH.i + d; if (k < 0 || k >= UH.st.length) return;
+  const b = $('#cbody'), cur = UH.st[UH.i], st = UH.st[k];
+  UH.restoring = true; UH.i = k;
+  try {
+    endPasteOpt(); b.innerHTML = st.a.join(''); UH.cache = new WeakMap();
+    $$('#cbody .tdsel, #cbody .hrsel').forEach(x => x.classList.remove('tdsel', 'hrsel')); TS.cells = []; TS.multi = false; drawTdBox();
+    b.focus(); uhPut(d < 0 ? (cur.selB || st.sel) : st.sel);
+    try { tableBar(); } catch (e) { /* */ }
+    dirty(); runTypo();
+  } finally { setTimeout(() => { UH.restoring = false; }, 0); }
+}
+function uhKey(e) {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) { if (/^(Enter|Backspace|Delete|Tab)$/.test(e.key)) uhFlush(); return; }
+  if (e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); e.stopImmediatePropagation(); uhGo(-1); return; }
+  if (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey)) { e.preventDefault(); e.stopImmediatePropagation(); uhGo(1); return; }
+  uhFlush();
+}
 /* ───────── 시작 ───────── */
 document.body.classList.toggle('noblur', SET.blur === false);
 wire(); renderTop(); renderNav();

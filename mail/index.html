@@ -982,7 +982,7 @@ nav{background:rgba(250,250,250,var(--gl-a))!important;backdrop-filter:var(--gl-
 .ni.on{background:rgba(255,255,255,.88)!important;border-left-color:transparent!important;color:#111!important;box-shadow:0 1px 3px rgba(0,0,0,.07)}
 .ni.on .n{color:var(--blue)}
 .ni:not(.on):hover{background:rgba(255,255,255,.55)!important}
-.list{background:rgba(250,250,250,calc(var(--gl-a) + .03))!important;backdrop-filter:var(--gl-blur);-webkit-backdrop-filter:var(--gl-blur);border:1px solid rgba(255,255,255,.6);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+.list{background:rgba(250,250,250,calc(var(--gl-a) + .03))!important;position:relative;isolation:isolate;border:1px solid rgba(255,255,255,.6);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.08)}
 .lfilt,.lhead{background:transparent!important;border-color:rgba(0,0,0,.06)!important}
 .lhead.sel{background:rgba(255,255,255,.75)!important;color:#111!important;border-bottom-color:rgba(0,0,0,.08)!important}
 .row{background:transparent!important;border-bottom-color:rgba(0,0,0,.06)!important}
@@ -993,12 +993,11 @@ nav{background:rgba(250,250,250,var(--gl-a))!important;backdrop-filter:var(--gl-
 .grp{background:rgba(255,255,255,.35)!important;border-color:rgba(0,0,0,.06)!important;color:#444!important}
 .boxt{color:#555!important;background:rgba(0,0,0,.05)!important;border-color:rgba(0,0,0,.08)!important}
 .dom{color:#777!important;background:rgba(0,0,0,.04)!important;border-color:rgba(0,0,0,.07)!important}
-.read{background:rgba(250,250,250,var(--gl-a))!important;backdrop-filter:var(--gl-blur);-webkit-backdrop-filter:var(--gl-blur);border:1px solid rgba(255,255,255,.6)!important;border-radius:14px!important;box-shadow:0 8px 30px rgba(0,0,0,.08)!important}
+.read{background:rgba(250,250,250,var(--gl-a))!important;position:relative;isolation:isolate;border:1px solid rgba(255,255,255,.6)!important;border-radius:14px!important;box-shadow:0 8px 30px rgba(0,0,0,.08)!important}
 .rhead,.attbar{background:transparent!important;border-color:rgba(0,0,0,.07)!important}
 .rscroll .rbody{background:#fff;margin:0 14px 14px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .sbox,.fbtn,.refbtn{background:rgba(255,255,255,.9)!important;border-color:rgba(255,255,255,.95)!important;box-shadow:0 2px 10px rgba(0,0,0,.06)}
 .sbox.active{background:#fff!important;border-color:var(--blue)!important}
-.lfilt .tf,.lhead .btn,.racts .btn,.attpick{background:rgba(255,255,255,.8)!important;border-color:rgba(0,0,0,.1)!important}
 .lfilt .tf.on{background:#fff!important;border-color:rgba(0,0,0,.4)!important;color:#111!important}
 .read.composing{background:rgba(250,250,250,var(--gl-a))!important}
 .compose{background:transparent!important}
@@ -1007,6 +1006,39 @@ body.noblur nav,body.noblur .list,body.noblur .read{backdrop-filter:none!importa
 body.noblur{--gl-a:.82}
 .lnpop{position:fixed;z-index:60;height:28px;padding:0 12px;border:1px solid rgba(0,0,0,.15);border-radius:999px;background:#fff;color:#c5221f;font-size:12.5px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.14);cursor:pointer}
 .lnpop:hover{background:#fdecea}
+
+/* 흐림은 칸 뒤판에서만 */
+.list::before,.read::before{content:"";position:absolute;inset:0;z-index:-1;backdrop-filter:var(--gl-blur);-webkit-backdrop-filter:var(--gl-blur);pointer-events:none}
+body.noblur .list::before,body.noblur .read::before{display:none}
+/* 메일을 고르지 않았을 때: 읽기 칸 판 자체를 없애 배경이 보이게 */
+.read:has(#view > .blank:only-child):not(.composing){background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+.read:has(#view > .blank:only-child):not(.composing)::before{display:none}
+.read #view > .blank:only-child{color:rgba(0,0,0,.35)}
+/* 칸 너비 조절 선: 두 칸 사이 가운데 · 둥글고 조금 두껍게 · 반투명 */
+.split[data-split]::after{top:10px!important;bottom:10px!important;left:50%!important;width:5px!important;margin-left:-2.5px;border-radius:5px;background:transparent!important;transition:background .2s,opacity .2s}
+.split[data-split]:hover::after,.split[data-split].drag::after{background:rgba(11,87,208,.38)!important}
+.split[data-split].drag::after{background:rgba(11,87,208,.55)!important}
+/* 읽기 칸: 흰 본문 둘레 테두리 넓게, 첨부 줄 위아래 선 없앰 */
+.rscroll .rbody{margin:0 20px 20px!important}
+.rhead{border-bottom:0!important}
+.attbar{border:0!important;padding-top:4px;padding-bottom:12px}
+/* 스크롤 바: 평소엔 숨기고 굴릴 때만 얇게 */
+.rscroll::-webkit-scrollbar,#rows::-webkit-scrollbar{width:10px;height:10px;background:transparent}
+.rscroll::-webkit-scrollbar-track,#rows::-webkit-scrollbar-track,.rscroll::-webkit-scrollbar-corner,#rows::-webkit-scrollbar-corner{background:transparent}
+.rscroll::-webkit-scrollbar-button,#rows::-webkit-scrollbar-button{display:none;width:0;height:0}
+.rscroll::-webkit-scrollbar-thumb,#rows::-webkit-scrollbar-thumb{background:transparent;border-radius:8px;border:3px solid transparent;background-clip:padding-box}
+.rscroll.scrolling::-webkit-scrollbar-thumb,#rows.scrolling::-webkit-scrollbar-thumb{background-color:rgba(0,0,0,.2)}
+.rscroll.scrolling::-webkit-scrollbar-thumb:hover,#rows.scrolling::-webkit-scrollbar-thumb:hover{background-color:rgba(0,0,0,.34)}
+/* 유리 버튼: 반투명 흰 유리 + 위쪽 빛 + 올리면 살짝 떠오르고 누르면 눌림 */
+.btn:not(.pri):not(.convclose),.tf,.fbtn,.refbtn,.attpick{background:rgba(255,255,255,.5)!important;border-color:rgba(255,255,255,.85)!important;box-shadow:0 1px 3px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.95);transition:background .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s cubic-bezier(.2,.8,.2,1),transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s,opacity .2s}
+.btn:not(.pri):not(.convclose):not(:disabled):hover,.tf:hover,.fbtn:hover,.refbtn:hover,.attpick:hover{background:rgba(255,255,255,.92)!important;box-shadow:0 6px 18px rgba(0,0,0,.09),inset 0 1px 0 #fff;transform:translateY(-1px)}
+.btn:not(:disabled):active,.tf:active,.fbtn:active,.refbtn:active,.attpick:active{transform:translateY(0) scale(.96);transition-duration:.08s}
+.btn.pri,.btn.convclose{background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 58%),rgba(11,87,208,.9)!important;border-color:rgba(255,255,255,.35)!important;box-shadow:0 4px 14px rgba(11,87,208,.25),inset 0 1px 0 rgba(255,255,255,.4);transition:box-shadow .3s cubic-bezier(.2,.8,.2,1),transform .3s cubic-bezier(.2,.8,.2,1),filter .3s}
+.btn.pri:not(:disabled):hover,.btn.convclose:hover{box-shadow:0 8px 22px rgba(11,87,208,.32),inset 0 1px 0 rgba(255,255,255,.5);transform:translateY(-1px);filter:brightness(1.06)}
+.ib{transition:background .25s cubic-bezier(.2,.8,.2,1),transform .25s cubic-bezier(.2,.8,.2,1),color .2s}
+.ib:not(:disabled):active{transform:scale(.9);transition-duration:.08s}
+.read .ib:hover,.list .ib:hover{background:rgba(255,255,255,.75)}
+.lfilt .tf.on{background:#fff!important;border-color:rgba(0,0,0,.35)!important}
 </style>
 </head>
 <body>
@@ -1056,6 +1088,6 @@ body.noblur{--gl-a:.82}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793168029"></script>
+<script src="mail-c.js?v=1793169031"></script>
 </body>
 </html>
