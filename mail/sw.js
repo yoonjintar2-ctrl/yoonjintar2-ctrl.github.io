@@ -1,6 +1,6 @@
 // 지니메일 앱 서비스 워커: 화면 파일(글꼴·아이콘·버전 붙은 스크립트)을 이 PC에 저장해 두고 빠르게 열기
 // 메일 내용·Gmail 요청은 다루지 않음 (다른 주소라 여기서 가로채지 않음)
-const C = 'jin-app-v2';
+const C = 'jin-app-v3';
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== C).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
