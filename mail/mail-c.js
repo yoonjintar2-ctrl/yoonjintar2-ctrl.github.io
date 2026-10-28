@@ -140,6 +140,7 @@ const nl = s => esc(s).replace(/\n/g, '<br>');
 const isMe = p => !!p && !!p.email && p.email.toLowerCase() === (ME.email || '').toLowerCase();
 const nameOf = p => isMe(p) ? '나' : p.name;
 const fmtD = d => (d.getMonth() + 1) + '/' + d.getDate();
+const fmtDW = d => fmtD(d) + '(' + '일월화수목금토'[d.getDay()] + ')';  // 10/26(월)
 /* 지니메일(jinny mail) 로고 — 요술램프 + 글자. 글꼴 없이 바로 그려지게 모양(path)으로 */
 const LOGO_WM = '<svg viewBox="-126 246 4317 967" role="img" aria-label="jinny mail"><path fill="#202124" d="M-43 1188Q-61 1188 -78.0 1184.5Q-95 1181 -105.5 1165.5Q-116 1150 -116 1114Q-116 1080 -105.5 1064.5Q-95 1049 -77.5 1045.0Q-60 1041 -41 1041Q-28 1041 -13.0 1038.0Q2 1035 15.0 1025.5Q28 1016 36.5 998.0Q45 980 45 951V550Q45 533 48.5 517.0Q52 501 68.0 491.0Q84 481 119 481Q155 481 170.5 492.0Q186 503 189.0 520.0Q192 537 192 556V955Q192 1013 171.5 1056.5Q151 1100 117.0 1129.5Q83 1159 41.5 1173.5Q0 1188 -43 1188ZM117 410Q74 410 58.0 393.5Q42 377 42 332Q42 289 58.5 273.0Q75 257 119 257Q163 257 178.5 273.0Q194 289 194 333Q194 377 178.0 393.5Q162 410 117 410ZM347 983Q310 983 294.5 972.5Q279 962 275.5 944.5Q272 927 272 908V559Q272 539 275.5 522.0Q279 505 295.0 494.5Q311 484 348 484Q384 484 399.5 495.0Q415 506 418.5 523.0Q422 540 422 561V909Q422 928 418.5 945.5Q415 963 399.5 973.0Q384 983 347 983ZM347 411Q309 411 293.0 400.0Q277 389 273.5 371.0Q270 353 270 333Q270 312 274.0 294.5Q278 277 294.0 266.5Q310 256 348 256Q385 256 401.0 267.0Q417 278 420.5 296.0Q424 314 424 334Q424 354 420.5 372.0Q417 390 401.0 400.5Q385 411 347 411ZM574 982Q537 982 521.5 971.5Q506 961 502.5 943.5Q499 926 499 907V555Q499 536 503.0 519.5Q507 503 522.5 493.0Q538 483 575 483Q607 483 622.0 491.5Q637 500 641.5 512.0Q646 524 646.0 534.5Q646 545 648 549L647 553Q651 546 658 537Q671 522 691.5 509.5Q712 497 735.5 490.0Q759 483 782 483Q830 483 867.5 500.5Q905 518 931.0 551.0Q957 584 970.5 628.5Q984 673 984 726V908Q984 927 980.5 944.5Q977 962 961.5 972.0Q946 982 909 982Q871 982 855.5 971.5Q840 961 836.0 943.5Q832 926 832 907V726Q832 696 822.0 675.0Q812 654 792.0 642.5Q772 631 743.0 631.0Q714 631 693.0 643.0Q672 655 660.5 676.0Q649 697 649 726V908Q649 927 645.5 944.5Q642 962 626.5 972.0Q611 982 574 982ZM1127 982Q1090 982 1074.5 971.5Q1059 961 1055.5 943.5Q1052 926 1052 907V555Q1052 536 1056.0 519.5Q1060 503 1075.5 493.0Q1091 483 1128 483Q1160 483 1175.0 491.5Q1190 500 1194.5 512.0Q1199 524 1199.0 534.5Q1199 545 1201 549L1200 553Q1204 546 1211 537Q1224 522 1244.5 509.5Q1265 497 1288.5 490.0Q1312 483 1335 483Q1383 483 1420.5 500.5Q1458 518 1484.0 551.0Q1510 584 1523.5 628.5Q1537 673 1537 726V908Q1537 927 1533.5 944.5Q1530 962 1514.5 972.0Q1499 982 1462 982Q1424 982 1408.5 971.5Q1393 961 1389.0 943.5Q1385 926 1385 907V726Q1385 696 1375.0 675.0Q1365 654 1345.0 642.5Q1325 631 1296.0 631.0Q1267 631 1246.0 643.0Q1225 655 1213.5 676.0Q1202 697 1202 726V908Q1202 927 1198.5 944.5Q1195 962 1179.5 972.0Q1164 982 1127 982ZM1747 1185Q1706 1167 1699.5 1145.0Q1693 1123 1710 1086L1796 894L1599 594Q1577 561 1581.5 539.0Q1586 517 1621 494Q1660 470 1681.5 475.5Q1703 481 1725 515L1868 734L1961 525Q1978 486 1998.5 478.5Q2019 471 2060 487Q2100 506 2106.5 527.0Q2113 548 2097 583L1845 1148Q1828 1187 1808.0 1195.0Q1788 1203 1747 1185Z"/><path fill="#80868b" transform="translate(2333 0)" d="M106 984Q87 984 78.0 978.0Q69 972 66.0 962.0Q63 952 63 938V542Q63 528 66.0 519.0Q69 510 78.5 505.0Q88 500 107 500Q129 500 138.5 508.5Q148 517 148 538L144 581Q151 566 165.0 551.0Q179 536 198.5 524.0Q218 512 240.0 505.0Q262 498 285 498Q320 498 347.5 510.5Q375 523 397.0 546.0Q419 569 434 603Q454 570 476.5 546.5Q499 523 528.0 510.5Q557 498 593 498Q650 498 688.5 526.5Q727 555 746.5 606.5Q766 658 766 730V939Q766 953 763.5 963.0Q761 973 751.5 978.5Q742 984 722 984Q703 984 693.5 978.0Q684 972 681.0 962.0Q678 952 678 938V729Q678 684 667.5 651.5Q657 619 635.5 601.0Q614 583 580 583Q544 583 516.5 600.5Q489 618 474.0 651.0Q459 684 459 729V940Q459 955 453.0 966.0Q447 977 435.0 981.5Q423 986 406 983Q390 981 382.0 975.0Q374 969 372.0 959.5Q370 950 370 938V729Q370 684 359.5 651.5Q349 619 327.5 601.0Q306 583 272 583Q236 583 208.5 601.5Q181 620 166.0 653.0Q151 686 151 729V939Q151 953 148.0 963.0Q145 973 135.5 978.5Q126 984 106 984ZM1291 983Q1269 983 1259.5 974.0Q1250 965 1248 946L1252 896Q1242 912 1221.0 932.5Q1200 953 1166.0 968.5Q1132 984 1083 984Q1035 984 993.5 965.0Q952 946 920.5 912.0Q889 878 871.5 834.0Q854 790 854 740Q854 691 871.5 647.5Q889 604 921.0 571.0Q953 538 994.5 519.0Q1036 500 1083 500Q1127 500 1158.0 511.5Q1189 523 1211.5 541.5Q1234 560 1251 583L1249 541Q1248 519 1258.5 509.5Q1269 500 1292 500Q1311 500 1319.5 506.0Q1328 512 1331.0 523.0Q1334 534 1334 550V936Q1334 950 1331.0 961.0Q1328 972 1319.0 977.5Q1310 983 1291 983ZM1098 900Q1138 900 1171.5 879.0Q1205 858 1224.5 822.5Q1244 787 1244 741Q1244 694 1223.5 658.5Q1203 623 1169.5 602.5Q1136 582 1096 582Q1049 582 1014.5 603.5Q980 625 960.0 661.0Q940 697 940 743Q940 788 960.0 823.5Q980 859 1015.5 879.5Q1051 900 1098 900ZM1492 984Q1473 984 1463.5 978.5Q1454 973 1451.0 963.0Q1448 953 1448 939V544Q1448 530 1451.0 520.0Q1454 510 1463.5 505.0Q1473 500 1493 500Q1512 500 1521.0 505.5Q1530 511 1533.0 521.0Q1536 531 1536 546V940Q1536 954 1533.0 964.0Q1530 974 1520.5 979.0Q1511 984 1492 984ZM1492 380Q1470 380 1459.0 373.5Q1448 367 1444.5 355.0Q1441 343 1441 327Q1441 311 1445.0 299.5Q1449 288 1460.0 282.5Q1471 277 1493 277Q1514 277 1525.0 283.0Q1536 289 1539.5 301.0Q1543 313 1543 329Q1543 345 1539.5 356.5Q1536 368 1525.0 374.0Q1514 380 1492 380ZM1809 984Q1777 984 1751.5 978.5Q1726 973 1707.0 961.0Q1688 949 1675.5 930.0Q1663 911 1657.5 884.0Q1652 857 1652 821V321Q1652 306 1654.5 296.0Q1657 286 1667.0 280.5Q1677 275 1695 275Q1715 275 1724.5 280.0Q1734 285 1737.0 295.0Q1740 305 1740 319V820Q1740 840 1744.0 854.5Q1748 869 1756.5 879.0Q1765 889 1778.0 893.0Q1791 897 1809 897Q1821 897 1829.5 900.0Q1838 903 1843.0 912.0Q1848 921 1848 940Q1848 960 1843.0 969.5Q1838 979 1829.5 981.5Q1821 984 1809 984Z"/></svg>';
 const APP_ICON = '<svg viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14.5" fill="#202124"/><g transform="translate(1.5 3.5)"><path fill="#fff" d="M18.5 35.5Q18.5 46 33.5 46Q48.5 46 48.5 35.5Z"/><path fill="#fff" d="M24 34Q24 26.5 33.5 26.5Q43 26.5 43 34Z"/><circle fill="#fff" cx="33.5" cy="24.2" r="2.4"/><path fill="#fff" d="M20.5 41.5C13 41.5 9.5 36 5.5 30.5Q5 29.5 6.3 29.6L8.6 29.8C12.5 34.5 15.5 36.3 20.5 36.3Z"/><path fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" d="M47.5 33.6C55.5 31.8 57.8 41.8 46.4 41.8"/><path fill="#fff" d="M28.5 45.5H38.5L40.5 50.5Q40.7 51.5 39.6 51.5H27.4Q26.3 51.5 26.5 50.5Z"/><path fill="#fff" d="M10.5 10.8Q11.332 15.168 15.7 16Q11.332 16.832 10.5 21.2Q9.668 16.832 5.3 16Q9.668 15.168 10.5 10.8Z"/><path fill="#fff" opacity=".6" d="M18.5 6.7Q18.948 9.052 21.3 9.5Q18.948 9.948 18.5 12.3Q18.052 9.948 15.7 9.5Q18.052 9.052 18.5 6.7Z"/></g></svg>';
@@ -698,7 +699,7 @@ function visible() {
 const grpName = (d, m) => d === 0 ? '오늘' : d === 1 ? '어제' : d <= 7 ? '이번 주' : d <= 31 ? '이번 달' : (m ? (dayOf(m).getFullYear() !== TODAY.getFullYear() ? dayOf(m).getFullYear() + '년 ' : '') + (dayOf(m).getMonth() + 1) + '월' : '이전');
 // 목록 미리보기 한 줄: 본문 앞부분 (인용·빈 줄 제외)
 const snipOf = m => (m.snippet || m.body || '').replace(/\s+/g, ' ').trim().slice(0, 200);
-const dateLabel = m => m.d === 0 ? m.t : fmtD(dayOf(m));
+const dateLabel = m => m.d === 0 ? m.t : fmtDW(dayOf(m));
 // 파일 종류 아이콘: 무채색 종이 모양 + 확장자 앞 글자 (그림은 산 모양, 압축은 지퍼)
 const extOf = n => ((n || '').split('.').length > 1 ? n.split('.').pop() : '').toLowerCase();
 const ftIcon = (t, sz, name) => {
@@ -749,13 +750,14 @@ function renderList() {
   renderSugg(list);
   if (!list.length) { $('#rows').innerHTML = '<div class="empty">조건에 맞는 메일이 없어요</div>'; return; }
   let g = '', h = '';
+  const cord = st.folder === 'conv' ? new Map(list.slice().sort((a, b) => (a.when || 0) - (b.when || 0)).map((m, i) => [m.id, i + 1])) : null;  // 대화 보기: 오래된 순 번호
   shown.forEach(m => {
     const gn = grpName(m.d, m);
     if (gn !== g) { g = gn; h += `<div class="grp">${gn}</div>`; }
     const who = m.sent ? esc('받는사람: ' + m.to.map(nameOf).join(', ')) : `${esc(m.from.name)}${m.from.email && m.from.email.includes('@') ? ` <span class="dom">${esc(m.from.email.split('@')[1])}</span>` : ''}` + boxTag(m);
     h += `<div class="row${m.unread ? ' unread' : ''}${st.open === m.id || (m.nd && st.ndOpen === m.id && $('#read').classList.contains('composing')) ? ' open' : ''}${st.picked.has(m.id) ? ' picked' : ''}" data-id="${m.id}" draggable="true">
       <input type="checkbox" class="ck"${st.picked.has(m.id) ? ' checked' : ''}><div class="mid">
-      <div class="l1"><span class="who">${who}</span>${m.deleted || m.nd ? '' : `<button class="rdel" data-del="${m.id}" title="지운 편지함으로">${ico('trash', 15)}</button>`}<span class="dt">${dateLabel(m)}</span></div>
+      <div class="l1">${cord ? `<span class="cnum">${cord.get(m.id)}</span>` : ''}<span class="who">${who}</span>${m.deleted || m.nd ? '' : `<button class="rdel" data-del="${m.id}" title="지운 편지함으로">${ico('trash', 15)}</button>`}<span class="dt">${dateLabel(m)}</span></div>
       <div class="subj">${m.deleted ? '<span class="deltag">삭제됨</span> ' : ''}${m.draft ? '<span class="draft">작성 중</span> ' : ''}${esc(m.subj)}</div>
       <div class="snip">${attIcons(m)}${esc(snipOf(m)) || '&nbsp;'}</div>
     </div>${(() => { const n = convCount(m); return `<button class="convb${n > 1 ? ' has' : ''}" data-conv="${m.id}" title="이 메일과 이어진 대화 ${n}통 보기">${ico('conv', 15)}${n > 1 ? n : ''}</button>`; })()}<button class="starb${m.star ? ' on' : ''}" data-star="${m.id}" title="${m.star ? '즐겨찾기 해제' : '즐겨찾기 (별표)'}">${STAR_SVG}</button></div>`;
@@ -772,10 +774,15 @@ function renderHead(list) {
   let cb = $('#convbar');
   if (conv) {
     if (!cb) { cb = document.createElement('div'); cb.id = 'convbar'; cb.className = 'convbar'; lh.before(cb); cb.addEventListener('click', e => { if (e.target.closest('[data-b="convclose"]')) closeConv(); }); }
-    cb.innerHTML = `${ico('conv', 16)}<span class="k">대화 보기</span><b title="${esc(st.conv.title)}">${esc(st.conv.title)}</b><span class="n">${list.length}통</span><button class="btn pri convclose" data-b="convclose" title="원래 보던 편지함으로">${ico('close', 14)} 대화 닫기</button>`;
+    // 대화 보기: 목록 전체 파란 테두리 + 맨 위 '← 보던 편지함 › 대화: 제목' + 참여자
+    const ppl = []; const seen = new Set(); list.slice().reverse().forEach(m => { const p = m.sent ? ME : m.from; const k = (p.email || p.name || '').toLowerCase(); if (k && !seen.has(k)) { seen.add(k); ppl.push(p); } });
+    const pName = p => isMe(p) ? '나' : (p.name || p.email);
+    cb.innerHTML = `<div class="cvtop"><button class="cvback" data-b="convclose" title="원래 보던 편지함으로 (Esc)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button><span class="cvfrom">${esc(folderName(st.conv.prev && st.conv.prev !== 'conv' ? st.conv.prev : 'inbox'))} ›</span><b title="${esc(st.conv.title)}">대화: ${esc(st.conv.title)}</b></div>`
+      + `<div class="cvppl"><span class="k">참여</span>${ppl.slice(0, 5).map(p => `<span class="pp${isMe(p) ? ' me' : ''}" title="${esc(p.email || '')}">${esc(pName(p))}</span>`).join('')}${ppl.length > 5 ? `<span class="more">외 ${ppl.length - 5}명</span>` : ''}<span class="n">${list.length}통</span></div>`;
   } else if (cb) cb.remove();
+  $('.list').classList.toggle('convmode', !!conv);
   const label = n ? `<span class="cnt"><b>${n}개 선택</b></span>`
-    : conv ? `<span class="cnt">대화 · ${list.length}통 (최근 메일부터)</span>`
+    : conv ? '<span class="cnt"></span>'
     : st.folder === 'srch' ? `<span class="cnt" title="왼쪽 편지함을 누르면 그 편지함 안에서만 찾아요">모든 편지함 · ${list.length}통</span>`
     : st.q.trim() ? `<span class="cnt">${esc(folderName(st.folder))} 안 · ${list.length}통</span>`
     : '<span class="cnt"></span>';  // 평소엔 편지함 이름·통수 표시 안 함 (왼쪽에서 이미 보임)
@@ -867,7 +874,7 @@ function personLine0(list) { return list.map(p => isMe(p) ? '<span class="me">�
 function prevHtml(prev, i) {
   if (i >= prev.length) return '';
   const p = prev[i];
-  return `<div class="prev"><div class="ph"><b>보낸 사람:</b> ${esc(p.from.name)} &lt;${esc(p.from.email)}&gt;<br><b>보낸 날짜:</b> ${fmtD(dayOf(p))} ${p.t}<br><b>받는 사람:</b> ${p.to.map(x => esc(x.name)).join(', ')}${p.cc.length ? `<br><b>참조:</b> ${p.cc.map(x => esc(x.name)).join(', ')}` : ''}</div>
+  return `<div class="prev"><div class="ph"><b>보낸 사람:</b> ${esc(p.from.name)} &lt;${esc(p.from.email)}&gt;<br><b>보낸 날짜:</b> ${fmtDW(dayOf(p))} ${p.t}<br><b>받는 사람:</b> ${p.to.map(x => esc(x.name)).join(', ')}${p.cc.length ? `<br><b>참조:</b> ${p.cc.map(x => esc(x.name)).join(', ')}` : ''}</div>
     <div class="txt">${esc(p.body)}</div>${prevHtml(prev, i + 1)}</div>`;
 }
 // 본문 속 그림을 받아 오는 동안 보여 줄 도는 고리 (첨부 내려받기 표시와 같은 모양)
@@ -892,7 +899,7 @@ function renderRead(force) {
             <button class="btn" data-act="reply">${ico('reply', 16)} 답장</button><button class="btn" data-act="all">${ico('replyall', 16)} 전체답장</button><button class="btn" data-act="fwd">${ico('fwd', 16)} 전달</button>
             <button class="ib" data-act="more" title="이동·삭제">${ico('more', 18)}</button><button class="ib" data-act="popview" title="새 창에서 보기">${ico('pop')}</button>
           </div>
-          <span class="when">${m.d === 0 ? '오늘' : fmtD(dayOf(m))} ${m.t}</span>
+          <span class="when">${m.d === 0 ? '오늘 ' + fmtDW(dayOf(m)) : fmtDW(dayOf(m))} ${m.t}</span>
         </div>
       </div>
       <div class="plwrap">
@@ -1173,7 +1180,7 @@ async function quoteHtml(m) {
   const r = await renderPasted(src, { quote: true });  // 메일 안 <style> 모양을 칸·글자마다 직접 입힘 (작성 화면 전체에 번지지 않게)
   if (!r) return null;
   const who = p => p.name && p.name !== p.email ? `${esc(p.name)} &lt;${esc(p.email)}&gt;` : esc(p.email);
-  const hdr = `<div class="qhdr">-----원본 메일-----<br><b>보낸 사람:</b> ${who(m.from)}<br><b>보낸 날짜:</b> ${fmtD(dayOf(m))} ${m.t}<br><b>받는 사람:</b> ${m.to.map(who).join(', ')}${m.cc && m.cc.length ? `<br><b>참조:</b> ${m.cc.map(who).join(', ')}` : ''}<br><b>제목:</b> ${esc(m.subj)}</div><br>`;
+  const hdr = `<div class="qhdr">-----원본 메일-----<br><b>보낸 사람:</b> ${who(m.from)}<br><b>보낸 날짜:</b> ${fmtDW(dayOf(m))} ${m.t}<br><b>받는 사람:</b> ${m.to.map(who).join(', ')}${m.cc && m.cc.length ? `<br><b>참조:</b> ${m.cc.map(who).join(', ')}` : ''}<br><b>제목:</b> ${esc(m.subj)}</div><br>`;
   const body = cleanHtml(r.html).replace(/\scontenteditable="[^"]*"/gi, '');
   const out = `<div class="quote qhtml" spellcheck="false">${hdr}<div class="qbody">${body}</div></div>`;
   // 원본 메일 안 그림 목록 (임시저장 때 그림 내용 대신 순번만 저장하려고)
@@ -1190,7 +1197,7 @@ function buildDraft(kind, m) {
     if (kind === 'all') { to = uniq(m.sent ? m.to : [sender, ...m.to.filter(p => !isMe(p))]); const inTo = new Set(to.map(p => p.email.toLowerCase())); cc = uniq(m.cc.filter(p => !isMe(p) && !inTo.has(p.email.toLowerCase()))); }
     subj = (kind === 'fwd' ? 'FW: ' : 'RE: ') + m.subj.replace(/^((re|fw|fwd):\s*)+/i, '');
     // 전체 히스토리: 이 메일 + 그 이전 메일 전부를 차례로 이어 붙임
-    const hdr = x => `-----원본 메일-----\n보낸 사람: ${x.from.name} <${x.from.email}>\n보낸 날짜: ${fmtD(dayOf(x))} ${x.t}\n받는 사람: ${x.to.map(p => p.name).join(', ')}${x.cc && x.cc.length ? '\n참조: ' + x.cc.map(p => p.name).join(', ') : ''}\n제목: ${m.subj}\n\n${x.body}`;
+    const hdr = x => `-----원본 메일-----\n보낸 사람: ${x.from.name} <${x.from.email}>\n보낸 날짜: ${fmtDW(dayOf(x))} ${x.t}\n받는 사람: ${x.to.map(p => p.name).join(', ')}${x.cc && x.cc.length ? '\n참조: ' + x.cc.map(p => p.name).join(', ') : ''}\n제목: ${m.subj}\n\n${x.body}`;
     quote = [m, ...m.prev].map(hdr);
     if (kind === 'draft') text = m.draft + '\n';
   }
@@ -3799,7 +3806,7 @@ function wire() {
     if (e.target.closest('input, textarea, select, [contenteditable="true"]')) { if (e.key === 'Escape' && $('#read').classList.contains('composing') && !$('.menu')) closeCompose(); return; }
     if ($('.modal-bg')) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;  // Ctrl+R 새로고침 등 브라우저 단축키는 그대로
-    if (e.key === 'Escape') { if ($('.menu')) closeMenus(); else deselect(); return; }
+    if (e.key === 'Escape') { if ($('.menu')) closeMenus(); else if (!deselect() && st.folder === 'conv') closeConv(); return; }
     const list = visible(); const i = list.findIndex(m => m.id === st.open);
     if (e.key === 'j' && list[i + 1]) openMail(list[i + 1].id);
     else if (e.key === 'k' && i > 0) openMail(list[i - 1].id);
