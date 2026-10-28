@@ -742,7 +742,7 @@ function visible() {
 const grpName = (d, m) => d === 0 ? '오늘' : d === 1 ? '어제' : d <= 7 ? '이번 주' : d <= 31 ? '이번 달' : (m ? (dayOf(m).getFullYear() !== TODAY.getFullYear() ? dayOf(m).getFullYear() + '년 ' : '') + (dayOf(m).getMonth() + 1) + '월' : '이전');
 // 목록 미리보기 한 줄: 본문 앞부분 (인용·빈 줄 제외)
 const snipOf = m => (m.snippet || m.body || '').replace(/\s+/g, ' ').trim().slice(0, 200);
-const dateLabel = m => m.d === 0 ? m.t : fmtDW(dayOf(m));
+const dateLabel = m => m.d === 0 ? m.t + ' 오늘' : fmtDW(dayOf(m));
 // 파일 종류 아이콘: 무채색 종이 모양 + 확장자 앞 글자 (그림은 산 모양, 압축은 지퍼)
 const extOf = n => ((n || '').split('.').length > 1 ? n.split('.').pop() : '').toLowerCase();
 const ftIcon = (t, sz, name) => {
@@ -939,29 +939,27 @@ function renderRead(force) {
   $('#view').dataset.key = key;
   const toMe = m.to.some(isMe);
   $('#view').innerHTML = `
-    <div class="rhead"><h2>${esc(m.subj)}</h2>
-      <div class="hrow">
-        <div class="people">
-          <div class="from"><b>${esc(m.from.name)}</b><span class="addr">&lt;${esc(m.from.email)}&gt;</span></div>
-        </div>
-        <div class="racts">
+    <div class="rhead"><div class="rmain"><h2>${esc(m.subj)}</h2>
+      <div class="from"><b>${esc(m.from.name)}</b><span class="addr">&lt;${esc(m.from.email)}&gt;</span></div>
+      <div class="plwrap">
+        <div class="pl${toMe ? ' tome' : ''}"><span class="k">수신</span>${personLine(m.to, 'to')}</div>
+        ${m.cc.length ? `<div class="pl"><span class="k">참조</span>${personLine(m.cc, 'cc')}</div>` : ''}
+        ${m.box ? `<div class="boxchip">${ico('folder', 13)}${esc(boxPath(m.box))}</div>` : ''}
+      </div>
+      </div>
+      <div class="racts">
           <div class="bar">
             <button class="btn" data-act="reply">${ico('reply', 16)} 답장</button><button class="btn" data-act="all">${ico('replyall', 16)} 전체답장</button><button class="btn" data-act="fwd">${ico('fwd', 16)} 전달</button>
             <button class="ib" data-act="more" title="이동·삭제">${ico('more', 18)}</button><button class="ib" data-act="popview" title="새 창에서 보기">${ico('pop')}</button>
           </div>
           <span class="when">${m.d === 0 ? '오늘 ' + fmtDW(dayOf(m)) : fmtDW(dayOf(m))} ${m.t}</span>
         </div>
-      </div>
-      <div class="plwrap">
-        <div class="pl${toMe ? ' tome' : ''}"><span class="k">수신</span>${personLine(m.to, 'to')}</div>
-        ${m.cc.length ? `<div class="pl"><span class="k">참조</span>${personLine(m.cc, 'cc')}</div>` : ''}
-        ${m.box ? `<div class="boxchip">${ico('folder', 13)}${esc(boxPath(m.box))}</div>` : ''}
-      </div>
     </div>
+    <div class="rscroll">
     ${attsOf(m).length ? `<div class="attbar${st.attFull === m.id ? ' full' : ''}"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b><div class="attgrid n${Math.min(3, attsOf(m).length)}">${attsOf(m).map(([[t, n, s], i]) => `<span class="attw"><span class="att" data-ai="${i}" title="${esc(n)} · 누르면 다운로드">${ftIcon(t, 17, n)}<span class="an">${esc(n)}</span> <small>${s}</small></span>${attBtns(m, i, n)}</span>`).join('')}</div><button class="attmore" data-act="attfull" hidden>${st.attFull === m.id ? '접기' : '펼치기'}</button></div>` : ''}
     ${m.deleted ? `<div class="dbanner delb"><span>${ico('trash', 16)} 삭제한 메일이에요</span><button data-act="restore">되살리기</button></div>` : ''}
     ${m.draft ? `<div class="dbanner"><span>${ico('pen', 16)} 이 대화에 작성 중이던 답장이 있어요</span><button data-act="draft">이어서 쓰기</button><button class="ib" data-act="deldraft" title="작성 중이던 메일 삭제">${ico('trash', 17)}</button></div>` : ''}
-    <div class="rbody${(m.real && !m.full) || (m.html && !m.htmlReady) ? ' loading' : ''}">${m.real && !m.full ? '<div class="blank" style="padding:40px 0;min-height:260px"></div>' : m.html ? '<iframe class="mailhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>' : `<div class="txt">${esc(m.body)}</div>${prevHtml(m.prev, 0)}`}</div>`;
+    <div class="rbody${(m.real && !m.full) || (m.html && !m.htmlReady) ? ' loading' : ''}">${m.real && !m.full ? '<div class="blank" style="padding:40px 0;min-height:260px"></div>' : m.html ? '<iframe class="mailhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>' : `<div class="txt">${esc(m.body)}</div>${prevHtml(m.prev, 0)}`}</div></div>`;
   const fr = $('#view iframe.mailhtml');
   attMoreCheck(); fitPpl();
   if (fr) {

@@ -950,6 +950,20 @@ body.hasfmt #fPasteF{opacity:1}
 @keyframes spIn{from{opacity:0;transform:translateY(-6px) scale(.97)}}
 .convbar .cvtop{padding-left:14px}
 .convbar .cvx{margin-left:4px}
+
+/* 읽기 머리: 왼쪽(제목·보낸사람·수신/참조) + 오른쪽 위(답장 등 버튼·날짜). 제목은 버튼 자리를 넘지 않고 줄바꿈 */
+.rhead{display:flex;align-items:flex-start;gap:8px 18px}
+#view{container:rv/inline-size}
+.rmain{flex:1;min-width:0}
+.rmain h2{margin:0 0 8px;overflow-wrap:break-word;word-break:keep-all}
+.rmain .from{margin-bottom:2px}
+.rmain .plwrap{margin-top:6px}
+.rhead .racts{flex:none;margin-left:0;padding-top:2px}
+@container rv (max-width:660px){.rhead{flex-direction:column-reverse;align-items:stretch}.rhead .rmain{flex:none;width:100%}.rhead .racts{align-self:flex-end;flex-direction:row-reverse;align-items:center;gap:10px}}
+/* 첨부 띠·안내·본문은 함께 스크롤 (머리만 고정) */
+.rscroll{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}
+.rscroll .rbody{flex:1 0 auto;overflow:visible}
+.rscroll .attbar,.rscroll .dbanner{flex:none}
 </style>
 </head>
 <body>
@@ -999,6 +1013,6 @@ body.hasfmt #fPasteF{opacity:1}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793161657"></script>
+<script src="mail-c.js?v=1793162606"></script>
 </body>
 </html>
