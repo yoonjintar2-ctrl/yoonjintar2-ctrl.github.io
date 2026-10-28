@@ -1884,6 +1884,15 @@ function bodyKeydown(e) {
     lastSpace = now; return;
   }
   lastSpace = 0;
+  // 아웃룩처럼 자동 바꾸기: -> 는 →, => 는 ⇒
+  if (e.key === '>' && !e.ctrlKey && !e.altKey && !e.isComposing) {
+    const s = getSelection(), n = s.anchorNode, o = s.anchorOffset;
+    if (s.isCollapsed && n && n.nodeType === 3 && o > 0 && (n.nodeValue[o - 1] === '-' || n.nodeValue[o - 1] === '=') && !(o > 1 && n.nodeValue[o - 2] === '<')) {
+      e.preventDefault(); const arrow = n.nodeValue[o - 1] === '-' ? '→' : '⇒'; document.execCommand('delete'); document.execCommand('insertText', false, arrow); dirty(); return;
+    }
+  }
+  // --- (하이픈 3개 이상)만 있는 줄에서 Enter → 가로선
+  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.isComposing && hrOnEnter(e)) return;
   if (e.key === 'Tab') { const td = cellAtCaret(); if (td) { e.preventDefault(); moveCell(td, e.shiftKey ? -1 : 1); } }
   cellUpDown(e);
   if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.isComposing) keepIndentOnEnter(e);
@@ -1905,6 +1914,22 @@ function wrapLine(container, s) {
 }
 // 들여쓰기한 줄에서 Enter → 다음 줄도 같은 들여쓰기. 들여쓰기만 있는 빈 줄에서 한 번 더 Enter → 들여쓰기 없앰
 // (들여쓰기 버튼으로 준 왼쪽 여백, 스페이스 두 번으로 넣은 앞 공백 둘 다)
+function hrOnEnter(e) {
+  const b = $('#cbody'), s = getSelection(); if (!s.rangeCount || !s.isCollapsed || !b.contains(s.anchorNode)) return false;
+  let n = s.anchorNode; n = n.nodeType === 1 ? n : n.parentElement;
+  if (n.closest('li, td, th, .quote, .gp-footer')) return false;
+  // 커서 뒤에 같은 줄 글자가 있으면 아님
+  const an = s.anchorNode; if (an.nodeType === 3 && an.nodeValue.slice(s.anchorOffset).replace(/[\s\u00a0]/g, '')) return false;
+  let blk = n; while (blk && blk !== b && !/^(DIV|P)$/.test(blk.tagName)) blk = blk.parentElement;
+  const root = blk && blk !== b ? blk : b, r = document.createRange(); r.setStart(root, 0); r.setEnd(s.anchorNode, s.anchorOffset);
+  const tmp = document.createElement('div'); tmp.append(r.cloneContents()); $$('br', tmp).forEach(x => x.replaceWith('\n')); $$('div,p', tmp).forEach(x => x.prepend('\n'));
+  const line = tmp.textContent.split('\n').pop();
+  if (!/^[\s\u00a0]*-{3,}[\s\u00a0]*$/.test(line)) return false;
+  e.preventDefault();
+  for (let i = 0; i < line.length; i++) document.execCommand('delete');
+  document.execCommand('insertHTML', false, '<hr style="border:0;border-top:1px solid #bfbfbf;margin:8px 0"><br>');
+  dirty(); return true;
+}
 function keepIndentOnEnter(e) {
   const b = $('#cbody'), s = getSelection(); if (!s.rangeCount || !s.isCollapsed || !b.contains(s.anchorNode)) return;
   let n = s.anchorNode; n = n.nodeType === 1 ? n : n.parentElement;
@@ -3199,17 +3224,20 @@ async function loadReal(interactive, token) {
     real.poll = () => {
       if (!real.on || real.expired || gen !== real.gen) return Promise.resolve(null);
       if (real.pollP) return real.pollP;  // 이미 확인 중이면 그 결과를 같이 기다림
-      return (real.pollP = (async () => {
+      // 네트워크가 멈춰도 다음 확인이 막히지 않게 40초 넘으면 이번 확인은 포기
+      const to = new Promise(z => setTimeout(() => z(null), 40000));
+      return (real.pollP = Promise.race([to, (async () => {
         try {
           const ids = await listIds('newer_than:1d');
           const fresh2 = ids.filter(g => !metas.has(g));
           if (!fresh2.length) return 0;
           await fetchMetas(fresh2, '새 메일', true);
           show(); prefetchBodies();
-          const nw = fresh2.map(g => MAILS.find(m => m.gid === g)).filter(m => m && m.inbox && m.unread && !m.deleted && !isMe(m.from));
+          // 알림: 받은편지함뿐 아니라 자동 분류로 바로 편지함에 들어간 새 메일도 (내가 보낸 것·지운 것 제외)
+          const nw = fresh2.map(g => MAILS.find(m => m.gid === g)).filter(m => m && m.unread && !m.deleted && !m.sent && !isMe(m.from));
           notifyNew(nw); return nw.length;
-        } catch (e) { return null; /* 다음에 다시 */ } finally { real.pollP = null; }
-      })());
+        } catch (e) { return null; /* 다음에 다시 */ }
+      })()]).then(v => { real.lastPoll = { t: Date.now(), n: v }; const rb = $('#refBtn'); if (rb) rb.title = `새로 고침 (F9) — 마지막 확인 ${new Date().toTimeString().slice(0, 5)}${v == null ? ' (확인 실패, 1분 뒤 다시)' : ''}`; return v; }).finally(() => { real.pollP = null; }));
     };
     // 3단계: 3개월보다 옛날 메일 — 메모리 여유가 있을 때 조금씩 끌어와 이 PC에 저장
     const userIds = new Set(user.map(l => l.id));
