@@ -402,7 +402,7 @@ const ATYPES = [['XLS', '엑셀'], ['PPT', '파워포인트'], ['PDF', 'PDF'], [
 function renderTop() {
   const f = st.f;
   $('#newMail').innerHTML = ico('pen') + ' 새 메일';
-  const rb = $('#refBtn'); if (rb && !rb.firstChild) rb.innerHTML = '<svg viewBox="0 0 64 64" width="32" height="32"><g class="lamp"><path fill="currentColor" d="M18.5 35.5Q18.5 46 33.5 46Q48.5 46 48.5 35.5Z"/><path fill="currentColor" d="M24 34Q24 26.5 33.5 26.5Q43 26.5 43 34Z"/><circle fill="currentColor" cx="33.5" cy="24.2" r="2.4"/><path fill="currentColor" d="M20.5 41.5C13 41.5 9.5 36 5.5 30.5Q5 29.5 6.3 29.6L8.6 29.8C12.5 34.5 15.5 36.3 20.5 36.3Z"/><path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" d="M47.5 33.6C55.5 31.8 57.8 41.8 46.4 41.8"/><path fill="currentColor" d="M28.5 45.5H38.5L40.5 50.5Q40.7 51.5 39.6 51.5H27.4Q26.3 51.5 26.5 50.5Z"/></g><g class="spk"><path fill="currentColor" d="M10.5 10.8Q11.332 15.168 15.7 16Q11.332 16.832 10.5 21.2Q9.668 16.832 5.3 16Q9.668 15.168 10.5 10.8Z"/><path fill="currentColor" opacity=".6" d="M18.5 6.7Q18.948 9.052 21.3 9.5Q18.948 9.948 18.5 12.3Q18.052 9.948 15.7 9.5Q18.052 9.052 18.5 6.7Z"/></g></svg><span class="f9">F9</span>';  // 램프를 문지르면 마법으로 메일이 오가요
+  const rb = $('#refBtn'); if (rb && !rb.firstChild) rb.innerHTML = '<svg viewBox="0 0 32 32" width="28" height="28"><g class="rot"><path d="M25.3 12.4A10 10 0 1 0 26 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M26.4 6.6v6.3h-6.3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g><text x="16" y="19.4" text-anchor="middle" font-size="7.6" font-weight="700" fill="currentColor" font-family="Pretendard,sans-serif">F9</text></svg>';  // 새로 고침(F9)
   $('#goSearch').innerHTML = ico('search');
   $('#gear').innerHTML = ico('gear', 20);
   let pill = $('#srcPill'); if (!pill) { pill = document.createElement('span'); pill.id = 'srcPill'; $('#gear').before(pill); }
@@ -413,6 +413,7 @@ function renderTop() {
   pill.textContent = R.expired ? (auth.needClick ? '로그인 연장 — 화면을 한 번 눌러 주세요' : 'Gmail 다시 연결하기 (클릭)') : avatar ? (ME.email || '?').charAt(0).toUpperCase() : R.prog ? R.prog : '예시 메일';
   // 뒤에서 하는 일(옛날 메일 저장·본문 저장 등)은 눈에 띄지 않는 회색 모래시계로만, 마우스를 올리면 내용
   let hg = $('#bgWork'); if (!hg) { hg = document.createElement('span'); hg.id = 'bgWork'; hg.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9"/></svg>'; pill.before(hg); }
+  if (rb && hg.nextElementSibling !== rb) hg.after(rb);  // 새로 고침 버튼은 오른쪽 모래시계 바로 옆
   hg.hidden = !(R.on && R.prog && !R.expired); hg.className = 'tip'; hg.dataset.tip = R.prog || '';  // 마우스를 올리는 즉시 내용
   pill.title = R.expired ? '로그인이 만료됐어요. 누르면 다시 연결해요' : '';
   if (avatar) { pill.style.background = dotColor(ME.email); pill.dataset.tip = `${ME.name || ''}\n${ME.email}\nGmail 연결됨${extAuth.ok ? ' · 로그인 자동 연장 중' : ''}\n(누르면 계정 설정)`; } else { pill.style.background = ''; delete pill.dataset.tip; }
