@@ -203,6 +203,24 @@ function convMembers(seed) {
   (X.byS.get(k) || []).forEach(m => { if (out.has(m.id)) return; if ([m.from, ...(m.to || []), ...(m.cc || [])].some(p => p && ppl.has(p.email))) out.set(m.id, m); });
   return [...out.values()];
 }
+// 내가 답장한 메일: 내가 보낸 메일의 바로 앞 메일(References 마지막 = 답장한 메일). 그 정보가 없으면 같은 대화에서 내 메일 직전에 받은 메일
+let REPLIED = null;
+function repliedSet() {
+  if (REPLIED && REPLIED.n === MAILS.length && REPLIED.ref === MAILS) return REPLIED.set;
+  const set = new Set(), byMsg = new Map(), byT = new Map();
+  MAILS.forEach(m => { if (m.msgId) byMsg.set(m.msgId.trim(), m); if (m.threadId) { if (!byT.has(m.threadId)) byT.set(m.threadId, []); byT.get(m.threadId).push(m); } });
+  const whenOf = m => m.when || 0;
+  MAILS.forEach(x => {
+    if (!x.sent || !isMe(x.from) || x.deleted) return;
+    const last = ((x.refs || '').match(/<[^>]+>/g) || []).pop();
+    const par = last && byMsg.get(last);
+    if (par) { if (!isMe(par.from)) set.add(par.id); return; }
+    if (last) return;  // 앞 메일이 목록에 없음
+    const prev = (byT.get(x.threadId) || []).filter(m => m !== x && !isMe(m.from) && whenOf(m) < whenOf(x)).sort((a, b) => whenOf(b) - whenOf(a))[0];
+    if (prev) set.add(prev.id);
+  });
+  REPLIED = { n: MAILS.length, ref: MAILS, set }; return set;
+}
 const convCount = m => { const X = convIndex(); if (!X.cnt.has(m.id)) { const mem = convMembers(m); mem.forEach(x => X.cnt.set(x.id, mem.length)); } return X.cnt.get(m.id) || 1; };
 function openConv(id) {
   const seed = MAILS.find(m => m.id === id); if (!seed) return;
@@ -817,7 +835,7 @@ function renderList() {
     const who = m.sent ? esc('받는사람: ' + m.to.map(nameOf).join(', ')) : `${esc(m.from.name)}${m.from.email && m.from.email.includes('@') ? ` <span class="dom">${esc(m.from.email.split('@')[1])}</span>` : ''}` + boxTag(m);
     h += `<div class="row${m.unread ? ' unread' : ''}${st.open === m.id || (m.nd && st.ndOpen === m.id && $('#read').classList.contains('composing')) ? ' open' : ''}${st.picked.has(m.id) ? ' picked' : ''}" data-id="${m.id}" draggable="true">
       <input type="checkbox" class="ck"${st.picked.has(m.id) ? ' checked' : ''}><div class="mid">
-      <div class="l1">${cord ? `<span class="cnum">${cord.get(m.id)}</span>` : ''}<span class="who">${who}</span>${m.deleted || m.nd ? '' : `<button class="rdel" data-del="${m.id}" title="지운 편지함으로">${ico('trash', 15)}</button>`}<span class="dt">${dateLabel(m)}</span></div>
+      <div class="l1">${cord ? `<span class="cnum">${cord.get(m.id)}</span>` : ''}<span class="who">${who}</span>${m.deleted || m.nd ? '' : `<button class="rdel" data-del="${m.id}" title="지운 편지함으로">${ico('trash', 15)}</button>`}${repliedSet().has(m.id) ? `<span class="rpl" title="답장한 메일">${ico('reply', 13)}</span>` : ''}<span class="dt">${dateLabel(m)}</span></div>
       <div class="subj">${m.deleted ? '<span class="deltag">삭제됨</span> ' : ''}${m.draft ? '<span class="draft">작성 중</span> ' : ''}${esc(m.subj)}</div>
       <div class="snip">${attIcons(m)}${esc(snipOf(m)) || '&nbsp;'}</div>
     </div>${(() => { const n = convCount(m); return `<button class="convb${n > 1 ? ' has' : ''}" data-conv="${m.id}" title="이 메일과 이어진 대화 ${n}통 보기">${ico('conv', 15)}${n > 1 ? n : ''}</button>`; })()}<button class="starb${m.star ? ' on' : ''}" data-star="${m.id}" title="${m.star ? '즐겨찾기 해제' : '즐겨찾기 (별표)'}">${STAR_SVG}</button></div>`;
