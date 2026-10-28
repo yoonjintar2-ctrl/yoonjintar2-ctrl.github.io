@@ -4366,6 +4366,15 @@ function uhKey(e) {
   uhFlush();
 }
 /* ───────── 시작 ───────── */
+// 버튼을 누르면 테두리 빛 한 바퀴 + 훑는 빛 (모든 버튼 공통)
+document.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  const b = e.target.closest('.btn, .tf, .fbtn, .refbtn, .attpick, .foot .chip, .ib, #srcPill.avatar, .sbox .go'); if (!b || b.disabled || b.closest('.menu, .modal, #cbody')) return;
+  if (getComputedStyle(b).position === 'static') b.style.position = 'relative';
+  const old = b.querySelector(':scope > .jp'); if (old) old.remove();
+  const j = document.createElement('i'); j.className = 'jp'; j.innerHTML = '<i class="jp-orb"></i><i class="jp-clip"><i class="jp-sw"></i></i>';
+  b.append(j); j.querySelector('.jp-sw').addEventListener('animationend', () => j.remove()); setTimeout(() => j.remove(), 3000);
+}, true);
 // 메일 쓰기 버튼들(휴지통·닫기·새 창·보내기)은 받는사람 줄 오른쪽에, 저장 상태 글은 첨부 줄 오른쪽에
 (() => { const ct = $('.ctool'), to = $('#toBox') && $('#toBox').closest('.fld'); if (ct && to) to.append(ct); const sv = $('#saveState'), af = $('.attfld'); if (sv && af) af.append(sv); })();
 document.body.classList.toggle('noblur', SET.blur === false);
