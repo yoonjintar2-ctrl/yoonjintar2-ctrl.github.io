@@ -669,14 +669,23 @@ function queryMatch(m, raw) {
   return ws.every(w => hay.includes(w));
 }
 // 자동완성: 글자를 치는 동안만. 엔터·돋보기를 누르거나 마우스가 검색창·자동완성 밖으로 0.2초 넘게 나가면 닫고, 다시 칠 때까지 안 띄움
-function renderSugg(list) {
-  const q = st.q.trim(), box = $('#sugg');
+// 자동완성용 사람 목록: 메일이 늘어날 때만 다시 만듦 (글자 칠 때마다 전체를 훑지 않게)
+function suggPeople() {
+  if (suggPeople.n === MAILS.length && suggPeople.v) return suggPeople.v;
+  const mp = new Map(); MAILS.forEach(m => { const p = m.from; if (!p || !p.email || isMe(p)) return; const k = p.email.toLowerCase(), x = mp.get(k); if (x) x.c++; else mp.set(k, { name: p.name || p.email, email: p.email, c: 1 }); });
+  suggPeople.n = MAILS.length; return (suggPeople.v = [...mp.values()].sort((a, b) => b.c - a.c));
+}
+// 아직 엔터 전(입력 중)인 검색어로 자동완성에 띄울 메일 6통만 (목록은 그대로)
+function draftMails(q) { return MAILS.filter(m => !m.deleted && queryMatch(m, q)).sort((a, b) => a.d - b.d || (a.t < b.t ? 1 : a.t > b.t ? -1 : 0)).slice(0, 6); }
+function renderSugg(list, draft) {
+  const q = (draft != null ? draft : st.q).trim(), box = $('#sugg');
   if (!q || st.suggOff || document.activeElement !== $('#q')) { box.classList.remove('on'); return; }
+  if (draft != null) list = draftMails(q);
   const hl = s => { const i = s.toLowerCase().indexOf(q.toLowerCase()); return i < 0 ? esc(s) : esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length)); };
-  const ppl = peopleFromMails('from').filter(p => personMatch(p, q)).slice(0, 3);
+  const ppl = suggPeople().filter(p => personMatch(p, q)).slice(0, 3);
   const mails = (list || visible()).slice(0, 6);
   box.innerHTML = (ppl.length ? '<div class="sh">사람 — 누르면 보낸사람으로 거르기</div>' + ppl.map(p => `<div class="si" data-p="${esc(p.email)}">${ico('me', 16)}<span class="s1">${hl(p.name)} <small style="color:var(--mute)">${hl(p.email)}</small></span></div>`).join('') : '') +
-    (mails.length ? `<div class="sh">메일 · ${esc(folderName(st.folder))}</div>` + mails.map(m => `<div class="si" data-id="${m.id}">${ico('env', 16)}<span class="s1">${hl(m.subj)}</span><span class="s2">${esc(m.from.name)} · ${dateLabel(m)}</span></div>`).join('') : '<div class="sh">맞는 메일이 없어요</div>');
+    (mails.length ? `<div class="sh">메일 · ${draft != null ? '모든 편지함' : esc(folderName(st.folder))}</div>` + mails.map(m => `<div class="si" data-id="${m.id}">${ico('env', 16)}<span class="s1">${hl(m.subj)}</span><span class="s2">${esc(m.from.name)} · ${dateLabel(m)}</span></div>`).join('') : '<div class="sh">맞는 메일이 없어요</div>');
   box.classList.add('on');
 }
 
@@ -3612,7 +3621,17 @@ function wire() {
     renderNav(); renderTop(); renderList();
   };
   // 글자를 칠 때마다 바로 다시 찾지 않고, 잠깐(0.15초) 멈추면 찾음 — 한글 조합 중 자모마다 검색하던 것도 줄어듦
-  let qT = 0; q.addEventListener('input', () => { st.suggOff = false; clearTimeout(qT); qT = setTimeout(() => { if (st.q !== q.value) setQuery(q.value); }, 120); });
+  // 입력 중에는 목록을 거르지 않고 자동완성만 → 엔터(돋보기·흐린 목록 누르기)를 쳐야 목록이 바뀜. 그동안 목록은 흐리게
+  const qPend = on => { const L = $('.list'); L.classList.toggle('qpending', on); let hn = $('#qhint'); if (on) { if (!hn) { hn = document.createElement('button'); hn.id = 'qhint'; hn.className = 'qhint'; L.append(hn); } hn.innerHTML = `${ico('search', 15)}<span><b>Enter</b>를 누르면 ‘${esc(q.value.trim())}’(으)로 목록을 걸러요</span>`; } else if (hn) hn.remove(); };
+  const preview = () => {
+    const v = q.value;
+    if (!v.trim()) { qPend(false); if (st.q) setQuery(''); else renderSugg(); return; }  // 다 지우면 바로 원래 목록
+    if (v.trim() === st.q.trim()) { qPend(false); renderSugg(); return; }
+    qPend(true); renderSugg(null, v);
+  };
+  const applyQ = () => { clearTimeout(qT); qPend(false); if (st.q !== q.value) setQuery(q.value); };
+  $('.list').addEventListener('click', e => { if (e.target.closest('#qhint')) { applyQ(); suggClose(); } });
+  let qT = 0; q.addEventListener('input', () => { st.suggOff = false; clearTimeout(qT); qT = setTimeout(preview, 90); });
   const suggClose = () => { st.suggOff = true; $('#sugg').classList.remove('on'); };
   let outT = 0; document.addEventListener('mousemove', e => {
     if (!$('#sugg').classList.contains('on')) { clearTimeout(outT); outT = 0; return; }
@@ -3623,12 +3642,12 @@ function wire() {
   const sbw = $('.sbwrap'), outStart = () => { if ($('#sugg').classList.contains('on') && !outT) outT = setTimeout(() => { outT = 0; suggClose(); }, 200); };
   sbw.addEventListener('mouseleave', outStart); sbw.addEventListener('mouseenter', () => { clearTimeout(outT); outT = 0; });
   document.addEventListener('mouseout', e => { if (!e.relatedTarget || e.relatedTarget.tagName === 'IFRAME') outStart(); });
-  q.addEventListener('compositionend', () => { clearTimeout(qT); qT = setTimeout(() => { if (st.q !== q.value) setQuery(q.value); }, 60); });
+  q.addEventListener('compositionend', () => { clearTimeout(qT); qT = setTimeout(preview, 40); });
   q.addEventListener('focus', () => { renderSugg(); warmSearch(); });
   q.addEventListener('blur', () => setTimeout(() => $('#sugg').classList.remove('on'), 150));
-  q.addEventListener('keydown', e => { if (e.key === 'Enter' && st.q !== q.value) { clearTimeout(qT); setQuery(q.value); } if (e.key === 'Enter') { suggClose(); const first = visible()[0]; if (first) openMail(first.id); } if (e.key === 'Escape') { clearTimeout(qT); q.value = ''; setQuery(''); } });
-  $('#goSearch').addEventListener('click', () => { clearTimeout(qT); suggClose(); setQuery(q.value); });
-  const qClearNow = () => { clearTimeout(qT); q.value = ''; suggClose(); setQuery(''); };
+  q.addEventListener('keydown', e => { if (e.key === 'Enter') { setTimeout(() => { applyQ(); suggClose(); const first = visible()[0]; if (first) openMail(first.id); }, 0); } if (e.key === 'Escape') { qClearNow(); } });
+  $('#goSearch').addEventListener('click', () => { suggClose(); applyQ(); });
+  const qClearNow = () => { clearTimeout(qT); q.value = ''; suggClose(); qPend(false); setQuery(''); };
   document.addEventListener('click', e => { if (e.target.closest('#qClear, [data-qclear]')) qClearNow(); });
   $('#sugg').addEventListener('mousedown', e => { e.preventDefault(); const si = e.target.closest('.si'); if (!si) return; if (si.dataset.id) openMail(+si.dataset.id); if (si.dataset.p) { st.f.from = si.dataset.p; q.value = ''; setQuery(''); } $('#sugg').classList.remove('on'); });
   // 왼쪽

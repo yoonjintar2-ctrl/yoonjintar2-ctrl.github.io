@@ -869,6 +869,15 @@ body.resizing{cursor:col-resize;user-select:none}
 .sbox .qclear{flex:none;width:26px;height:26px;margin-right:2px;border:0;border-radius:50%;background:#dbe6fb;color:var(--blue);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .sbox .qclear:hover{background:#c8d9fa}
 .empty .qclear2{margin-top:12px;font-size:12.5px}
+
+/* 검색어 입력 중(엔터 전): 목록은 그대로 두고 흐리게, 가운데 'Enter를 누르면 걸러요' */
+.list.qpending{position:relative}
+.list.qpending #rows,.list.qpending #lhead{filter:blur(1.6px) grayscale(.3);opacity:.45;pointer-events:none;transition:filter .2s,opacity .2s}
+.qhint{position:absolute;left:50%;top:52%;transform:translateX(-50%);z-index:7;display:inline-flex;align-items:center;gap:8px;max-width:calc(100% - 28px);padding:10px 16px;border:1.5px solid var(--lq-on-line);border-radius:999px;background:#fff;color:var(--lq-ink);font-size:13px;box-shadow:0 6px 20px rgba(11,40,100,.14);cursor:pointer;animation:qhIn .2s ease-out}
+.qhint span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qhint b{color:var(--blue)}
+.qhint svg{color:var(--blue);flex:none}
+@keyframes qhIn{from{opacity:0;transform:translate(-50%,6px)}}
 </style>
 </head>
 <body>
@@ -918,6 +927,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793153849"></script>
+<script src="mail-c.js?v=1793154485"></script>
 </body>
 </html>
