@@ -2827,14 +2827,29 @@ function tokenAfter401() {
 }
 const authGesture = () => { if (auth.needClick && !auth.p) renewToken().catch(() => {}); };
 ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, authGesture, true));
-setInterval(() => {
-  if (!real.on || auth.p || auth.needClick) return;
-  if (tokCache.left() < 6 * 60000) {
-    if (IS_EXT) renewToken().catch(() => { auth.needClick = true; });
-    else if (extAuth.ok) { auth.p = extToken(false).then(t => { real.token = t; real.expired = false; renderTop(); return t; }).catch(() => { auth.needClick = true; }).finally(() => { auth.p = null; }); }  // 확장: 창 없이 미리 연장
-    else auth.needClick = true;  // 웹: 다음 클릭 때 연장 (표시 없이)
+// 로그인 자동 연장: 확장 프로그램이 있으면 창 없이 미리 연장(실패해도 1분마다 다시 시도),
+// 없으면 다음 클릭 때 연장 — 그동안 새 메일 확인이 멈추므로, 화면을 안 보고 있으면 알림으로 한 번 알려 줌
+setInterval(async () => {
+  if (!real.on || auth.p) return;
+  if (tokCache.left() >= 6 * 60000) { auth.stallNotified = false; return; }
+  if (IS_EXT) { renewToken().catch(() => { auth.needClick = true; }); return; }
+  if (!extAuth.ok) await extAvailable(true);  // 확장을 나중에 설치했거나 처음 확인 때 응답이 늦었을 수 있음 → 다시 확인
+  if (extAuth.ok) {
+    auth.p = extToken(false).then(t => { real.token = t; real.expired = false; auth.needClick = false; auth.stallNotified = false; renderTop(); if (real.poll) real.poll(); return t; })
+      .catch(() => { auth.needClick = true; }).finally(() => { auth.p = null; });
+    return;
   }
+  auth.needClick = true;  // 웹: 다음 클릭 때 연장 (표시 없이)
+  if (tokCache.left() <= 0) notifyStall();
 }, 60000);
+function notifyStall() {
+  if (auth.stallNotified || (document.visibilityState === 'visible' && document.hasFocus())) return;
+  if (!SET.notify || !('Notification' in window) || Notification.permission !== 'granted') return;
+  auth.stallNotified = true;
+  const title = '새 메일 확인이 잠시 멈췄어요', opt = { body: '구글 로그인이 만료됐어요. 눌러서 지니메일을 열고 화면을 한 번 누르면 다시 확인해요. (로그인 유지 확장 프로그램을 설치하면 자동으로 연장돼요)', tag: 'jin-stall', data: { id: null } };
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification(title, opt)).catch(() => {});
+  else { try { const n = new Notification(title, opt); n.onclick = () => { window.focus(); n.close(); }; } catch (e) { /* */ } }
+}
 /* ───────── 실제 Gmail 메일 불러오기 · 바뀐 내용 Gmail에 반영 ───────── */
 const real = { on: false, token: null };
 // Gmail 사용량 한도(사용자당 1분 15,000) 안에서 천천히: 뒤에서 받아 오기는 1초 100까지, 사용자가 누른 동작은 바로
