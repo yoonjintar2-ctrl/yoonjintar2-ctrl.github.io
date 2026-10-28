@@ -694,6 +694,17 @@ function suggSearch(q, done) {
   };
   setTimeout(step, 0);
 }
+// 검색을 시작하면 검색창 바로 아래에 한 번만: '지금 보던 ○○에서만 찾을까요?' (8초 뒤 저절로 닫힘)
+function scopePop(on) {
+  let pp = $('#scopePop'); clearTimeout(scopePop.t);
+  const pre = st.preFolder;
+  if (!on || !pre || ['all', 'srch', 'conv', 'inbox'].includes(pre)) { if (pp) pp.remove(); return; }
+  if (!pp) { pp = document.createElement('div'); pp.id = 'scopePop'; pp.className = 'scopepop'; document.body.append(pp);
+    pp.addEventListener('click', e => { const b = e.target.closest('[data-sp]'); if (!b) return; if (b.dataset.sp === 'pre' && st.preFolder) st.folder = st.preFolder; else st.folder = 'srch'; pp.remove(); renderNav(); renderTop(); renderList(); }); }
+  pp.innerHTML = `<span class="ic">${ico('folder', 15)}</span><span class="tx">지금 보던 <b>‘${esc(folderName(pre))}’</b>에서만 찾을까요?</span><button data-sp="pre" class="yes">여기서만</button><button data-sp="all">모든 편지함</button>`;
+  const r = $('.sbox').getBoundingClientRect(); pp.style.left = r.left + 'px'; pp.style.top = (r.bottom + 10) + 'px';
+  scopePop.t = setTimeout(() => { const x = $('#scopePop'); if (x) { x.classList.add('out'); setTimeout(() => x.remove(), 250); } }, 8000);
+}
 function renderSugg(list, draft) {
   const q = (draft != null ? draft : st.q).trim(), box = $('#sugg');
   if (!q || st.suggOff || document.activeElement !== $('#q')) { suggJob++; box.classList.remove('on'); return; }
@@ -1181,6 +1192,77 @@ function chipLabel(p, all) {
   const dup = (all || []).filter(x => x !== p && (x.name || '') === nm).length > 0;
   return codey || dup ? `${nm} · ${loc}` : nm;
 }
+// 표 칸 선택을 엑셀처럼: 고른 칸들 바탕 + 바깥 굵은 파란 테두리 (글자 선택 하이라이트는 숨김)
+function drawTdBox() {
+  let bx = $('#tdbox'); const cells = TS.cells.filter(c => c.isConnected);
+  const on = cells.length > 1 && TS.multi && $('#read').classList.contains('composing');
+  const b = $('#cbody'); if (b) b.classList.toggle('cellmode', on);
+  if (!on) { if (bx) bx.remove(); return; }
+  if (!bx) { bx = document.createElement('div'); bx.id = 'tdbox'; bx.className = 'tdbox'; document.body.append(bx); }
+  let L = 1e9, T = 1e9, R = -1e9, B = -1e9; cells.forEach(c => { const r = c.getBoundingClientRect(); L = Math.min(L, r.left); T = Math.min(T, r.top); R = Math.max(R, r.right); B = Math.max(B, r.bottom); });
+  const cb = b.getBoundingClientRect();  // 본문 칸 밖으로 스크롤된 부분은 잘라서
+  const t = Math.max(T, cb.top), btm = Math.min(B, cb.bottom);
+  if (btm <= t) { bx.style.display = 'none'; return; }
+  Object.assign(bx.style, { display: 'block', left: (L - 1) + 'px', top: (t - 1) + 'px', width: (R - L + 2) + 'px', height: (btm - t + 2) + 'px' });
+}
+// 보내기 예약: 지니메일이 켜져 있는 동안 정한 시간에 보냄 (이 PC에 저장 — 꺼져 있었으면 다음에 열 때 물어봄)
+let SCHED = [];
+const schedKey = () => 'sched-' + (ME.email || 'x');
+const kvDB = (op, key, val) => new Promise(res => { try { const rq = indexedDB.open('jin-mail', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('kv'); rq.onsuccess = () => { const tx = rq.result.transaction('kv', op === 'get' ? 'readonly' : 'readwrite'); const s = tx.objectStore('kv'); const r = op === 'get' ? s.get(key) : s.put(val, key); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }; rq.onerror = () => res(null); } catch (e) { res(null); } });
+const schedSave = () => kvDB('put', schedKey(), SCHED);
+const fmtWhen = t => { const d = new Date(t); return fmtDW(d) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+async function schedLoad() {
+  SCHED = (await kvDB('get', schedKey())) || [];
+  const late = SCHED.filter(j => j.at < Date.now() - 60000);
+  if (late.length && await askConfirm(`예약한 메일 ${late.length}통의 보낼 시간이 지났어요 (지니메일이 꺼져 있었어요).\n${late.map(j => '· ' + (j.subj || '(제목 없음)') + ' — ' + fmtWhen(j.at)).join('\n')}\n\n지금 보낼까요?`, '지금 보내기')) late.forEach(j => schedFire(j));
+  else late.forEach(j => { j.at = Date.now() + 365 * 86400000; j.held = true; });  // 보내지 않으면 보류 (보내기 ▾에서 다시 고를 수 있음)
+  schedSave();
+}
+function schedFire(j) {
+  SCHED = SCHED.filter(x => x !== j); schedSave();
+  const d = Object.assign({}, j.d, { files: unpackFiles(j.d.files) }), snap = Object.assign({}, j.snap, { files: unpackFiles(j.snap.files) });
+  toast(`예약 메일을 보내요: ${j.subj || '(제목 없음)'}`); runSend(d, snap);
+}
+setInterval(() => { if (!real.on || !SCHED.length) return; SCHED.filter(j => !j.held && j.at <= Date.now()).forEach(schedFire); }, 15000);
+async function scheduleSend(at) {
+  if (!real.on) { toast('예시 화면에서는 예약할 수 없어요'); return; }
+  const r = await sendMail({ prepOnly: true }); if (!r) return;
+  const { d, snap } = r;
+  SCHED.push({ id: Date.now(), at, subj: d.subj, to: d.to.map(p => p.name || p.email).slice(0, 3).join(', '), d: Object.assign({}, d, { files: await packFiles(d.files) }), snap: Object.assign({}, snap, { files: await packFiles(snap.files) }) });
+  await schedSave();
+  // 작성 화면 닫고 작성 중 표시는 지움 (예약 취소하면 되살림)
+  const o = MAILS.find(x => x.id === d.mailId); if (o) { o.draft = null; o.draftD = null; }
+  ndRemove(d.nd); if ($('#read').classList.contains('composing')) $('#read').classList.remove('composing');
+  renderRead(true); renderList(); renderNav();
+  toast(`${fmtWhen(at)}에 보내도록 예약했어요 · 지니메일이 켜져 있어야 보내져요`);
+}
+function nextAt(h, m, addDays, weekday) { const d = new Date(); d.setSeconds(0, 0); if (weekday != null) { const add = (weekday - d.getDay() + 7) % 7 || 7; d.setDate(d.getDate() + add); } else d.setDate(d.getDate() + (addDays || 0)); d.setHours(h, m); return d.getTime(); }
+function sendMenu(btn) {
+  const now = new Date(), items = [{ head: '보내기 예약' }];
+  if (now.getHours() < 17 || now.getHours() === 17 && now.getMinutes() < 30) items.push({ html: `오늘 오후 6:00 <small class="sub">${fmtWhen(nextAt(18, 0, 0))}</small>`, act: () => scheduleSend(nextAt(18, 0, 0)) });
+  items.push({ html: `내일 오전 8:00 <small class="sub">${fmtWhen(nextAt(8, 0, 1))}</small>`, act: () => scheduleSend(nextAt(8, 0, 1)) });
+  items.push({ html: `내일 오후 1:00 <small class="sub">${fmtWhen(nextAt(13, 0, 1))}</small>`, act: () => scheduleSend(nextAt(13, 0, 1)) });
+  items.push({ html: `월요일 오전 8:00 <small class="sub">${fmtWhen(nextAt(8, 0, 0, 1))}</small>`, act: () => scheduleSend(nextAt(8, 0, 0, 1)) });
+  const pick = document.createElement('div'); pick.className = 'mrow schedpick';
+  const def = new Date(Date.now() + 3600000); def.setMinutes(0, 0, 0); const loc = new Date(def - def.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  pick.innerHTML = `<input type="datetime-local" id="schedAt" value="${loc}"><button class="btn pri" id="schedGo">예약</button>`;
+  pick.addEventListener('keydown', e => e.stopPropagation());
+  $('#schedGo', pick).addEventListener('click', () => { const v = $('#schedAt', pick).value; const t = v ? new Date(v).getTime() : 0; if (!t || t < Date.now() + 30000) { toast('지금 이후 시간을 골라 주세요'); return; } closeMenus(); scheduleSend(t); });
+  items.push('-', { head: '날짜·시간 직접 고르기' }, { node: pick });
+  if (SCHED.length) {
+    items.push('-', { head: `예약된 메일 ${SCHED.length}통` });
+    SCHED.slice().sort((a, b) => a.at - b.at).forEach(j => {
+      const row = document.createElement('div'); row.className = 'schedrow';
+      row.innerHTML = `<div class="si"><b>${esc(j.subj || '(제목 없음)')}</b><small>${j.held ? '보류 중' : fmtWhen(j.at)} · ${esc(j.to || '')}</small></div><button data-k="now">지금 보내기</button><button data-k="edit">취소·고치기</button>`;
+      row.addEventListener('click', e => { const k = e.target.closest('[data-k]'); if (!k) return; closeMenus();
+        if (k.dataset.k === 'now') schedFire(j);
+        else { SCHED = SCHED.filter(x => x !== j); schedSave(); const snap = Object.assign({}, j.snap, { files: unpackFiles(j.snap.files) }); cs.files = snap.files; loadDraft(snap); cs.files = snap.files; renderFiles(); toast('예약을 취소하고 작성 화면으로 되돌렸어요'); } });
+      items.push({ node: row });
+    });
+  }
+  items.push({ html: '<span style="color:var(--mute);font-size:11.5px">지니메일이 켜져 있어야 정한 시간에 보내져요 (최소화는 괜찮아요)</span>', act: () => {} });
+  const m = menuAt(btn, items); m.classList.add('sendmenu');
+}
 function fmtToolbar() {
   const b = (cmd, ic, t, txt) => `<button class="ib" data-cmd="${cmd}" title="${t}">${txt ? `<span style="${txt[1]}">${txt[0]}</span>` : ico(ic, 17)}</button>`;
   $('#fmt').innerHTML = `
@@ -1195,7 +1277,7 @@ function fmtToolbar() {
     <span class="sep"></span>
     ${b('insertUnorderedList', 'ul', '글머리 기호')}${b('insertOrderedList', 'ol', '번호 매기기')}${b('outdent', 'outd', '내어쓰기')}${b('indent', 'ind', '들여쓰기 (한글 한 글자)')}
     <span class="sep"></span>
-    <button class="ib" id="fTable" title="표 넣기">${ico('table', 17)}</button>${b('image', 'image', '그림 넣기')}${b('hr', 'hr', '가로선')}${b('link', 'link', '링크')}${b('removeFormat', 'clear', '서식 지우기')}<button class="ib" id="fPaint" title="서식 복사 — 한 번 누르면 다음에 고른 글자에 한 번, 두 번 누르면 Esc 전까지 계속 (Ctrl+Shift+C / V)"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M18 5.5h1.5a1 1 0 0 1 1 1V10a1 1 0 0 1-1 1H12v2.5"/><path d="M10.5 13.5h3v7a1.5 1.5 0 0 1-3 0z"/></svg></button>`;
+    <button class="ib" id="fTable" title="표 넣기">${ico('table', 17)}</button>${b('image', 'image', '그림 넣기')}${b('hr', 'hr', '가로선')}${b('link', 'link', '링크')}${b('removeFormat', 'clear', '서식 지우기')}<button class="ib" id="fPaint" title="서식 복사 — 한 번 누르면 다음에 고른 글자에 한 번, 두 번 누르면 Esc 전까지 계속 (Ctrl+Shift+C / V)"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M18 5.5h1.5a1 1 0 0 1 1 1V10a1 1 0 0 1-1 1H12v2.5"/><path d="M10.5 13.5h3v7a1.5 1.5 0 0 1-3 0z"/></svg></button><button class="ib" id="fPasteF" title="서식 붙여넣기 — 복사해 둔 서식을 지금 고른(블록) 글자에 입히기"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" fill="currentColor" fill-opacity=".18"/><path d="M18 5.5h1.5a1 1 0 0 1 1 1V10a1 1 0 0 1-1 1H12v2.5"/><path d="M10.5 13.5h3v7a1.5 1.5 0 0 1-3 0z"/><path d="M15.5 18.5l2 2 3.5-4" stroke-width="1.9"/></svg></button>`;
 }
 function renderFooterBar() {
   $('#foot').innerHTML = `풋터 ${FOOTERS.map(f => `<button class="chip${cs.footer === f.id ? ' on' : ''}" data-fid="${f.id}">${esc(f.name)}</button>`).join('')}<button class="lnk" data-set="footers">풋터 설정</button>`;
@@ -1680,7 +1762,7 @@ function myBodyText() {
     if (norm(fEl.textContent) === pristine) { all = all.replace(fEl.textContent.replace(/[\s\u00a0\u3000]+/g, ' ').trim(), '').trim(); if (t.querySelector('img, table')) rich = !!$$('img, table', d).filter(x => !fEl.contains(x)).length; } }
   return { text: all, rich };
 }
-async function sendMail() {
+async function sendMail(opts) {
   if (!commitRcpts()) return;  // 칸에 글자로 남은 주소는 칩으로, 주소 꼴이 아니면 멈춤
   const d = composeDraftForSend();
   if (!d.to.length && !d.cc.length && !(d.bcc || []).length) { toast('받는사람을 넣어 주세요'); $('#toBox input').focus(); return; }
@@ -1699,6 +1781,7 @@ async function sendMail() {
   }
   clearTimeout(cs.timer); cs.saving = false;
   const snap = draftNow(); snap.files = cs.files.slice();
+  if (opts && opts.prepOnly) return { d, snap };  // 보내기 예약: 검사까지만 하고 넘김
   // 새 창에서 쓴 메일: 원래 지니메일 창에 넘겨서 거기서 보내고(5초 취소도 거기서), 이 창은 바로 닫음
   if (document.body.classList.contains('popmode') && !st.open && await handOffSend(d, snap)) { window.close(); return; }
   return runSend(d, snap);
@@ -1739,7 +1822,7 @@ async function runSend(d, snap) {
   const setDraft = v => { const o = MAILS.find(x => x.id === origId); if (o) { o.draft = v; if (!v) o.draftD = null; } };
   const keepD = orig0 && orig0.draftD;
   // 보내기를 누르면 1초쯤 종이비행기가 날아가는 효과 → 그다음 작성 화면을 닫고 아래에 3초 취소 안내
-  if ($('#read').classList.contains('composing') && cs.nd === snap.nd && !document.body.classList.contains('popmode')) await sendFly();
+  if ($('#read').classList.contains('composing') && cs.nd === snap.nd && cs.mailId === origId && !document.body.classList.contains('popmode')) await sendFly();
   setDraft(null);
   if (cs.mailId === origId && $('#read').classList.contains('composing') && cs.nd === snap.nd) $('#read').classList.remove('composing');
   sendFlyReset();
@@ -2261,6 +2344,7 @@ function copyFormat() {
     (c.textDecorationLine || '').split(' ').forEach(d => { if (d && d !== 'none' && !deco.includes(d)) deco.push(d); });
     if (!bg && c.backgroundColor && !/rgba\(0, 0, 0, 0\)|transparent/.test(c.backgroundColor)) bg = c.backgroundColor;
   }
+  document.body.classList.add('hasfmt');
   fmtClip = { fontFamily: cs.fontFamily, fontSize: (Math.round(parseFloat(cs.fontSize) * 0.75 * 2) / 2) + 'pt', fontWeight: cs.fontWeight, fontStyle: cs.fontStyle, color: cs.color, textDecoration: deco.join(' ') || 'none', backgroundColor: bg || 'transparent' };
   const pt = Math.round(parseFloat(cs.fontSize) * 0.75);
   toast(`서식을 복사했어요 (${cs.fontFamily.split(',')[0].replace(/['"]/g, '')} ${pt}pt${+cs.fontWeight >= 600 ? ' · 굵게' : ''}${cs.fontStyle === 'italic' ? ' · 기울임' : ''}) — 바꿀 글자를 고르고 Ctrl+Shift+V`);
@@ -2486,7 +2570,7 @@ function tablePicker() {
 }
 function insertTable(r, c) {
   restoreSel();
-  const rows = Array.from({ length: r }, () => '<tr>' + Array.from({ length: c }, () => '<td style="border:1px solid #000000;padding:3px 7px;min-width:60px;height:22px;vertical-align:top"><br></td>').join('') + '</tr>').join('');
+  const rows = Array.from({ length: r }, () => '<tr>' + Array.from({ length: c }, () => '<td style="border:1px solid #000000;padding:3px 7px;min-width:60px;height:22px;text-align:center;vertical-align:middle"><br></td>').join('') + '</tr>').join('');
   const s = getSelection(); if (!s.rangeCount) return;
   const rg = s.getRangeAt(0); rg.deleteContents(); rg.collapse(false);
   const tmp = document.createElement('div'); tmp.innerHTML = `<table style="border-collapse:collapse">${rows}</table><br>`;
@@ -2508,6 +2592,7 @@ function tdSel(cells, multi) {
   $$('#cbody .tdsel').forEach(x => x.classList.remove('tdsel'));
   TS.cells = (cells || []).filter(Boolean); TS.multi = !!multi && TS.cells.length > 1;
   TS.cells.forEach(c => c.classList.add('tdsel'));
+  drawTdBox();
 }
 const selCells = () => { const c = TS.cells.filter(x => x.isConnected); if (c.length) return c; const td = cellAtCaret(); return td ? [td] : []; };
 // 두 칸을 꼭짓점으로 하는 사각형 안의 칸들 (엑셀처럼)
@@ -2544,7 +2629,7 @@ function tableBar() {
     const tb = (a, ic, txt, t, cls) => `<button class="tbt${cls ? ' ' + cls : ''}" data-ta="${a}" title="${t}">${ico(ic, 15)}${txt}</button>`;
     bar.innerHTML = `<span class="lb">정렬</span>${b('hl', 'alL', '칸 안에서 왼쪽')}${b('hc', 'alC', '칸 안에서 가운데')}${b('hr', 'alR', '칸 안에서 오른쪽')}<span class="vsep"></span>${b('vtop', 'vtop', '칸 안에서 위로')}${b('vmid', 'vmid', '칸 안에서 가운데(세로)')}${b('vbot', 'vbot', '칸 안에서 아래로')}<span class="sep"></span>`
       + `${tb('merge', 'merge', '합치기', '고른 칸 합치기 (여러 칸을 끌어서 고른 뒤)')}${tb('split', 'split', '나누기', '합친 칸 다시 나누기')}<span class="sep"></span>`
-      + `${tb('addMenu', 'tadd', '칸 추가 ▾', '위·아래에 행, 왼쪽·오른쪽에 열 넣기 (지우기: 행이나 열 전체를 고르고 Delete)')}${tb('eqW', 'eqW', '너비 같게', '고른 칸들의 열 너비를 같게')}${tb('eqH', 'eqH', '높이 같게', '고른 칸들의 행 높이를 같게')}<span class="sep"></span>`
+      + `${tb('addMenu', 'tadd', '칸 추가 ▾', '위·아래에 행, 왼쪽·오른쪽에 열 넣기')}${tb('delMenu', 'minus', '칸 제거 ▾', '고른 칸의 행·열 지우기 (행·열 전체를 고르고 Delete로도)')}${tb('eqW', 'eqW', '너비 같게', '고른 칸들의 열 너비를 같게')}${tb('eqH', 'eqH', '높이 같게', '고른 칸들의 행 높이를 같게')}<span class="sep"></span>`
       + `<span class="splitb">${b('fill', 'fill', '칸 음영 — 누르면 최근 색 바로 적용', `<span class="sw" id="tbFill" style="background:${recentColor('fill')}"></span>`)}<button class="ib sbd" data-ta="fillDd" title="다른 음영 색 고르기">${CARET}</button></span>${b('bcolor', 'bcolor', '테두리 색', `<span class="sw" id="tbBc" style="background:${TBS.color}"></span>`)}${b('bstyle', 'bstyle', '테두리 모양')}<span class="sep"></span>`
       + `${tb('tstyle', 'tstyle', '스타일', '표 스타일 (머리글·줄무늬 등)')}${b('selall', 'selall', '표 전체 선택')}${b('tblX', 'trash', '표 삭제')}<span class="tinfo" id="tbInfo"></span>`;
     bar.addEventListener('mousedown', e => { e.preventDefault(); const x = e.target.closest('[data-ta]'); if (x) tblAct(x.dataset.ta, x); });
@@ -2637,12 +2722,20 @@ async function tblAct(a, btn, given) {
   if (a[0] === 'v' && a.length === 4) cells.forEach(c => { c.style.verticalAlign = { vtop: 'top', vmid: 'middle', vbot: 'bottom' }[a]; });
   if (a === 'rowA' || a === 'rowB') { const nr = document.createElement('tr'); [...tr.cells].forEach(c => nr.append(newTd(c))); a === 'rowA' ? tr.before(nr) : tr.after(nr); }
   if (a === 'colL' || a === 'colR') [...table.rows].forEach(r => { const ref = r.cells[Math.min(ci, r.cells.length - 1)]; if (ref) a === 'colL' && ci < r.cells.length ? ref.before(newTd(ref)) : ref.after(newTd(ref)); });
+  if (a === 'delMenu') {
+    const keep = cells.slice();
+    const m = menuAt(btn, [{ head: '칸 제거' },
+      { html: `${ico('rowX', 15)} 고른 칸의 행 지우기`, act: () => tblAct('rowX', null, keep) }, { html: `${ico('colX', 15)} 고른 칸의 열 지우기`, act: () => tblAct('colX', null, keep) },
+      '-', { html: `${ico('trash', 15)} 표 전체 삭제`, act: () => tblAct('tblX', null, keep) }]);
+    m.addEventListener('mousedown', e => e.preventDefault());
+    return;
+  }
   if (a === 'addMenu') {
     const keep = cells.slice();
     const m = menuAt(btn, [{ head: '칸 추가' },
       { html: `${ico('rowA', 15)} 위에 행`, act: () => tblAct('rowA', null, keep) }, { html: `${ico('rowB', 15)} 아래에 행`, act: () => tblAct('rowB', null, keep) },
       { html: `${ico('colL', 15)} 왼쪽에 열`, act: () => tblAct('colL', null, keep) }, { html: `${ico('colR', 15)} 오른쪽에 열`, act: () => tblAct('colR', null, keep) },
-      '-', { html: '<span style="color:var(--mute);font-size:12px">지우기: 행이나 열 전체를 고르고 Delete</span>', act: () => {} }]);
+    ]);
     m.addEventListener('mousedown', e => e.preventDefault());  // 메뉴를 눌러도 표 안 커서가 그대로
     return;
   }
@@ -3311,6 +3404,7 @@ const cacheAll = db => new Promise(res => { if (!db) return res([]); try { const
 const cachePut = (db, list) => { if (!db || !list.length) return; try { const tx = db.transaction('meta', 'readwrite'); const os = tx.objectStore('meta'); list.forEach(x => os.put(Object.assign({}, x, { body: '', html: '', full: false, att: x.att.map(a => [a[0], a[1], a[2], Object.assign({}, a[3], { data: undefined })]) }))); } catch (e) { /* 저장 실패는 무시 */ } };
 async function listIds(q, label) {
   const out = []; let tok = '';
+  q = ((q || '') + ' -in:drafts').trim();  // 임시보관 메일은 목록에서 제외
   do { const r = await gapi(`messages?maxResults=500&q=${encodeURIComponent(q)}${label ? '&labelIds=' + label : ''}${tok ? '&pageToken=' + tok : ''}`, { bg: !!real.on }  /* 첫 화면 전에는 우선 처리 */); (r.messages || []).forEach(x => out.push(x.id)); tok = r.nextPageToken || ''; } while (tok);
   return out;
 }
@@ -3361,12 +3455,13 @@ async function loadReal(interactive, token) {
     const first = !real.on;
     const show = () => {
       const keepFull = new Map(MAILS.filter(m => m.real && m.full).map(m => [m.gid, m]));
-      MAILS = [...metas.values()].map(x => { const k = keepFull.get(x.gid); return toMail(k ? Object.assign({}, x, { body: k.body, html: k.html, htmlReady: k.htmlReady, att: k.att, full: true }) : Object.assign({}, x, { body: real.texts.get(x.gid) || '' }), lab); }).sort((a, b) => b.when - a.when);
+      // Gmail 임시보관(DRAFT) 메일은 빼기 — Gmail에서 고칠 때마다 번호가 바뀌어 열면 404가 나던 문제
+      MAILS = [...metas.values()].filter(x => !(x.labels || []).includes('DRAFT')).map(x => { const k = keepFull.get(x.gid); return toMail(k ? Object.assign({}, x, { body: k.body, html: k.html, htmlReady: k.htmlReady, att: k.att, full: true }) : Object.assign({}, x, { body: real.texts.get(x.gid) || '' }), lab); }).sort((a, b) => b.when - a.when);
       applyReplyDrafts();
       if (first && !real.on) { real.on = true; st.folder = 'inbox'; st.open = null; st.picked.clear(); }
       if (J.dirty) { J.dirty = false; jSave(); }
       bootScreen('off'); renderNav(); renderList(); renderTop();
-      if (st.open == null) { const f = visible()[0]; if (f) openMail(f.id); } else renderRead();
+      if (st.open == null) { if (first) { const f = visible()[0]; if (f) openMail(f.id); } } else renderRead();  // 처음 열 때만 첫 메일을 자동으로 (새 메일 확인 때는 빈 화면 그대로)
     };
     const fetchMetas = async (ids, label, withLabels) => {
       const need = ids.filter(g => !metas.has(g));
@@ -3428,6 +3523,7 @@ async function loadReal(interactive, token) {
         } catch (e) { return null; /* 다음에 다시 */ }
       })()]).then(v => { real.lastPoll = { t: Date.now(), n: v }; const rb = $('#refBtn'); if (rb) rb.title = `새로 고침 (F9) — 마지막 확인 ${new Date().toTimeString().slice(0, 5)}${v == null ? ' (확인 실패, 1분 뒤 다시)' : ''}`; return v; }).finally(() => { real.pollP = null; }));
     };
+    if (!real.schedLoaded) { real.schedLoaded = true; setTimeout(schedLoad, 1500); }  // 예약 메일 불러오기 (시간이 지난 게 있으면 물어봄)
     // 3단계: 3개월보다 옛날 메일 — 메모리 여유가 있을 때 조금씩 끌어와 이 PC에 저장
     const userIds = new Set(user.map(l => l.id));
     const addLab = x => { if (!x.labels) return; const L = x.labels; if (L.includes('INBOX')) lab.inbox.add(x.gid); if (L.includes('SENT')) lab.sent.add(x.gid); if (L.includes('UNREAD')) lab.unread.add(x.gid); if (!lab.box.has(x.gid)) { const b = L.find(id => userIds.has(id)); if (b) lab.box.set(x.gid, b); } };
@@ -3504,7 +3600,12 @@ async function fetchFull(m) {
     if (c && (c.html || c.body)) Object.assign(m, { body: c.body, html: c.html, htmlReady: c.htmlReady || null, att: c.att, full: true }, c.msgId ? { threadId: c.threadId, msgId: c.msgId, refs: c.refs } : {});
     else { const x = parseMsg(await gapi(`messages/${m.gid}?format=full`), true); Object.assign(m, { body: x.body, html: x.html, att: x.att, full: true, threadId: x.threadId, msgId: x.msgId, refs: x.refs }); saveFull(m); }
   }
-  catch (e) { toast('본문을 불러오지 못했어요: ' + e.message); }
+  catch (e) {
+    if (/404|not found/i.test(e.message)) {  // Gmail에서 이미 지워진 메일(보낸 뒤 사라진 임시보관 등) → 목록에서도 빼기
+      MAILS = MAILS.filter(x => x !== m); if (st.open === m.id) st.open = null; toast('이 메일은 Gmail에서 지워졌거나 임시보관 메일이었어요. 목록에서 뺐어요'); renderNav(); renderList(); renderRead(true); m._loading = false; return;
+    }
+    toast('본문을 불러오지 못했어요: ' + e.message);
+  }
   finally { m._loading = false; if (st.open === m.id) renderRead(); renderList(); }
 }
 // 본문 그림(cid:)을 실제 그림으로 바꿔 끼우기 — 메일을 열 때 한 번만
@@ -3789,8 +3890,9 @@ function wire() {
     const was = !!st.q.trim(), now = !!(v || '').trim(); st.q = v;
     if (!was && now) { st.f.from = null; st.f.to = null;  // 검색을 시작하면 보낸사람·받는사람 필터는 풀기
       st.preFolder = st.folder === 'conv' ? (st.conv && st.conv.prev) || 'inbox' : st.folder; if (st.folder === 'conv') st.conv = null; st.folder = 'srch'; st.picked.clear(); }
-    else if (was && !now) { if (st.folder === 'srch') st.folder = st.preFolder || 'inbox'; st.preFolder = null; }
+    else if (was && !now) { if (st.folder === 'srch') st.folder = st.preFolder || 'inbox'; st.preFolder = null; scopePop(false); }
     renderNav(); renderTop(); renderList();
+    if (!was && now) scopePop(true);  // 보던 편지함이 있으면 '그 편지함에서만?' 한 번 물어봄
   };
   // 글자를 칠 때마다 바로 다시 찾지 않고, 잠깐(0.15초) 멈추면 찾음 — 한글 조합 중 자모마다 검색하던 것도 줄어듦
   // 입력 중에는 목록을 거르지 않고 자동완성만 → 엔터(돋보기·흐린 목록 누르기)를 쳐야 목록이 바뀜. 그동안 목록은 흐리게
@@ -3912,6 +4014,7 @@ function wire() {
   $('#cbody').addEventListener('mouseover', e => { const a = e.target.closest('a[href]'); if (!a) return; const r = a.getBoundingClientRect(); lt.textContent = (a.closest('.quote') ? '누르면 새 탭에서 열려요' : 'Ctrl+클릭하면 새 탭에서 열려요') + ' · ' + (a.getAttribute('href') || '').slice(0, 60); lt.style.left = Math.min(innerWidth - 20, r.left) + 'px'; lt.style.top = (r.bottom + 6) + 'px'; lt.hidden = false; });
   $('#cbody').addEventListener('mouseout', e => { if (e.target.closest('a[href]')) lt.hidden = true; });
   $('#cbody').addEventListener('scroll', () => { lt.hidden = true; }, true);
+  $('#sendDd').addEventListener('click', e => { e.preventDefault(); toggleMenu($('#sendDd'), () => sendMenu($('#sendDd'))); });
   $('#closeC').addEventListener('click', closeCompose);
   $('#discard').addEventListener('click', discardCompose);
   $('#popBtn').addEventListener('click', () => { flushCompose(); if (!popCompose(draftNow())) return; $('#read').classList.remove('composing'); renderRead(); });
@@ -3937,6 +4040,7 @@ function wire() {
     if (e.target.closest('#fHiDd')) { e.preventDefault(); paletteMenu(e.target.closest('.splitb'), PALETTE, recentColor('hi'), applyHilite, '색 없음'); return; }
     if (e.target.closest('#fHi')) { e.preventDefault(); applyHilite(recentColor('hi')); return; }
     if (e.target.closest('#fPaint')) { e.preventDefault(); if (e.detail >= 2) { painter.on = true; painter.sticky = true; $('#fPaint').classList.add('on'); document.body.classList.add('painting'); return; } if (painter.on) { painterStop(); return; } painterStart(false); return; }
+    if (e.target.closest('#fPasteF')) { e.preventDefault(); if (!fmtClip) { toast('먼저 붓(서식 복사)으로 서식을 복사해 주세요'); return; } restoreSel(); const sl = getSelection(); if (!sl.rangeCount || sl.isCollapsed) { toast('서식을 입힐 글자를 먼저 블록으로 골라 주세요'); return; } pasteFormat(); return; }
     if (e.target.closest('#fSzUp')) { e.preventDefault(); stepSize(1); return; }
     if (e.target.closest('#fSzDn')) { e.preventDefault(); stepSize(-1); return; }
   });
@@ -3950,6 +4054,7 @@ function wire() {
     bodyKeydown(e);
   });
   body.addEventListener('beforeinput', bodyBeforeInput);
+  body.addEventListener('scroll', drawTdBox, { passive: true }); window.addEventListener('resize', drawTdBox); new MutationObserver(() => { if (TS.multi) { clearTimeout(drawTdBox.t); drawTdBox.t = setTimeout(drawTdBox, 20); } }).observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'colspan', 'rowspan'] });
   // 서식 복사 붓: 글자를 고르고 마우스를 떼면(또는 낱말을 누르면) 그 글자에 입힘
   body.addEventListener('mouseup', () => { if (!painter.on) return; setTimeout(() => { if (!painter.on) return; pasteFormat(); if (!painter.sticky) painterStop(); }, 0); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && painter.on) { painterStop(); e.stopPropagation(); } }, true);
