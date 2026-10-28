@@ -2722,8 +2722,10 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); APP.pr
 window.addEventListener('appinstalled', () => { APP.prompt = null; toast('지니메일 앱을 설치했어요. 시작 메뉴·작업 표시줄에서 열 수 있어요'); });
 if ('serviceWorker' in navigator && location.protocol === 'https:' && !IS_EXT) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
-  navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'jin-open') openFromNotify(e.data.id); });
+  navigator.serviceWorker.addEventListener('message', e => { if (!e.data) return; if (e.data.type === 'jin-open') openFromNotify(e.data.id); if (e.data.type === 'jin-popped') markNotified(e.data.id); });
 }
+// 알림에서 팝업으로 연 메일: 큰 창 목록에서도 읽음으로
+function markNotified(gid) { const m = MAILS.find(x => x.gid === gid); if (m && m.unread) { m.unread = 0; jSet(m, { u: 0 }); renderNav(); renderList(); updateBadge && updateBadge(); } }
 function openFromNotify(gid) { const m = MAILS.find(x => x.gid === gid); if (!m) return; if (!folderFn(st.folder)(m)) { st.folder = m.inbox ? 'inbox' : 'all'; renderNav(); } openMail(m.id); }
 // 작업 표시줄 아이콘 숫자(안 읽은 받은편지함) + 창 제목
 function updateBadge() {
@@ -2738,14 +2740,20 @@ function notifyNew(list) {
   // 화면을 보고 있거나 알림을 꺼 두었으면 화면 아래 짧은 안내만
   if (focused || !SET.notify || !('Notification' in window) || Notification.permission !== 'granted') { toast(`새 메일 ${list.length}통 — ${list[0].from.name || list[0].from.email}: ${list[0].subj}`); return; }
   // 알림 모양: 큰 그림(로고) 없이 → 윈도우가 맨 위에 작은 지니메일 아이콘만 표시. 굵은 첫 줄 = 보낸사람·제목, 아래 = 본문 미리보기
-  const one = (title, body, gid) => {
-    const opt = { body, tag: 'jin-' + gid, data: { id: gid }, silent: false };
+  // 화면 폭 기준으로 줄임 (한글 1칸, 영문·숫자 약 0.55칸)
+  const clip = (t, max) => { t = String(t || '').replace(/\s+/g, ' ').trim(); let w = 0, i = 0; for (; i < t.length; i++) { w += /[\u0000-\u00ff]/.test(t[i]) ? 0.55 : 1; if (w > max) break; } return i < t.length ? t.slice(0, i).trimEnd() + '…' : t; };
+  const one = (m) => {
+    // 첫 줄(굵게) = 보낸사람 이름(없으면 주소) / 다음 = 제목(두 줄까지) / 마지막 = 내용 한 줄
+    const title = clip(m.from.name || m.from.email, 30), body = clip(m.subj || '(제목 없음)', 42) + '\n' + clip(m.snippet || m.body || '', 21);
+    // 알림을 누르면 이 메일만 새 창(팝업)으로 열 수 있게 미리 넣어 둠
+    try { const k = 'pop-n-' + m.gid, keep = store.get('pop-n-list', []).filter(x => x !== k).concat(k); while (keep.length > 15) store.set(keep.shift(), null); store.set('pop-n-list', keep); store.set(k, Object.assign({}, m, { htmlReady: m.htmlReady && m.htmlReady.length < 1e6 ? m.htmlReady : null })); } catch (e) { /* 저장 공간이 모자라면 큰 창에서 열기 */ }
+    const opt = { body, tag: 'jin-' + m.gid, data: { id: m.gid, url: location.pathname + '#view=n:' + m.gid }, silent: false };
     if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification(title, opt)).catch(() => {});
-    else { try { const n = new Notification(title, opt); n.onclick = () => { window.focus(); openFromNotify(gid); n.close(); }; } catch (e) { /* */ } }
+    else { try { const n = new Notification(title, opt); n.onclick = () => { n.close(); window.open(opt.data.url, '_blank', popFeatures) || (window.focus(), openFromNotify(m.gid)); markNotified(m.gid); }; } catch (e) { /* */ } }
   };
-  const peek = m => String(m.snippet || m.body || '').replace(/\s+/g, ' ').trim().slice(0, 90);
-  if (list.length <= 3) list.forEach(m => one(`${m.from.name || m.from.email} · ${m.subj}`, peek(m), m.gid));
-  else one(`새 메일 ${list.length}통`, list.slice(0, 3).map(m => `${m.from.name || m.from.email}: ${m.subj}`).join('\n'), list[0].gid);
+  if (list.length <= 3) list.forEach(m => one(m));
+  else { const title = `새 메일 ${list.length}통`, opt = { body: list.slice(0, 3).map(m => `${clip(m.from.name || m.from.email, 8)}: ${clip(m.subj, 18)}`).join('\n'), tag: 'jin-many', data: { id: list[0].gid } };
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification(title, opt)).catch(() => {}); else { try { const n = new Notification(title, opt); n.onclick = () => { window.focus(); openFromNotify(list[0].gid); n.close(); }; } catch (e) { /* */ } } }
 }
 /* ───────── '지니메일 로그인 유지' 확장 프로그램 (설치돼 있으면) ─────────
    웹페이지는 클릭 없이 Google 로그인을 연장할 수 없음 → 작은 확장 프로그램이 창 없이 새 토큰을 받아 넘겨줌.
@@ -3727,6 +3735,12 @@ if (hash === '#compose') {
   if (c && c.email && tokCache.get()) { real.on = true; real.token = tokCache.get(); ME.email = c.email.toLowerCase(); if (c.name) ME.name = c.name; real.num = real.num || (g => g); }
   let pd = null; try { pd = window.opener && window.opener.__jinPop; if (pd) window.opener.__jinPop = null; } catch (e) { pd = null; }
   loadDraft(pd || store.get('pop-draft', null) || buildDraft('new'));
+} else if (/^#view=n:/.test(hash)) {
+  // 알림을 눌러 연 팝업: 그 메일 하나만 (본문이 아직 없으면 여기서 받아 옴)
+  document.body.classList.add('popmode');
+  const m = store.get('pop-' + hash.slice(6).replace(':', '-'), null);
+  if (m) { MAILS = [m]; st.open = m.id; real.on = true; real.token = tokCache.get(); document.title = m.subj + ' · jinny mail'; renderRead(); if (m.real && !m.full) fetchFull(m); }
+  else { document.title = 'jinny mail'; $('#view').innerHTML = '<div class="blank" style="padding:60px 20px;text-align:center;color:var(--sub)">이 메일을 찾지 못했어요. jinny mail 큰 창에서 열어 주세요.</div>'; }
 } else if (hash === '#view=real') {
   document.body.classList.add('popmode');
   const m = store.get('pop-view', null);

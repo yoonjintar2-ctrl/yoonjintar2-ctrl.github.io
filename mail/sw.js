@@ -19,8 +19,10 @@ self.addEventListener('fetch', e => {
 // 알림을 누르면 지니메일 창으로
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const id = e.notification.data && e.notification.data.id;
+  const d = e.notification.data || {}, id = d.id;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+    // 메일 하나짜리 알림: 그 메일만 새 창(팝업)으로 열고, 큰 창에는 읽음 표시만 알려 줌
+    if (d.url) { cs.forEach(w => w.postMessage({ type: 'jin-popped', id })); return self.clients.openWindow(d.url); }
     const w = cs[0]; if (w) { w.postMessage({ type: 'jin-open', id }); return w.focus(); }
     return self.clients.openWindow('./');
   }));
