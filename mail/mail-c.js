@@ -3569,6 +3569,18 @@ function wire() {
       await sendMail();
     } finally { b.disabled = false; }
   });
+  // 작성 화면 링크: 아래 원본 메일(스레드)의 링크는 그냥 눌러도 새 탭으로 열림, 내가 쓴 부분은 Ctrl(⌘)+클릭으로 (글자 고치기와 안 겹치게)
+  $('#cbody').addEventListener('click', e => {
+    const a = e.target.closest('a[href]'); if (!a || !$('#cbody').contains(a)) return;
+    if (!a.closest('.quote') && !e.ctrlKey && !e.metaKey) return;
+    const href = a.getAttribute('href') || ''; if (!/^(https?:|mailto:|tel:)/i.test(href.trim())) return;
+    e.preventDefault(); e.stopPropagation(); window.open(href.trim(), '_blank', 'noopener');
+  }, true);
+  // 링크 위에 올리면 작은 안내 (메일 본문에는 아무것도 붙이지 않음 — 보내는 메일이 바뀌지 않게)
+  const lt = document.createElement('div'); lt.className = 'lnktip'; lt.hidden = true; document.body.append(lt);
+  $('#cbody').addEventListener('mouseover', e => { const a = e.target.closest('a[href]'); if (!a) return; const r = a.getBoundingClientRect(); lt.textContent = (a.closest('.quote') ? '누르면 새 탭에서 열려요' : 'Ctrl+클릭하면 새 탭에서 열려요') + ' · ' + (a.getAttribute('href') || '').slice(0, 60); lt.style.left = Math.min(innerWidth - 20, r.left) + 'px'; lt.style.top = (r.bottom + 6) + 'px'; lt.hidden = false; });
+  $('#cbody').addEventListener('mouseout', e => { if (e.target.closest('a[href]')) lt.hidden = true; });
+  $('#cbody').addEventListener('scroll', () => { lt.hidden = true; }, true);
   $('#closeC').addEventListener('click', closeCompose);
   $('#discard').addEventListener('click', discardCompose);
   $('#popBtn').addEventListener('click', () => { flushCompose(); if (!popCompose(draftNow())) return; $('#read').classList.remove('composing'); renderRead(); });
