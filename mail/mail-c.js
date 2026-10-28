@@ -820,7 +820,7 @@ function renderHead(list) {
     // 대화 보기: 목록 전체 파란 테두리 + 맨 위 '← 보던 편지함 › 대화: 제목' + 참여자
     const ppl = []; const seen = new Set(); list.slice().reverse().forEach(m => { const p = m.sent ? ME : m.from; const k = (p.email || p.name || '').toLowerCase(); if (k && !seen.has(k)) { seen.add(k); ppl.push(p); } });
     const pName = p => isMe(p) ? '나' : (p.name || p.email);
-    cb.innerHTML = `<div class="cvtop"><button class="cvback" data-b="convclose" title="원래 보던 편지함으로 (Esc)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button><span class="cvfrom">${esc(folderName(st.conv.prev && st.conv.prev !== 'conv' ? st.conv.prev : 'inbox'))} ›</span><b title="${esc(st.conv.title)}">대화: ${esc(st.conv.title)}</b></div>`
+    cb.innerHTML = `<div class="cvtop"><span class="cvfrom">${esc(folderName(st.conv.prev && st.conv.prev !== 'conv' ? st.conv.prev : 'inbox'))} ›</span><b title="${esc(st.conv.title)}">대화: ${esc(st.conv.title)}</b><button class="cvback cvx" data-b="convclose" title="대화 보기 닫기 (Esc)">${ico('close', 15)}</button></div>`
       + `<div class="cvppl"><span class="k">참여</span>${ppl.slice(0, 5).map(p => `<span class="pp${isMe(p) ? ' me' : ''}" title="${esc(p.email || '')}">${esc(pName(p))}</span>`).join('')}${ppl.length > 5 ? `<span class="more">외 ${ppl.length - 5}명</span>` : ''}<span class="n">${list.length}통</span></div>`;
   } else if (cb) cb.remove();
   $('.list').classList.toggle('convmode', !!conv);
