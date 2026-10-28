@@ -407,6 +407,15 @@ function menuAt(btn, items, keepOpen, at) {
 // 같은 버튼을 다시 누르면 닫기
 function toggleMenu(btn, open) { const cur = $('.menu'); if (cur && cur._btn === btn) { closeMenus(); return; } open(); }
 function closeMenus() { $$('.menu').forEach(m => { document.removeEventListener('mousedown', m._off, true); if (m._onClose) m._onClose(); m.remove(); }); }
+// 검색창 오른쪽 필터 버튼(편지함·검색 범위·기간): 검색창을 누르면 그때 오른쪽으로 하나씩 튀어나옴
+function sopenSync() {
+  const a = document.activeElement, fb = ['fBox', 'fWhere', 'fPeriod'];
+  const on = (a && (a.id === 'q' || fb.includes(a.id))) || (st.q || '').trim() || $('.menu') || ['fWhere', 'fPeriod'].some(id => { const b = $('#' + id); return b && b.classList.contains('on'); });
+  document.body.classList.toggle('sopen', !!on);
+}
+document.addEventListener('focusin', () => setTimeout(sopenSync));
+document.addEventListener('focusout', () => setTimeout(sopenSync, 150));
+document.addEventListener('mousedown', () => setTimeout(sopenSync, 200), true);
 function paletteMenu(anchor, colors, cur, pick, noneLabel) {
   closeMenus();
   const m = document.createElement('div'); m.className = 'menu';
@@ -442,6 +451,7 @@ function renderTop() {
   if (avatar) { pill.style.background = dotColor(ME.email); pill.dataset.tip = `${ME.name || ''}\n${ME.email}\nGmail 연결됨${extAuth.ok ? ' · 로그인 자동 연장 중' : ''}\n(누르면 계정 설정)`; } else { pill.style.background = ''; delete pill.dataset.tip; }
   pill.onclick = R.expired ? () => (R.on ? renewToken().catch(e => toast('연결하지 못했어요: ' + e.message)) : loadReal(true)) : avatar ? () => openSettings('account') : null;
   const set = (id, ic, on, tip) => { const b = $(id); b.innerHTML = ico(ic); b.classList.toggle('on', !!on); b.title = tip; };
+  setTimeout(sopenSync);
   set('#fBox', 'folder', st.folder !== 'all' && st.folder !== 'srch', st.folder === 'all' || st.folder === 'srch' ? '편지함: 전체 (필터 없음)' : '편지함: ' + folderName(st.folder));
   set('#fWhere', 'where', f.where !== 'all' || f.exclude || f.exact, '검색 범위: ' + (f.where === 'subj' ? '제목만' : '제목+내용+첨부파일 이름') + (f.exact ? ' · 정확히 일치' : '') + (f.exclude ? ' · 제외: ' + f.exclude : ''));
   const p = f.period.k === 'range' ? fmtD(f.period.from) + '~' + fmtD(f.period.to) : PERIODS.find(x => x[0] === f.period.k)[1];

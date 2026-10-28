@@ -1090,6 +1090,16 @@ body.noblur .list::before,body.noblur .read::before{display:none}
 .row:not(.unread) .snip{color:#9aa0a6!important}
 .row:not(.unread).open .who,.row:not(.unread).open .subj{color:#2b2b2b!important}
 .row.open{background:rgba(255,255,255,.97)!important}
+/* 편지함 칸 스크롤 바 자리 없앰 → 고른 편지함 강조가 오른쪽 끝까지 */
+nav::-webkit-scrollbar{width:0!important;height:0!important}
+nav{scrollbar-width:none}
+
+/* 검색 필터 버튼: 평소엔 숨김 → 검색창을 누르면 검색창 쪽에서 오른쪽으로 뿅뿅뿅 */
+.top .fbtn{transition:opacity .22s ease,transform .5s cubic-bezier(.34,1.7,.5,1)}
+body:not(.sopen) .top .fbtn{opacity:0;transform:translateX(-30px) scale(.4);pointer-events:none;transition:opacity .18s ease,transform .25s ease}
+body.sopen #fBox{transition-delay:0s}
+body.sopen #fWhere{transition-delay:.07s}
+body.sopen #fPeriod{transition-delay:.14s}
 </style>
 </head>
 <body>
@@ -1139,6 +1149,6 @@ body.noblur .list::before,body.noblur .read::before{display:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793172411"></script>
+<script src="mail-c.js?v=1793173343"></script>
 </body>
 </html>
