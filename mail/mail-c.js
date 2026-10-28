@@ -772,6 +772,23 @@ const attIcons = m => { const A = attsOf(m); if (!A.length) return ''; return `<
 // 메일이 들어 있는 편지함 이름 (목록 이름·도메인 옆, 같은 높이의 작은 표시)
 const boxTag = m => { let nm, full; if (m.deleted) nm = full = '지운 편지함'; else if (m.box && boxById(m.box)) { nm = boxById(m.box).name; full = boxPath(m.box); } else if (m.draft && !m.inbox && !m.sent) nm = full = '작성 중'; else if (m.sent && !m.inbox) nm = full = '보낸편지함'; else if (m.inbox) nm = full = '받은편지함'; else nm = full = '전체 메일'; return ` <span class="boxt" title="편지함: ${esc(full)}">${esc(nm)}</span>`; };
 const STAR_SVG = '<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" stroke-linejoin="round" stroke-width="1.6"/></svg>';
+// 새 창(팝업)에서 중요 표시: 팝업엔 편지함 기록이 없어서 큰 창에 부탁 (큰 창이 꺼져 있으면 다음에 열 때 반영)
+function starFromPop(m) {
+  m.star = m.star ? 0 : 1; renderRead(true);
+  try { const pk = location.hash.startsWith('#view=n:') ? 'pop-' + location.hash.slice(6).replace(':', '-') : 'pop-view'; const sv = store.get(pk, null); if (sv) { sv.star = m.star; store.set(pk, sv); } } catch (e) { /* */ }
+  if (!m.gid) return;
+  const q = store.get('star-q', []).filter(x => x.g !== m.gid); q.push({ g: m.gid, s: m.star, at: Date.now() }); store.set('star-q', q);
+  toast(m.star ? '중요 표시했어요' : '중요 표시를 껐어요');
+}
+function starQFlush() {
+  if (!real.on || !J.data || document.body.classList.contains('popmode')) return;
+  const q = store.get('star-q', []); if (!q.length) return;
+  store.set('star-q', []); let ch = false;
+  q.forEach(x => { const m = MAILS.find(y => y.gid === x.g); if (m) { m.star = x.s; jSet(m, { s: x.s }); ch = true; } else if (J.data.m[x.g]) { J.data.m[x.g].s = x.s; jSave(); } });
+  if (ch) { renderList(); if (st.open != null) renderRead(true); }
+}
+window.addEventListener('storage', e => { if (e.key === 'jin-star-q') starQFlush(); });
+setInterval(starQFlush, 5000);
 function toggleStar(id) {
   const m = MAILS.find(x => x.id === id); if (!m) return;
   m.star = m.star ? 0 : 1; jSet(m, { s: m.star });
@@ -951,7 +968,7 @@ function renderRead(force) {
           <div class="bar">
             <button class="btn" data-act="reply">${ico('reply', 16)} 답장</button><button class="btn" data-act="all">${ico('replyall', 16)} 전체답장</button><button class="btn" data-act="fwd">${ico('fwd', 16)} 전달</button>
           </div>
-          <div class="bar2"><span class="when">${m.d === 0 ? '오늘 ' + fmtDW(dayOf(m)) : fmtDW(dayOf(m))} ${m.t}</span><button class="ib" data-act="more" title="이동·삭제">${ico('more', 18)}</button><button class="ib" data-act="popview" title="새 창에서 보기">${ico('pop')}</button></div>
+          <div class="bar2"><span class="when">${m.d === 0 ? '오늘 ' + fmtDW(dayOf(m)) : fmtDW(dayOf(m))} ${m.t}</span><button class="ib rstar${m.star ? ' on' : ''}" data-act="star" title="${m.star ? '중요 표시 끄기' : '중요 표시'}">${STAR_SVG.replace(/16/g, '18')}</button><button class="ib" data-act="more" title="이동·삭제">${ico('more', 18)}</button><button class="ib" data-act="popview" title="새 창에서 보기">${ico('pop')}</button></div>
         </div>
     </div>
     <div class="rscroll">
@@ -3977,6 +3994,7 @@ function wire() {
     const b = e.target.closest('[data-act]'); if (!b) return;
     const act = b.dataset.act, m = MAILS.find(x => x.id === st.open);
     if (act === 'attmore') { st.attFull = st.attFull || new Set(); const bar = b.closest('.attbar'); const on = !bar.classList.contains('full'); bar.classList.toggle('full', on); on ? st.attFull.add(st.open) : st.attFull.delete(st.open); b.textContent = on ? '접기' : '펼치기'; return; }
+    if (act === 'star') { if (!m) return; if (document.body.classList.contains('popmode')) starFromPop(m); else toggleStar(m.id); return; }
     if (act === 'popview') { popView(st.open); return; }
     if (act === 'ppl') { const k = st.open + ':' + b.dataset.k; st.pplOpen = st.pplOpen === k ? null : k; renderRead(true); return; }
     if (act === 'attfull') { const bar = b.closest('.attbar'); const on = !bar.classList.contains('full'); bar.classList.toggle('full', on); st.attFull = on ? st.open : null; b.textContent = on ? '접기' : '펼치기'; return; }
