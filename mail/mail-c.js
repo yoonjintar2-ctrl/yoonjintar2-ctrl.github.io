@@ -841,13 +841,8 @@ function renderHead(list) {
       + `<div class="cvppl"><span class="k">참여</span>${ppl.slice(0, 5).map(p => `<span class="pp${isMe(p) ? ' me' : ''}" title="${esc(p.email || '')}">${esc(pName(p))}</span>`).join('')}${ppl.length > 5 ? `<span class="more">외 ${ppl.length - 5}명</span>` : ''}<span class="n">${list.length}통</span></div>`;
   } else if (cb) cb.remove();
   $('.list').classList.toggle('convmode', !!conv);
-  // 검색 중: 검색을 시작하기 전에 보던 편지함이 있으면 '그 편지함에서만 찾기'를 추천 (기본은 모든 편지함)
-  let sc = $('#scopebar'); const pre = st.preFolder;
-  if (st.q.trim() && !conv && pre && !['all', 'srch', 'conv', 'inbox'].includes(pre) && (st.folder === 'srch' || st.folder === pre)) {
-    if (!sc) { sc = document.createElement('div'); sc.id = 'scopebar'; sc.className = 'scopebar'; lh.after(sc); sc.addEventListener('click', e => { const b = e.target.closest('[data-scope]'); if (!b) return; st.folder = b.dataset.scope === 'pre' ? st.preFolder : 'srch'; renderNav(); renderTop(); renderList(); }); }
-    const inPre = st.folder === pre;
-    sc.innerHTML = `<span class="k">찾는 범위</span><button data-scope="srch" class="${inPre ? '' : 'on'}">모든 편지함</button><button data-scope="pre" class="${inPre ? 'on' : 'rec'}" title="검색 전에 보던 편지함 안에서만 찾기">${inPre ? '' : '<i>추천</i>'}‘${esc(folderName(pre))}’에서만</button>`;
-  } else if (sc) sc.remove();
+  // 찾는 범위 띠는 없앰 (검색창 아래 팝업으로 알려 줌)
+  const sc = $('#scopebar'); if (sc) sc.remove();
   const label = n ? `<span class="cnt"><b>${n}개 선택</b></span>`
     : conv ? '<span class="cnt"></span>'
     : st.folder === 'srch' ? `<span class="cnt" title="왼쪽 편지함을 누르면 그 편지함 안에서만 찾아요">모든 편지함 · ${list.length}통</span>`
