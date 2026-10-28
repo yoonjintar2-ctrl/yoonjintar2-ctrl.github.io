@@ -3832,8 +3832,11 @@ function wire() {
     if (tw && tw.innerHTML) { const id = tw.dataset.tw; st.collapsed.has(id) ? st.collapsed.delete(id) : st.collapsed.add(id); store.set('collapsed', [...st.collapsed]); renderNav(); return; }
     if (e.target.closest('input.ren')) return;
     const a = e.target.closest('.ni[data-f]'); if (!a) return;
-    if (st.folder !== a.dataset.f) { st.f.from = null; st.f.to = null; }  // 다른 편지함으로 가면 보낸사람·받는사람 필터 풀기
-    st.folder = a.dataset.f; st.picked.clear(); renderNav(); renderTop(); renderList();
+    const moved = st.folder !== a.dataset.f;
+    if (moved) { st.f.from = null; st.f.to = null; }  // 다른 편지함으로 가면 보낸사람·받는사람 필터 풀기
+    // 다른 편지함으로 가면 오른쪽에 보던 메일은 닫고 빈 화면으로 (쓰던 메일은 그대로)
+    if (moved && !$('#read').classList.contains('composing')) { st.open = null; st.unreadKeep = null; }
+    st.folder = a.dataset.f; st.picked.clear(); renderNav(); renderTop(); renderList(); if (moved) renderRead(true);
   });
   nav.addEventListener('contextmenu', e => { const el = e.target.closest('.ni[data-box]'); if (!el) return; e.preventDefault(); boxMenu(el, el.dataset.box, { x: e.clientX, y: e.clientY }); });
   nav.addEventListener('dragstart', e => { const el = e.target.closest('.ni[data-box]'); if (!el) return; drag = { kind: 'box', id: el.dataset.box }; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'box'); });
