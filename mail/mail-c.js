@@ -3029,7 +3029,7 @@ function openSettings(tab) {
       <h5>맞춤법 표시</h5><label class="opt"><input type="checkbox" id="setTypo"${SET.typo ? ' checked' : ''}> 자주 틀리는 한글 표현에 밑줄 표시</label>
       <p class="desc">무시한 단어 ${IGNORE.size}개 ${IGNORE.size ? '<button class="btn" id="clrIgn" style="padding:2px 8px;margin-left:6px">무시 목록 비우기</button>' : ''}</p>
       <h5>화면</h5><label class="opt"><input type="checkbox" id="setBlur"${SET.blur !== false ? ' checked' : ''}> 유리 흐림 효과 쓰기 (PC가 느리거나 스크롤이 버벅이면 끄세요)</label>
-      <p class="desc" style="font-size:11px">배경 그림: deepin-wallpapers 'flow-light' © UnionTech Software Technology · CC BY 4.0 (흑백·구도 바꿈)</p>
+      <p class="desc" style="font-size:11px">배경 그림: deepin-wallpapers 'flow-light'·'organic-glass-light'·'Glossy-Gradient' © UnionTech Software Technology · CC BY 4.0 (흑백 합성·구도 바꿈)</p>
       <h5>이 PC에 저장한 메일</h5><p class="desc">불러온 메일 목록과 본문을 이 PC(브라우저 저장소)에 저장해 두고, 다음부터 바로 열고 본문 전체에서 검색해요. Google 외 다른 곳으로는 보내지 않아요.</p>
       <div class="opt"><span id="cacheInfo" style="color:var(--sub)">확인 중…</span><button class="btn" id="clrCache" style="padding:3px 10px">저장한 메일 비우기</button></div>`;
       (async () => { const el = $('#cacheInfo', body); if (!el) return; let n = real.texts ? real.texts.size : 0, sz = '';
