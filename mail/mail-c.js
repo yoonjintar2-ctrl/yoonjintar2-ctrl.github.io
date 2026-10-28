@@ -405,6 +405,10 @@ function renderTop() {
   $('#newMail').innerHTML = ico('pen') + ' 새 메일';
   const rb = $('#refBtn'); if (rb && !rb.firstChild) rb.innerHTML = '<svg viewBox="0 0 32 32" width="28" height="28"><g class="rot"><path d="M25.3 12.4A10 10 0 1 0 26 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M26.4 6.6v6.3h-6.3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g><text x="16" y="19.4" text-anchor="middle" font-size="7.6" font-weight="700" fill="currentColor" font-family="Pretendard,sans-serif">F9</text></svg>';  // 새로 고침(F9)
   $('#goSearch').innerHTML = ico('search');
+  // 검색어가 들어 있으면 검색창을 눈에 띄게 (편지함을 눌렀는데 메일이 안 보여 당황하지 않게)
+  const sq = st.q.trim(); $('.sbox').classList.toggle('active', !!sq);
+  let qc = $('#qClear'); if (!qc) { qc = document.createElement('button'); qc.id = 'qClear'; qc.className = 'qclear'; qc.title = '검색어 지우기 (Esc)'; qc.innerHTML = ico('close', 14); $('#goSearch').before(qc); }
+  qc.hidden = !sq;
   $('#gear').innerHTML = ico('gear', 20);
   let pill = $('#srcPill'); if (!pill) { pill = document.createElement('span'); pill.id = 'srcPill'; $('#gear').before(pill); }
   const R = typeof real !== 'undefined' ? real : {};
@@ -748,7 +752,7 @@ function renderList() {
   [...st.picked].forEach(id => { if (!list.some(m => m.id === id)) st.picked.delete(id); });
   renderHead(list);
   renderSugg(list);
-  if (!list.length) { $('#rows').innerHTML = '<div class="empty">조건에 맞는 메일이 없어요</div>'; return; }
+  if (!list.length) { $('#rows').innerHTML = `<div class="empty">조건에 맞는 메일이 없어요${st.q.trim() ? `<br><button class="btn qclear2" data-qclear>검색어 '${esc(st.q.trim())}' 지우고 다시 보기</button>` : ''}</div>`; return; }
   let g = '', h = '';
   const cord = st.folder === 'conv' ? new Map(list.slice().sort((a, b) => (a.when || 0) - (b.when || 0)).map((m, i) => [m.id, i + 1])) : null;  // 대화 보기: 오래된 순 번호
   shown.forEach(m => {
@@ -3624,6 +3628,8 @@ function wire() {
   q.addEventListener('blur', () => setTimeout(() => $('#sugg').classList.remove('on'), 150));
   q.addEventListener('keydown', e => { if (e.key === 'Enter' && st.q !== q.value) { clearTimeout(qT); setQuery(q.value); } if (e.key === 'Enter') { suggClose(); const first = visible()[0]; if (first) openMail(first.id); } if (e.key === 'Escape') { clearTimeout(qT); q.value = ''; setQuery(''); } });
   $('#goSearch').addEventListener('click', () => { clearTimeout(qT); suggClose(); setQuery(q.value); });
+  const qClearNow = () => { clearTimeout(qT); q.value = ''; suggClose(); setQuery(''); };
+  document.addEventListener('click', e => { if (e.target.closest('#qClear, [data-qclear]')) qClearNow(); });
   $('#sugg').addEventListener('mousedown', e => { e.preventDefault(); const si = e.target.closest('.si'); if (!si) return; if (si.dataset.id) openMail(+si.dataset.id); if (si.dataset.p) { st.f.from = si.dataset.p; q.value = ''; setQuery(''); } $('#sugg').classList.remove('on'); });
   // 왼쪽
   const nav = $('#nav');

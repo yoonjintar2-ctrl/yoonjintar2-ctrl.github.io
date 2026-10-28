@@ -862,6 +862,13 @@ body.resizing{cursor:col-resize;user-select:none}
 .convbar .cvppl .more{flex:none;color:var(--mute)}
 .convbar .cvppl .n{margin-left:auto;flex:none;font-weight:600;color:var(--sub)}
 .row .cnum{flex:none;width:19px;height:19px;border-radius:50%;background:var(--lq-on);color:var(--blue);font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-right:2px}
+
+/* 검색어가 있을 때 검색창 강조 */
+.sbox.active{border-color:var(--blue);box-shadow:0 0 0 3px rgba(11,87,208,.14);background:#f5f8ff}
+.sbox.active input{background:transparent;color:var(--blue-d);font-weight:600}
+.sbox .qclear{flex:none;width:26px;height:26px;margin-right:2px;border:0;border-radius:50%;background:#dbe6fb;color:var(--blue);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.sbox .qclear:hover{background:#c8d9fa}
+.empty .qclear2{margin-top:12px;font-size:12.5px}
 </style>
 </head>
 <body>
@@ -911,6 +918,6 @@ body.resizing{cursor:col-resize;user-select:none}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793153375"></script>
+<script src="mail-c.js?v=1793153849"></script>
 </body>
 </html>
