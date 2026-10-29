@@ -1340,6 +1340,21 @@ html body .btn.pri:not(:disabled):hover,html body .btn.convclose:hover,html body
 .sbwrap:has(.sbox.active)::before{content:"";position:absolute;left:0;right:0;top:0;height:var(--sbh,40px);border-radius:14px;pointer-events:none;z-index:0;animation:sGlow 2.2s ease-out infinite}
 .sbwrap .sbox{position:relative;z-index:1}
 @keyframes sGlow{0%{box-shadow:0 0 0 0 rgba(30,110,255,.55),0 0 0 0 rgba(30,110,255,.3)}60%{box-shadow:0 0 0 18px rgba(30,110,255,0),0 0 34px 10px rgba(30,110,255,.16)}100%{box-shadow:0 0 0 22px rgba(30,110,255,0),0 0 40px 14px rgba(30,110,255,0)}}
+
+/* PC용 지니메일 안내 */
+.pchint{position:fixed;right:20px;bottom:20px;z-index:70;display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;background:rgba(255,255,255,.96);border:.5px solid rgba(0,0,0,.1);border-radius:16px;box-shadow:0 12px 34px rgba(0,0,0,.16);max-width:640px;animation:afPop .5s cubic-bezier(.2,.8,.2,1) both}
+.pchint .ic svg{width:40px;height:40px;display:block}
+.pchint .tx{display:flex;flex-direction:column;gap:2px;font-size:13px;color:#2b2b2b;min-width:0}
+.pchint .tx small{font-size:11.5px;color:#6b6f76}
+.pchint .x{border:0;background:none;color:#9aa0a6;cursor:pointer;font-size:13px;padding:4px}
+.pcmoved{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:rgba(245,246,248,.86);backdrop-filter:blur(10px)}
+.pcmoved .bx{text-align:center;background:#fff;border-radius:18px;padding:30px 36px;box-shadow:0 16px 40px rgba(0,0,0,.12);display:flex;flex-direction:column;align-items:center;gap:8px}
+.pcmoved .ic svg{width:56px;height:56px}
+.pcmoved h3{margin:6px 0 0;font-size:18px}.pcmoved p{margin:0 0 10px;color:#6b6f76;font-size:13px}
+.pcmoved .lnk{border:0;background:none;color:#8a8f97;font-size:12px;cursor:pointer;margin-top:4px}
+
+.idxchip{position:fixed;left:16px;bottom:16px;z-index:65;display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 12px;border:.5px solid rgba(8,72,214,.35);background:rgba(255,255,255,.95);border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.12);cursor:pointer;font:inherit;font-size:12.5px;color:#0b47c9;text-align:left}
+.idxchip small{font-size:11px;color:#6b6f76}
 </style>
 </head>
 <body>
@@ -1390,6 +1405,6 @@ html body .btn.pri:not(:disabled):hover,html body .btn.convclose:hover,html body
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793257456"></script>
+<script src="mail-c.js?v=1793258409"></script>
 </body>
 </html>

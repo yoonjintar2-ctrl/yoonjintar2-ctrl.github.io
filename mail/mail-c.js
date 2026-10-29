@@ -3171,7 +3171,9 @@ function openSettings(tab) {
       <h5>화면</h5><label class="opt"><input type="checkbox" id="setBlur"${SET.blur !== false ? ' checked' : ''}> 유리 흐림 효과 쓰기 (PC가 느리거나 스크롤이 버벅이면 끄세요)</label>
       <p class="desc" style="font-size:11px">배경 그림: deepin-wallpapers 'flow-light'·'organic-glass-light'·'Glossy-Gradient' © UnionTech Software Technology · CC BY 4.0 (흑백 합성·구도 바꿈)</p>
       <h5>이 PC에 저장한 메일</h5><p class="desc">불러온 메일 목록과 본문을 이 PC(브라우저 저장소)에 저장해 두고, 다음부터 바로 열고 본문 전체에서 검색해요. Google 외 다른 곳으로는 보내지 않아요.</p>
-      <div class="opt"><span id="cacheInfo" style="color:var(--sub)">확인 중…</span><button class="btn" id="clrCache" style="padding:3px 10px">저장한 메일 비우기</button></div>`;
+      <div class="opt"><span id="cacheInfo" style="color:var(--sub)">확인 중…</span><button class="btn" id="clrCache" style="padding:3px 10px">저장한 메일 비우기</button></div>
+      <h5>색인 폴더 (D 드라이브 등)</h5><p class="desc">받아 둔 본문을 PC 폴더에도 저장해요(골라 준 곳 안에 '${IDX_ROOT}' 폴더). 브라우저 저장소가 지워지거나 웹 ↔ PC용을 바꿔 열어도 다시 받지 않고 바로 전체 검색돼요. 30초 넘게 입력이 없거나 창이 뒤에 있을 때, 화면이 버벅이지 않는 틈에만 조금씩 써요. 처음 한 번만 폴더를 골라 주면 그다음부터는 알아서 해요.</p>
+      <div class="opt"><span id="idxInfo" style="color:var(--sub)">${IDX.dir ? `'${esc(IDX.dir.name)}\\${IDX_ROOT}' · 저장 ${IDX.n}통${IDX.dirty.size ? ` · 남은 ${IDX.dirty.size}통` : ''}${IDX.perm === 'prompt' ? ' · 다시 연결 필요' : ''}` : '아직 고르지 않았어요'}</span><button class="btn" id="pickIdx" style="padding:3px 10px">${IDX.dir ? '폴더 바꾸기' : '폴더 고르기'}</button></div>`;
       (async () => { const el = $('#cacheInfo', body); if (!el) return; let n = real.texts ? real.texts.size : 0, sz = '';
         try { const e = await navigator.storage.estimate(); sz = ` · 사용 ${fmtSize(e.usage || 0)}`; } catch (er) { /* */ }
         el.textContent = real.on ? `본문 저장 ${n}통 / 전체 ${MAILS.length}통${sz}` : `예시 메일 사용 중${sz}`; })();
@@ -3297,6 +3299,7 @@ function openSettings(tab) {
     const fr = t.closest('.ftr'), br = t.closest('.bxr');
     if (t.id === 'clrCache') { if (!confirm('이 PC에 저장한 메일 목록·본문을 지울까요? (Gmail의 메일은 그대로예요. 다음에 열 때 다시 받아요)')) return; dotMorph(t, 'trash', async () => { try { if (real.db) real.db.close(); real.db = null; indexedDB.deleteDatabase('jin-cache-' + ME.email); } catch (er) { /* */ } toast('저장한 메일을 비웠어요 — 새로고침하면 다시 받아요'); }, 900); return; }
     if (t.id === 'clrIgn') { IGNORE.clear(); store.set('typo-ignore', []); show('general'); runTypo(); return; }
+    if (t.id === 'pickIdx') { if (await idxPick()) show('general'); return; }
     if (t.id === 'pickDir') {
       if (!window.showDirectoryPicker) { toast('이 브라우저에서는 폴더 고르기를 지원하지 않아요'); return; }
       try { const h = await window.showDirectoryPicker({ mode: 'readwrite' }); await idb('put', h); $('#dirName', body).textContent = '현재: ' + h.name; toast(`'${h.name}' 폴더를 저장 폴더로 정했어요`); } catch (err) { /* 취소 */ }
@@ -3451,11 +3454,17 @@ function googleLogin(interactive = true, force = false) {
       tc.requestAccessToken({ prompt: c ? '' : 'select_account' });
     }));
   }
+  // 확장 프로그램(PC용): 로그인 창은 한 번에 하나만 열 수 있어서 차례대로 (조용한 연장과 버튼 클릭이 겹치면 'Only one web auth flow' 오류가 나던 문제)
+  const run = () => extFlow(interactive, c);
+  const q = (googleLogin.q || Promise.resolve()).catch(() => {}).then(run);
+  googleLogin.q = q; return q;
+}
+function extFlow(interactive, c) {
   return new Promise((res, rej) => {
     const p = { client_id: CLIENT_ID, response_type: 'token', redirect_uri: chrome.identity.getRedirectURL(), scope: SCOPE, prompt: interactive ? 'select_account' : 'none' };
     if (c && c.email) p.login_hint = c.email;
     chrome.identity.launchWebAuthFlow({ url: 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams(p), interactive }, r => {
-      if (chrome.runtime.lastError) return rej(new Error(chrome.runtime.lastError.message));
+      if (chrome.runtime.lastError) { const m = chrome.runtime.lastError.message || ''; if (/only one web auth flow/i.test(m) && !extFlow.retry) { extFlow.retry = 1; return setTimeout(() => extFlow(interactive, c).then(res, rej).finally(() => { extFlow.retry = 0; }), 1200); } return rej(new Error(m)); }
       const h = new URLSearchParams((r || '').split('#')[1] || '');
       h.get('access_token') ? (tokCache.set(h.get('access_token'), +h.get('expires_in')), store.set('tok-scope', h.get('scope') || ''), res(h.get('access_token'))) : rej(new Error(h.get('error') || '로그인이 취소됐어요'));
     });
@@ -3685,6 +3694,88 @@ function saveFull(m) {
   idbPut(real.db, 'text', { gid: m.gid, t: (m.body || '').slice(0, 20000) });
   idbPut(real.db, 'full', { gid: m.gid, threadId: m.threadId, msgId: m.msgId, refs: m.refs, body: m.body, html: (m.html || '').length < 600000 ? m.html : '', htmlReady: m.htmlReady && m.htmlReady.length < 3000000 ? m.htmlReady : null, att: stripAttData(m.att) });
   if (real.texts) real.texts.set(m.gid, (m.body || '').slice(0, 20000));
+  IDX.dirty.add(m.gid);
+}
+// ── 색인 폴더: 받아 둔 본문을 PC 폴더(D 드라이브 등)에도 저장 ──
+// 브라우저 저장소가 지워지거나, 웹 ↔ PC용(확장 프로그램)처럼 저장소가 따로인 곳에서 열어도 다시 받지 않고 바로 전체 검색.
+// 쓰기는 PC가 한가할 때만: 30초 넘게 입력이 없거나 창이 뒤에 있고, 브라우저가 쉬는 틈(requestIdleCallback)이며, 화면이 버벅이지 않을 때(지연 측정)
+const IDX = { dirty: new Set(), seen: new Set(), dir: null, perm: '', lastIn: Date.now(), busy: false, n: 0 };
+['keydown', 'pointerdown', 'wheel'].forEach(ev => addEventListener(ev, () => { IDX.lastIn = Date.now(); }, { capture: true, passive: true }));
+const IDX_ROOT = 'jinny-mail-index';
+const idxMonth = w => { const d = new Date(w || 0), z = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); };  // 하루치씩 한 파일 (작게 → 쓰는 동안 안 버벅임)
+async function idxRoot(ask) {
+  const h = IDX.dir || await kvDB('get', 'idx-dir'); if (!h) { IDX.perm = 'none'; return null; }
+  IDX.dir = h;
+  try { let p = await h.queryPermission({ mode: 'readwrite' }); if (p === 'prompt' && ask) p = await h.requestPermission({ mode: 'readwrite' }); IDX.perm = p; if (p !== 'granted') { idxChip(); return null; } }
+  catch (e) { IDX.perm = 'gone'; return null; }
+  idxChip();
+  try { return await (await h.getDirectoryHandle(IDX_ROOT, { create: true })).getDirectoryHandle(ME.email.replace(/[^\w.@-]/g, '_'), { create: true }); } catch (e) { IDX.perm = 'gone'; return null; }
+}
+// 시작할 때: 폴더에 있는 본문 중 이 브라우저 저장소에 없는 것을 불러옴 (다시 받지 않게 저장소에도 넣음)
+async function idxLoad() {
+  if (!window.showDirectoryPicker || !real.texts) return;
+  const d = await idxRoot(false); if (!d) return;
+  let add = 0;
+  for await (const [name, fh] of d.entries()) {
+    if (fh.kind !== 'file' || !/^\d{4}-\d{2}-\d{2}\.json$/.test(name)) continue;
+    try { const o = JSON.parse(await (await fh.getFile()).text()); for (const g in o) { IDX.seen.add(g); if (!real.texts.has(g) && o[g] && o[g].t != null) { real.texts.set(g, o[g].t); idbPut(real.db, 'text', { gid: g, t: o[g].t }); add++; } } } catch (e) { /* 깨진 파일은 다음 쓰기 때 새로 */ }
+  }
+  real.texts.forEach((t, g) => { if (!IDX.seen.has(g)) IDX.dirty.add(g); });  // 폴더에 아직 없는 것 → 한가할 때 써 둠
+  IDX.n = IDX.seen.size; if (add) toast(`색인 폴더에서 본문 ${add}통을 불러왔어요`);
+}
+// 지금 한가한가: 입력 없음 + 화면 지연이 작음
+const idxLag = () => new Promise(r => { const t = performance.now(); setTimeout(() => r(performance.now() - t - 50), 50); });
+async function idxTick() {
+  setTimeout(idxTick, 20000);
+  if (IDX.busy || !IDX.dirty.size || !real.on || IDX.perm === 'prompt' || IDX.perm === 'none' || IDX.perm === 'gone') return;
+  if (!document.hidden && Date.now() - IDX.lastIn < 30000) return;
+  if (real.loading || real.prefetching) return;  // 받기 작업 중에는 쉬었다가
+  if ((await idxLag()) > 30) return;
+  (window.requestIdleCallback || (f => setTimeout(f, 1)))(() => idxWrite().catch(() => {}), { timeout: 5000 });
+}
+setTimeout(idxTick, 30000);
+// 하루치 파일씩 (기존 파일과 합쳐서 다시 씀). 한 번에 1.5초까지만, 그 사이 입력이 있으면 바로 멈춤
+async function idxWrite() {
+  if (IDX.busy) return; IDX.busy = true;
+  try {
+    const d = await idxRoot(false); if (!d) return;
+    const by = new Map(MAILS.filter(m => m.real).map(m => [m.gid, m])), groups = new Map();
+    IDX.dirty.forEach(g => { const m = by.get(g); if (!m || !real.texts.has(g)) { IDX.dirty.delete(g); return; } const k = idxMonth(m.when); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(m); });
+    const t0 = performance.now(), in0 = IDX.lastIn;
+    for (const [k, list] of [...groups.entries()].sort((a, b) => a[0] < b[0] ? 1 : -1)) {  // 최근 날짜부터
+      if (performance.now() - t0 > 1500 || IDX.lastIn !== in0 && !document.hidden) break;
+      const fh = await d.getFileHandle(k + '.json', { create: true });
+      let o = {}; try { o = JSON.parse(await (await fh.getFile()).text() || '{}'); } catch (e) { o = {}; }
+      list.forEach(m => { const fr = m.from || {}; o[m.gid] = { s: m.subj || '', f: fr.name || '', e: fr.email || '', w: m.when, t: real.texts.get(m.gid) || '' }; });
+      const w = await fh.createWritable(); await w.write(JSON.stringify(o)); await w.close();
+      list.forEach(m => { IDX.dirty.delete(m.gid); IDX.seen.add(m.gid); }); IDX.n = IDX.seen.size;
+    }
+  } finally { IDX.busy = false; }
+}
+async function idxPick() {
+  if (!window.showDirectoryPicker) { toast('이 브라우저에서는 폴더 고르기를 지원하지 않아요'); return false; }
+  let h; try { h = await window.showDirectoryPicker({ id: 'jin-idx', mode: 'readwrite' }); } catch (e) { return false; }
+  if (h.name === IDX_ROOT) { toast(`'${IDX_ROOT}' 안이 아니라, 그 폴더를 담은 곳(예: D 드라이브)을 골라 주세요`); return false; }
+  await kvDB('put', 'idx-dir', h); IDX.dir = h; IDX.perm = 'granted'; IDX.seen.clear();
+  await idxLoad(); toast(`'${h.name}\\${IDX_ROOT}'에 색인을 만들게요 — PC가 한가할 때 조금씩 써요`); idxChip(); return true;
+}
+// 권한을 다시 물어야 할 때(브라우저를 다시 켠 뒤 등) 왼쪽 아래 작은 단추
+function idxChip() {
+  let c = $('#idxChip');
+  if (IDX.perm !== 'prompt') { if (c) c.remove(); return; }
+  if (c) return;
+  c = document.createElement('button'); c.id = 'idxChip'; c.className = 'idxchip'; c.innerHTML = '<b>색인 폴더 다시 연결</b><small>한 번 누르면 이어서 저장해요</small>';
+  c.onclick = async () => { const d = await idxRoot(true); if (d) { c.remove(); IDX.seen.clear(); await idxLoad(); toast('색인 폴더를 다시 연결했어요'); } };
+  document.body.append(c);
+}
+// 처음 한 번: 색인 폴더를 고르라고 권함 (PC용 지니메일에서, 본문이 어느 정도 쌓인 뒤)
+async function idxSuggest() {
+  if (!IS_EXT || !window.showDirectoryPicker || store.get('idx-ask-off', false) || await kvDB('get', 'idx-dir')) return;
+  if (!real.texts || real.texts.size < 50 || $('#idxAsk')) return;
+  const b = document.createElement('div'); b.id = 'idxAsk'; b.className = 'pchint';
+  b.innerHTML = `<span class="tx"><b>D 드라이브에 메일 색인을 만들어 둘까요?</b><small>받아 둔 본문을 PC 폴더에도 저장해서, 저장소가 지워져도 다시 받지 않고 바로 전체 검색돼요. PC가 한가할 때만 조금씩 써요.</small></span><button class="btn pri" data-k="go">폴더 고르기</button><button class="x" data-k="off" title="다시 묻지 않기">✕</button>`;
+  document.body.append(b);
+  b.addEventListener('click', async e => { const kb = e.target.closest('[data-k]'); if (!kb) return; if (kb.dataset.k === 'off') { store.set('idx-ask-off', true); b.remove(); return; } if (await idxPick()) b.remove(); });
 }
 const cacheAll = db => new Promise(res => { if (!db) return res([]); try { const r = db.transaction('meta').objectStore('meta').getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => res([]); } catch (e) { res([]); } });
 const cachePut = (db, list) => { if (!db || !list.length) return; try { const tx = db.transaction('meta', 'readwrite'); const os = tx.objectStore('meta'); list.forEach(x => os.put(Object.assign({}, x, { body: '', html: '', full: false, att: x.att.map(a => [a[0], a[1], a[2], Object.assign({}, a[3], { data: undefined })]) }))); } catch (e) { /* 저장 실패는 무시 */ } };
@@ -3729,7 +3820,7 @@ async function loadReal(interactive, token) {
     const db = await dbP; const cArr = await cacheP; const cached = new Map(cArr.map(x => [x.gid, x]));
     real.texts = real.texts || new Map();
     // 검색용 본문 글자: 뒤에서 읽어서 이미 화면에 있는 메일에 채워 넣음
-    real.textsP = idbAll(db, 'text').then(tArr => { tArr.forEach(x => { if (!real.texts.has(x.gid)) real.texts.set(x.gid, x.t); }); MAILS.forEach(m => { if (m.real && !m.full && !m.body) { const t = real.texts.get(m.gid); if (t) m.body = t; } }); if (st.q) renderList(); }).catch(() => {});
+    real.textsP = idbAll(db, 'text').then(tArr => { tArr.forEach(x => { if (!real.texts.has(x.gid)) real.texts.set(x.gid, x.t); }); }).then(() => Promise.race([idxLoad(), new Promise(r => setTimeout(r, 20000))])).catch(() => {}).then(() => { MAILS.forEach(m => { if (m.real && !m.full && !m.body) { const t = real.texts.get(m.gid); if (t) m.body = t; } }); if (st.q) renderList(); });
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* */ }
     const metas = new Map(); const lab = { inbox: new Set(), sent: new Set(), unread: new Set(), box: new Map() };
     real.lab = lab;
@@ -3876,7 +3967,7 @@ async function prefetchBodies() {
         done++; if (done % 25 === 0 || done === todo.length) { real.prog = done < todo.length ? `본문 저장 중 ${done}/${todo.length}` : ''; renderTop(); }
       }
     }));
-  } finally { real.prefetching = false; real.prog = ''; renderTop(); }
+  } finally { real.prefetching = false; real.prog = ''; renderTop(); setTimeout(idxSuggest, 4000); }
 }
 // 메일을 열 때 본문 전체 받기
 async function fetchFull(m) {
@@ -4602,6 +4693,29 @@ if (hash === '#compose') {
   renderList();
   const first = visible()[0]; if (first) openMail(first.id); else renderRead();
 }
+// 웹(웹앱)으로 열었는데 이 PC에 'PC용 지니메일'(확장 프로그램 2.x)이 있으면 그쪽으로 유도: 코드가 PC에 고정돼 더 안전하고, 주소창 없는 넓은 앱 창
+(function pcHint() {
+  if (IS_EXT || document.body.classList.contains('popmode') || location.protocol !== 'https:') return;
+  setTimeout(async () => {
+    if (!(await extAvailable(true))) return; const v = (extAuth.info && extAuth.info.v) || ''; if (!/^([2-9]|\d{2,})\./.test(v)) return;
+    const open = () => extSend({ type: 'open', hash: '' }, 3000);
+    if (store.get('prefer-ext', false)) { await open(); showMoved(); return; }
+    if (store.get('pc-hint-off', false)) return;
+    const b = document.createElement('div'); b.className = 'pchint';
+    b.innerHTML = `<span class="ic">${APP_ICON}</span><span class="tx"><b>이 PC에 설치된 지니메일이 있어요</b><small>더 안전하고(코드가 PC에 고정) 주소창 없는 넓은 앱 창으로 열려요</small></span><button class="btn pri" data-k="open">앱 창으로 열기</button><button class="btn" data-k="always">늘 앱 창으로</button><button class="x" data-k="off" title="다시 보지 않기">✕</button>`;
+    document.body.append(b);
+    b.addEventListener('click', async e => { const kb = e.target.closest('[data-k]'); if (!kb) return; const k = kb.dataset.k;
+      if (k === 'off') { store.set('pc-hint-off', true); b.remove(); return; }
+      if (k === 'always') store.set('prefer-ext', true);
+      flushCompose(); await open(); b.remove(); showMoved(); });
+  }, 2500);
+  function showMoved() {
+    const m = document.createElement('div'); m.className = 'pcmoved';
+    m.innerHTML = `<div class="bx"><span class="ic">${APP_ICON}</span><h3>PC용 지니메일을 열었어요</h3><p>앱 창에서 계속 쓰시면 돼요. 이 탭은 닫아도 돼요.</p><button class="btn" data-k="stay">여기(웹)에서 계속 쓰기</button>${store.get('prefer-ext', false) ? '<button class="lnk" data-k="noauto">다음부터 자동으로 열지 않기</button>' : ''}</div>`;
+    document.body.append(m);
+    m.addEventListener('click', e => { const k = e.target.closest('[data-k]'); if (!k) return; if (k.dataset.k === 'noauto') { store.set('prefer-ext', false); k.remove(); return; } m.remove(); });
+  }
+})();
 // 새 버전이 올라오면 알아서 적용 (홈페이지 캐시 때문에 옛 화면이 10분쯤 남는 것 방지). 메일을 쓰는 중이면 묻기
 (function verCheck() {
   if (IS_EXT || location.protocol !== 'https:') return;
