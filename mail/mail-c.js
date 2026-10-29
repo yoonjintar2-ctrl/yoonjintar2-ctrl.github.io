@@ -1844,8 +1844,17 @@ function outgoingHtml(src) {
   document.body.append(tmp); const text = tmp.innerText; tmp.remove();
   return { html, text, inl };
 }
+// 받는 쪽 PC에 글꼴이 '한글 이름'으로 안 잡히거나(맥·일부 윈도우·모바일) 없을 때 얇은 기본 글꼴로 바뀌던 문제:
+// 보내는 메일의 글꼴 지정마다 영문 이름과 비슷한 대체 글꼴을 같이 적어 줌
+const FONT_ALT = { '맑은 고딕': "'맑은 고딕','Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif", '나눔고딕': "'나눔고딕','NanumGothic','Nanum Gothic','Malgun Gothic','Apple SD Gothic Neo',sans-serif",
+  '돋움': "'돋움','Dotum','Malgun Gothic','Apple SD Gothic Neo',sans-serif", '굴림': "'굴림','Gulim','Malgun Gothic','Apple SD Gothic Neo',sans-serif", '바탕': "'바탕','Batang','AppleMyungjo','Noto Serif KR',serif" };
+function fontFix(html) {
+  html = html.replace(/font-family:\s*&quot;([^&]+)&quot;(?:,\s*[^;"]*)?/gi, (all, f) => FONT_ALT[f.trim()] ? 'font-family:' + FONT_ALT[f.trim()] : all);
+  return html.replace(/font-family:\s*([^;"&]+)/gi, (all, v) => { const first = v.split(',')[0].trim().replace(/^&quot;|&quot;$|^['"]|['"]$/g, ''); const alt = FONT_ALT[first]; return alt ? 'font-family:' + alt.replace(/'/g, v.includes('&quot;') ? '&quot;' : "'") : all; })
+    .replace(/<font([^>]*?)face="([^"]+)"/gi, (all, a, f) => { const alt = FONT_ALT[f.split(',')[0].trim()]; return alt ? `<font${a}face="${f.split(',')[0].trim()},${alt.replace(/'/g, '').split(',').slice(1).join(',')}"` : all; });
+}
 async function buildMime(d) {
-  const { html, text, inl } = outgoingHtml(d.html);
+  const o = outgoingHtml(d.html), text = o.text, inl = o.inl, html = fontFix(o.html);
   const alt = boundary(), rel = boundary(), mix = boundary();
   const hdr = [`From: ${addrHdr([ME])}`, `To: ${addrHdr(d.to)}`];
   if (d.cc.length) hdr.push(`Cc: ${addrHdr(d.cc)}`);
