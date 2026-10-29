@@ -436,7 +436,7 @@ function renderTop() {
   $('#goSearch').innerHTML = ico('search');
   // 검색어가 들어 있으면 검색창을 눈에 띄게 (편지함을 눌렀는데 메일이 안 보여 당황하지 않게)
   const sq = st.q.trim(); $('.sbox').classList.toggle('active', !!sq);
-  let qc = $('#qClear'); if (!qc) { qc = document.createElement('button'); qc.id = 'qClear'; qc.className = 'qclear'; qc.title = '검색어 지우기 (Esc)'; qc.innerHTML = ico('close', 14); $('#goSearch').before(qc); }
+  let qc = $('#qClear'); if (!qc) { qc = document.createElement('button'); qc.id = 'qClear'; qc.className = 'qclear'; qc.title = '검색 취소 (Esc)'; qc.innerHTML = ico('close', 12) + '<small>Esc</small>'; $('#goSearch').before(qc); }
   qc.hidden = !sq;
   $('#gear').innerHTML = ico('gear', 20);
   let pill = $('#srcPill'); if (!pill) { pill = document.createElement('span'); pill.id = 'srcPill'; $('#gear').before(pill); }

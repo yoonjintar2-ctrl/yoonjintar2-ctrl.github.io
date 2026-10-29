@@ -1329,6 +1329,16 @@ html body .btn.pri:not(:disabled):hover,html body .btn.convclose:hover,html body
 .btn.pri:not(:disabled):hover::before,.btn.convclose:hover::before,.foot .chip.on:hover::before{opacity:.8!important;animation-duration:1.9s!important}
 .btn.pri:not(:disabled):hover::after,.btn.convclose:hover::after,.foot .chip.on:hover::after{opacity:.6!important;animation-duration:1.6s!important}
 .scopepop .kb{font-size:10px;font-weight:600;opacity:.75;margin-left:3px;padding:0 4px;border:1px solid rgba(255,255,255,.55);border-radius:4px;line-height:14px;display:inline-block;vertical-align:1px}
+
+/* 검색 중: 지우기 버튼에 Esc 안내 + 검색창 둘레로 푸른 빛이 퍼짐 */
+.sbox .qclear{width:auto!important;height:24px!important;padding:0 8px 0 6px!important;border-radius:999px!important;gap:3px;background:rgba(11,87,208,.1)!important;color:var(--blue)!important;font-size:11px;font-weight:700;letter-spacing:.02em}
+.sbox .qclear small{font-size:10.5px;font-weight:700}
+.sbox .qclear:hover{background:rgba(11,87,208,.18)!important}
+@keyframes sGlow{0%{box-shadow:0 0 0 0 rgba(40,120,255,.42),0 0 0 0 rgba(40,120,255,.22)}70%{box-shadow:0 0 0 9px rgba(40,120,255,0),0 0 16px 3px rgba(40,120,255,.12)}100%{box-shadow:0 0 0 0 rgba(40,120,255,0),0 0 0 0 rgba(40,120,255,0)}}
+.sbox.active{border-color:rgba(11,87,208,.7)!important}
+.sbwrap{position:relative}
+.sbwrap:has(.sbox.active)::before{content:"";position:absolute;left:0;right:0;top:0;height:var(--sbh,40px);border-radius:14px;pointer-events:none;z-index:0;animation:sGlow 2.2s ease-out infinite}
+.sbwrap .sbox{position:relative;z-index:1}
 </style>
 </head>
 <body>
@@ -1379,6 +1389,6 @@ html body .btn.pri:not(:disabled):hover,html body .btn.convclose:hover,html body
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793255868"></script>
+<script src="mail-c.js?v=1793256111"></script>
 </body>
 </html>
