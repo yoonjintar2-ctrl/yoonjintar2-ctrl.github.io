@@ -1323,6 +1323,11 @@ html body .btn.pri:not(:disabled):hover,html body .btn.convclose:hover,html body
 .rstar svg{fill:none;stroke:#9aa0a6;stroke-width:1.6}
 .rstar:hover svg{stroke:#5f6368}
 .rstar.on svg{fill:#fbbc04;stroke:#f29900}
+
+/* 파란 버튼 마우스 올림: 색은 한 단계 옅게, 흐름은 더 빠르게 */
+.btn.pri::before,.btn.convclose::before,.foot .chip.on::before{background:linear-gradient(110deg,rgba(10,60,180,.4) 0%,rgba(90,200,255,.75) 16%,rgba(215,240,255,.6) 22%,rgba(40,130,255,.35) 32%,rgba(10,55,170,.4) 48%,rgba(110,210,255,.7) 64%,rgba(30,100,235,.3) 78%,rgba(10,60,180,.4) 100%) 0 0/300% 100%!important}
+.btn.pri:not(:disabled):hover::before,.btn.convclose:hover::before,.foot .chip.on:hover::before{opacity:.8!important;animation-duration:1.9s!important}
+.btn.pri:not(:disabled):hover::after,.btn.convclose:hover::after,.foot .chip.on:hover::after{opacity:.6!important;animation-duration:1.6s!important}
 </style>
 </head>
 <body>
@@ -1373,6 +1378,6 @@ html body .btn.pri:not(:disabled):hover,html body .btn.convclose:hover,html body
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793249353"></script>
+<script src="mail-c.js?v=1793249916"></script>
 </body>
 </html>
