@@ -1000,7 +1000,7 @@ function renderRead(force) {
     ${attsOf(m).length ? `<div class="attbar${st.attFull === m.id ? ' full' : ''}"><b>${ico('clip', 16)} 첨부 ${attsOf(m).length}</b><div class="attgrid n${Math.min(3, attsOf(m).length)}">${attsOf(m).map(([[t, n, s], i]) => `<span class="attw"><span class="att" data-ai="${i}" title="${esc(n)} · 누르면 다운로드">${ftIcon(t, 17, n)}<span class="an">${esc(n)}</span> <small>${s}</small></span>${attBtns(m, i, n)}</span>`).join('')}</div><button class="attmore" data-act="attfull" hidden>${st.attFull === m.id ? '접기' : '펼치기'}</button></div>` : ''}
     ${m.deleted ? `<div class="dbanner delb"><span>${ico('trash', 16)} 삭제한 메일이에요</span><button data-act="restore">되살리기</button></div>` : ''}
     ${m.draft ? `<div class="dbanner"><span>${ico('pen', 16)} 이 대화에 작성 중이던 답장이 있어요</span><button data-act="draft">이어서 쓰기</button><button class="ib" data-act="deldraft" title="작성 중이던 메일 삭제">${ico('trash', 17)}</button></div>` : ''}
-    <div class="rbody${(m.real && !m.full) || (m.html && !m.htmlReady) ? ' loading' : ''}">${m.real && !m.full ? '<div class="blank" style="padding:40px 0;min-height:260px"></div>' : m.html ? '<iframe class="mailhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>' : `<div class="txt">${esc(m.body)}</div>${prevHtml(m.prev, 0)}`}</div></div>`;
+    <div class="rbody${(m.real && !m.full) || (m.html && !m.htmlReady) ? ' loading' : ''}">${m.real && !m.full ? '<div class="blank" style="padding:40px 0;min-height:260px"></div>' : m.html ? '<iframe class="mailhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads"></iframe>' : `<div class="txt">${esc(m.body)}</div>${prevHtml(m.prev, 0)}`}</div></div>`;
   const fr = $('#view iframe.mailhtml');
   attMoreCheck(); fitPpl();
   if (fr) {
@@ -1019,7 +1019,7 @@ function renderRead(force) {
       // 다 그린 뒤에 흐림·로딩 표시 걷어냄. 그림 받기가 오래 걸리면 1.2초 뒤엔 글부터 보여 줌 (그림 자리엔 도는 고리)
       const rb = fr.closest('.rbody'); if (rb) { if (fr._final) rb.classList.remove('loading'); else setTimeout(() => rb.classList.remove('loading'), 1200); }
     });
-    const css = '<base target="_blank"><style>html{overflow-x:auto;overflow-y:hidden}html,body{height:auto!important;min-height:0!important;max-height:none!important}body{overflow:visible!important}body{margin:0;font:14.5px/1.65 Pretendard,"Malgun Gothic",sans-serif;color:#1f1f1f;word-break:break-word}img[data-jl]{object-fit:none;background:#f3f5f8;min-width:28px;min-height:28px;border-radius:4px}</style>';
+    const css = '<base target="_blank"><meta name="referrer" content="no-referrer"><style>html{overflow-x:auto;overflow-y:hidden}html,body{height:auto!important;min-height:0!important;max-height:none!important}body{overflow:visible!important}body{margin:0;font:14.5px/1.65 Pretendard,"Malgun Gothic",sans-serif;color:#1f1f1f;word-break:break-word}img[data-jl]{object-fit:none;background:#f3f5f8;min-width:28px;min-height:28px;border-radius:4px}</style>';
     const show = (h, fin) => { if ($('#view iframe.mailhtml') === fr) { fr._final = !!fin; fr.srcdoc = css + h; } };
     if (m.htmlReady) show(m.htmlReady, true);
     else { show(m.html.replace(/src=["']?cid:[^"'\s>]+["']?/gi, `src="${IMG_SPIN}" data-jl="1"`)); resolveInline(m).then(h => show(h, true)).catch(() => show(m.html, true)); }
