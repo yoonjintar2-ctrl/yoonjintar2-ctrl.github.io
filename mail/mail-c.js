@@ -3217,14 +3217,21 @@ function openSettings(tab) {
     }
     if (t === 'app') {
       const st0 = APP.standalone(), perm = 'Notification' in window ? Notification.permission : 'unsupported';
-      body.innerHTML = `<h5>지니메일 앱으로 설치</h5>
-        <p class="desc">exe 프로그램이 아니라 크롬의 '웹앱 설치' 기능이에요. 시작 메뉴·작업 표시줄·바탕화면에 지니메일 아이콘이 생기고, 주소창 없는 별도 창으로 열려요. PC에 새 프로그램이 깔리지 않고 관리자 권한도 필요 없어요.</p>
-        <div class="acct${st0 ? ' on' : ''}"><span class="dot"></span><span style="flex:1">${st0 ? '지금 지니메일 앱으로 쓰고 있어요' : APP.prompt ? '이 PC에 설치할 수 있어요' : '이 창에서는 설치 버튼을 바로 띄울 수 없어요 (아래 방법으로 설치)'}</span>${!st0 && APP.prompt ? '<button class="btn pri" id="appInstall">앱 설치</button>' : ''}</div>
-        ${st0 ? '' : `<ol class="guide"><li>크롬 주소창 오른쪽 끝의 <b>설치 아이콘(모니터+화살표)</b>을 누르거나,</li><li>크롬 메뉴 <b>⋮ → 전송, 저장 및 공유 → 페이지를 앱으로 설치…</b> (엣지는 <b>⋯ → 앱 → 이 사이트를 앱으로 설치</b>)</li><li>설치한 뒤엔 시작 메뉴에서 '지니메일'을 찾아 작업 표시줄에 고정해 두면 편해요.</li></ol>`}
+      const pcV = !IS_EXT && extAuth.info && /^([2-9]|\d{2,})\./.test(extAuth.info.v || '');
+      const INST = '<svg viewBox="0 0 20 20" width="16" height="16" style="vertical-align:-3px"><rect x="2.5" y="3.5" width="15" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 17h6M10 6v5m-2.2-2.2L10 11l2.2-2.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      body.innerHTML = `<h5>지니메일을 앱처럼 쓰기</h5>
+        <p class="desc">주소창 없는 넓은 창으로 열리고, 작업 표시줄에서 바로 켤 수 있어요.</p>
+        ${IS_EXT ? `<div class="acct on"><span class="dot"></span><span style="flex:1">지금 PC용 지니메일로 쓰고 있어요</span></div>
+          <p class="desc">크롬 오른쪽 위 <b>퍼즐 모양</b>을 눌러 지니메일 옆 <b>핀</b>을 눌러 두면, 다음부터 아이콘 한 번으로 열려요.</p>`
+        : st0 ? `<div class="acct on"><span class="dot"></span><span style="flex:1">이미 앱으로 쓰고 있어요</span></div>`
+        : pcV ? `<div class="acct"><span class="dot"></span><span style="flex:1">이 PC에 PC용 지니메일이 있어요</span><button class="btn pri" id="openPc">PC용으로 열기</button></div>`
+        : APP.prompt ? `<div class="acct"><span class="dot"></span><span style="flex:1">버튼 한 번이면 설치돼요</span><button class="btn pri" id="appInstall">설치하기</button></div>`
+        : `<ol class="guide"><li>크롬 주소창 오른쪽 끝의 ${INST} 아이콘을 누르세요.</li><li>뜨는 창에서 <b>설치</b>를 누르면 끝이에요.</li></ol>
+          <p class="desc" style="font-size:11.5px">아이콘이 안 보이면: 크롬 메뉴 <b>⋮</b> → <b>전송, 저장 및 공유</b> → <b>페이지를 앱으로 설치</b></p>`}
         <h5>새 메일 알림</h5>
-        <p class="desc">지니메일이 열려 있으면(최소화해도 됨) 1분마다 새 메일을 확인해서, 다른 일을 하는 중이면 윈도우 알림으로 알려 줘요. 앱으로 설치하면 작업 표시줄 아이콘에 안 읽은 메일 수도 표시돼요. 지니메일 창을 완전히 닫으면 알림은 오지 않아요.</p>
-        <label class="opt"><input type="checkbox" id="setNotify"${SET.notify && perm === 'granted' ? ' checked' : ''}${perm === 'unsupported' ? ' disabled' : ''}> 새 메일이 오면 윈도우 알림 보내기</label>
-        <p class="desc" id="notifyState">${perm === 'denied' ? '⚠ 이 사이트 알림이 크롬에서 차단돼 있어요. 주소창 왼쪽 자물쇠(사이트 정보) → 알림 → 허용으로 바꿔 주세요.' : perm === 'unsupported' ? '이 브라우저는 알림을 지원하지 않아요.' : ''}</p>
+        <p class="desc">지니메일 창이 열려 있으면(최소화해도 돼요) 새 메일이 올 때 알려 줘요.</p>
+        <label class="opt"><input type="checkbox" id="setNotify"${SET.notify && perm === 'granted' ? ' checked' : ''}${perm === 'unsupported' ? ' disabled' : ''}> 새 메일 알림 받기</label>
+        <p class="desc" id="notifyState">${perm === 'denied' ? '⚠ 크롬에서 알림이 막혀 있어요. 주소창 왼쪽 아이콘 → 알림 → 허용으로 바꿔 주세요.' : perm === 'unsupported' ? '이 브라우저는 알림을 지원하지 않아요.' : ''}</p>
         <button class="btn" id="notifyTest"${SET.notify && perm === 'granted' ? '' : ' disabled'}>알림 시험해 보기</button>`;
     }
     if (t === 'account') {
@@ -3308,6 +3315,7 @@ function openSettings(tab) {
     if (t.id === 'reconn') { bg.remove(); openWelcome(true); return; }
     if (t.id === 'loadReal') { bg.remove(); loadReal(!real.token, real.token); return; }
     if (t.id === 'useSample') { location.reload(); return; }
+    if (t.id === 'openPc') { flushCompose(); extSend({ type: 'open', hash: '' }, 3000); return; }
     if (t.id === 'appInstall' && APP.prompt) { APP.prompt.prompt(); APP.prompt.userChoice.then(() => { APP.prompt = null; show('app'); }); return; }
     if (t.id === 'notifyTest') { dotMorph(t, 'env', async () => notifyTestNow(), 900); return; }
     if (t.id === 'copyExtUrl') { dotMorph(t, 'link', async () => { try { await navigator.clipboard.writeText('chrome://extensions'); toast('주소를 복사했어요. 새 탭 주소창에 붙여넣으세요'); } catch (e) { toast('복사하지 못했어요. 직접 입력해 주세요'); } }, 700); return; }

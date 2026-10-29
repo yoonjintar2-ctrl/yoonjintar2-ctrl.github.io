@@ -1363,6 +1363,9 @@ html body .btn.pri:not(:disabled):hover,html body .btn.convclose:hover,html body
 body.popmode #rglow{display:none!important}
 @keyframes rGlow{0%{box-shadow:0 0 0 0 rgba(30,110,255,.26),0 0 0 0 rgba(30,110,255,.14)}60%{box-shadow:0 0 0 10px rgba(30,110,255,0),0 0 22px 5px rgba(30,110,255,.07)}100%{box-shadow:0 0 0 12px rgba(30,110,255,0),0 0 26px 8px rgba(30,110,255,0)}}
 @media (prefers-reduced-motion:reduce){#rglow.on{animation:none;box-shadow:0 0 0 1px rgba(30,110,255,.18),0 0 16px rgba(30,110,255,.08)}}
+
+/* 자동 저장 표시: 글자가 '저장 중…' ↔ '자동 저장됨 16:45'로 바뀌어도 폭이 같게 → 첨부 줄이 접혔다 펴지며 본문이 위아래로 튀지 않게 */
+.attfld .save,.ctool .save{flex:none;width:9.8em;min-height:1em;text-align:right;overflow:hidden;text-overflow:clip}
 </style>
 </head>
 <body>
@@ -1413,6 +1416,6 @@ body.popmode #rglow{display:none!important}
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793259663"></script>
+<script src="mail-c.js?v=1793260500"></script>
 </body>
 </html>
