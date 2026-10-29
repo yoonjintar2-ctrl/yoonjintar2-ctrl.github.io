@@ -3121,9 +3121,9 @@ function saveAll() { const at = Date.now(); store.set('footers2', FOOTERS); stor
   if (!real.on) store.set('sample-boxes', BOXES); else if (J.data) { J.data.boxes = BOXES.map(b => ({ id: b.id, name: b.name, parent: b.parent, hidden: !!b.hidden })); J.data.prefs = { footers: FOOTERS, set: SET, at }; jSave(); } }
 // 풋터·설정: 드라이브 기록이 더 최신이면 가져오고(다른 PC·확장 프로그램판과 같게), 이 PC가 더 최신이면 올림
 function prefsSync() {
-  if (!J.data) return false; const r = J.data.prefs, la = store.get('prefs-at', 0);
+  if (!J.data) return false; const r = J.data.prefs, la = store.get('prefs-at', 0) || (store.get('footers2', null) ? 1 : 0);  // 처음 여는 PC(풋터를 만든 적 없음)는 0 → 드라이브 것을 받기만 함
   if (r && r.at > la && Array.isArray(r.footers) && r.footers.length) { FOOTERS = r.footers; SET = Object.assign(SET, r.set || {}); store.set('footers2', FOOTERS); store.set('settings', SET); store.set('prefs-at', r.at); return true; }
-  if (!r || la > r.at) { J.data.prefs = { footers: FOOTERS, set: SET, at: la || Date.now() }; jSave(); }
+  if (la && (!r || la > r.at)) { J.data.prefs = { footers: FOOTERS, set: SET, at: la }; jSave(); }
   return false;
 }
 // 저장 폴더: 브라우저가 고른 폴더 권한을 기억 (IndexedDB)
