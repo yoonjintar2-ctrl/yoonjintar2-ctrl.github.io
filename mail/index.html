@@ -1339,6 +1339,7 @@ html body .btn.pri:not(:disabled):hover,html body .btn.convclose:hover,html body
 .sbwrap{position:relative}
 .sbwrap:has(.sbox.active)::before{content:"";position:absolute;left:0;right:0;top:0;height:var(--sbh,40px);border-radius:14px;pointer-events:none;z-index:0;animation:sGlow 2.2s ease-out infinite}
 .sbwrap .sbox{position:relative;z-index:1}
+@keyframes sGlow{0%{box-shadow:0 0 0 0 rgba(30,110,255,.55),0 0 0 0 rgba(30,110,255,.3)}60%{box-shadow:0 0 0 18px rgba(30,110,255,0),0 0 34px 10px rgba(30,110,255,.16)}100%{box-shadow:0 0 0 22px rgba(30,110,255,0),0 0 40px 14px rgba(30,110,255,0)}}
 </style>
 </head>
 <body>
@@ -1389,6 +1390,6 @@ html body .btn.pri:not(:disabled):hover,html body .btn.convclose:hover,html body
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793256111"></script>
+<script src="mail-c.js?v=1793256286"></script>
 </body>
 </html>
