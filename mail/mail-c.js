@@ -1911,8 +1911,13 @@ function setupRcpt(box) {
   const close = () => { ac.classList.remove('on'); items = []; };
   const add = p => { inp.value = ''; close(); if (rcptTaken(p.email, box)) { inp.focus(); return; } box.insertBefore(chipEl(p), inp); dirty(); inp.focus(); };
   // 칸에 남은 글자를 칩으로: 주소 꼴이면 넣고, 아니면 알려 줌 (quiet: 그냥 둠)
-  const commit = quiet => { const v = inp.value.trim().replace(/[,;]$/, ''); if (!v) return true; if (RCPT_RE.test(v)) { add({ name: v, email: v }); return true; } const ps = parseAddrs(v); if (ps.length) { inp.value = ''; ps.forEach(add); return true; } if (!quiet) toast(`'${v}'은(는) 메일 주소 꼴이 아니에요 (예: name@company.com)`); return false; };
+  const commit = quiet => { const v = inp.value.trim().replace(/[,;]$/, ''); if (!v) return true; if (RCPT_RE.test(v)) { add({ name: v, email: v }); return true; } const ps = parseAddrs(v); if (ps.length) { inp.value = ''; ps.forEach(add); return true; } const who = nameHit(v); if (who) { add(who); return true; } if (!quiet) toast(`'${v}'은(는) 메일 주소 꼴이 아니에요 (예: name@company.com)`); return false; };
   box._commit = commit;
+  // 이름만 쳤을 때: 이름이 정확히 같은 사람(또는 찾은 사람이 한 명뿐이면) 그 사람으로
+  function nameHit(v) { const q = v.toLowerCase(), taken = new Set(chipsOf(box).map(p => p.email)); const m = rcptPeople().filter(p => !isMe(p) && !taken.has(p.email) && personMatch(p, q)); return m.find(p => (p.name || '').trim().toLowerCase() === q) || (m.length === 1 ? m[0] : null); }
+  // 한글 입력 중 Enter·Tab: 글자 조합이 끝난 뒤에 넣음 (윈도우 한글 입력기는 이때 Enter를 'Process'로 보내서 그냥 지나가던 문제)
+  let afterIme = null;
+  inp.addEventListener('compositionend', () => { if (!afterIme) return; const k = afterIme; afterIme = null; setTimeout(() => { draw(); if (items.length && ac.classList.contains('on')) add(items[idx]); else if (inp.value.trim()) commit(k === 'Tab'); }, 0); });
   const draw = () => {
     const q = inp.value.trim().toLowerCase();
     if (!q) { close(); return; }
@@ -1925,6 +1930,7 @@ function setupRcpt(box) {
   };
   inp.addEventListener('input', () => { idx = 0; draw(); $$('.rc.sel', box).forEach(c => c.classList.remove('sel')); });
   inp.addEventListener('keydown', e => {
+    if ((e.isComposing || e.key === 'Process' || e.keyCode === 229) && /^(Enter|NumpadEnter|Tab)$/.test(e.code)) { afterIme = e.code === 'Tab' ? 'Tab' : 'Enter'; if (e.code !== 'Tab') e.preventDefault(); return; }
     if (ac.classList.contains('on') && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); idx = (idx + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; draw(); return; }
     if (e.key === 'Enter' || e.key === ',' || e.key === ';' || e.key === 'Tab' || (e.key === ' ' && RCPT_RE.test(inp.value.trim()))) {
       if (items.length && ac.classList.contains('on')) { e.preventDefault(); add(items[idx]); return; }
@@ -1960,7 +1966,7 @@ function setupRcpt(box) {
     ps.forEach(p => { if (!taken.has(p.email) && !rcptTaken(p.email, box)) { box.insertBefore(chipEl(p), inp); taken.add(p.email); } }); dirty();
   });
   ac.addEventListener('mousedown', e => { const it = e.target.closest('.it'); if (it) { e.preventDefault(); add(items[+it.dataset.i]); } });
-  inp.addEventListener('blur', () => setTimeout(() => { close(); if (inp.value.trim() && RCPT_RE.test(inp.value.trim())) { const v = inp.value.trim(); inp.value = ''; if (!rcptTaken(v, box)) { box.insertBefore(chipEl({ name: v, email: v }), inp); dirty(); } } }, 120));
+  inp.addEventListener('blur', () => setTimeout(() => { close(); if (inp.value.trim() && !RCPT_RE.test(inp.value.trim())) { const who = nameHit(inp.value.trim()); if (who && !rcptTaken(who.email, box)) { inp.value = ''; box.insertBefore(chipEl(who), inp); dirty(); } return; } if (inp.value.trim() && RCPT_RE.test(inp.value.trim())) { const v = inp.value.trim(); inp.value = ''; if (!rcptTaken(v, box)) { box.insertBefore(chipEl({ name: v, email: v }), inp); dirty(); } } }, 120));
   // 칩 클릭 = 선택 (Ctrl/Shift로 여러 개), 칩 위를 끌면 블록 선택
   let dragSel = null;
   box.addEventListener('mousedown', e => {
@@ -4466,7 +4472,7 @@ if (hash === '#compose') {
   const check = async () => {
     try {
       const v = ((await (await fetch(location.pathname + '?vchk=' + Date.now(), { cache: 'no-store' })).text()).match(/mail-c\.js\?v=(\d+)/) || [])[1];
-      if (!v || v === cur) return;
+      if (!v || v === cur || +v < +cur) return;  // 홈페이지 캐시가 옛 버전을 잠깐 돌려줘도 되돌아가지 않게 (예전엔 옛 버전↔새 버전을 오가며 다시 열리던 문제)
       const go = () => { flushCompose(); location.replace(location.pathname + '?v=' + v); };
       if ($('#read').classList.contains('composing') || cs.saving) toast('지니메일 새 버전이 있어요', go, '지금 적용');
       else go();
