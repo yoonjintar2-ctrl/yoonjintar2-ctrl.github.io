@@ -993,7 +993,7 @@ function renderRead(force) {
           <div class="bar">
             <button class="btn" data-act="reply">${ico('reply', 16)} 답장</button><button class="btn" data-act="all">${ico('replyall', 16)} 전체답장</button><button class="btn" data-act="fwd">${ico('fwd', 16)} 전달</button>
           </div>
-          <div class="bar2"><span class="when">${m.d === 0 ? '오늘 ' + fmtDW(dayOf(m)) : fmtDW(dayOf(m))} ${m.t}</span><button class="ib rstar${m.star ? ' on' : ''}" data-act="star" title="${m.star ? '중요 표시 끄기' : '중요 표시'}">${STAR_SVG.replace(/16/g, '18')}</button><button class="ib" data-act="more" title="이동·삭제">${ico('more', 18)}</button><button class="ib" data-act="popview" title="새 창에서 보기">${ico('pop')}</button></div>
+          <div class="bar2"><span class="when">${m.d === 0 ? '오늘 ' + fmtDW(dayOf(m)) : fmtDW(dayOf(m))} ${m.t}</span><button class="ib rstar${m.star ? ' on' : ''}" data-act="star" title="${m.star ? '중요 표시 끄기' : '중요 표시'}">${STAR_SVG.replace('width="16" height="16"', 'width="18" height="18"')}</button><button class="ib" data-act="more" title="이동·삭제">${ico('more', 18)}</button><button class="ib" data-act="popview" title="새 창에서 보기">${ico('pop')}</button></div>
         </div>
     </div>
     <div class="rscroll">

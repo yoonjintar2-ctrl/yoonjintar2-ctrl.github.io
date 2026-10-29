@@ -1310,6 +1310,19 @@ body.unfold nav{animation-delay:.08s}body.unfold .list{animation-delay:.2s}body.
 .gtpop button{height:22px;padding:0 9px;border:.5px solid rgba(0,0,0,.12);border-radius:999px;background:#fff;font-size:12px;color:#2b2b2b;cursor:pointer}
 .gtpop button.on{background:#e9f0fc;border-color:var(--blue);color:var(--blue);font-weight:600}
 .gtpop .x{border:0;background:none;color:#9aa0a6;padding:0 4px}
+
+/* 파란 버튼 마우스 올림: 모양(테두리·그림자)은 평소 그대로, 안쪽 빛 흐름은 더 또렷하게 */
+html body .btn.pri:not(:disabled):hover,html body .btn.convclose:hover,html body .foot .chip.on:hover{box-shadow:inset 0 0 0 .5px rgba(255,255,255,.25),0 1px 2px rgba(0,0,0,.07),0 5px 12px rgba(0,30,110,.12)!important;border:.5px solid rgba(140,195,255,.75)!important}
+.btn.pri::before,.btn.convclose::before,.foot .chip.on::before{background:linear-gradient(110deg,rgba(0,40,150,.85) 0%,rgba(70,200,255,1) 16%,rgba(210,245,255,.9) 22%,rgba(30,120,255,.6) 32%,rgba(0,35,140,.85) 48%,rgba(90,215,255,1) 64%,rgba(20,90,230,.5) 78%,rgba(0,40,150,.85) 100%) 0 0/300% 100%!important}
+.btn.pri::after,.btn.convclose::after,.foot .chip.on::after{background:radial-gradient(55% 140% at 30% 120%,rgba(170,220,255,.85),transparent 70%)!important}
+.btn.pri:not(:disabled):hover::before,.btn.convclose:hover::before,.foot .chip.on:hover::before{opacity:.9!important;animation-duration:3.2s!important}
+.btn.pri:not(:disabled):hover::after,.btn.convclose:hover::after,.foot .chip.on:hover::after{opacity:.85!important;animation-duration:2.6s!important}
+/* 읽기 화면: 날짜·별·⋮·새 창 줄을 답장 버튼 줄 위로 */
+.racts{display:flex!important;flex-direction:column;align-items:flex-end;gap:6px}
+.racts .bar2{order:-1}
+.rstar svg{fill:none;stroke:#9aa0a6;stroke-width:1.6}
+.rstar:hover svg{stroke:#5f6368}
+.rstar.on svg{fill:#fbbc04;stroke:#f29900}
 </style>
 </head>
 <body>
@@ -1360,6 +1373,6 @@ body.unfold nav{animation-delay:.08s}body.unfold .list{animation-delay:.2s}body.
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793248873"></script>
+<script src="mail-c.js?v=1793249353"></script>
 </body>
 </html>
