@@ -1287,6 +1287,24 @@ body.unfold nav{animation-delay:.08s}body.unfold .list{animation-delay:.2s}body.
 #boot.done .bootart .art{opacity:1;animation:none;filter:none}
 #boot.done .bootart .sk2{opacity:1;animation:none}
 #boot.ld .bootbox::before{animation:bootOut 1s ease 2.1s forwards!important}
+
+/* 그림 수정 메뉴 */
+.imgsz{flex-wrap:nowrap;white-space:nowrap;gap:6px!important;padding:6px 10px!important}
+.imgsz .gt{font-weight:700;color:#3c3f45;margin-right:-2px}
+.imgsz .vs{width:1px;height:18px;background:rgba(0,0,0,.12);margin:0 3px}
+.imgsz button.on{background:#e9f0fc!important;border-color:var(--blue)!important;color:var(--blue)}
+.imgsz button svg{vertical-align:-2px}
+.imgsz .bdc input{width:24px;height:22px;padding:0;border:1px solid #c9d5ea;border-radius:5px;background:none;cursor:pointer}
+.imgcrop{position:fixed;z-index:61;overflow:visible}
+.imgcrop .sh{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.imgcrop .cs{position:absolute;box-shadow:0 0 0 9999px rgba(10,14,22,.5)}
+.imgcrop .cb{position:absolute;outline:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);cursor:move;touch-action:none}
+.imgcrop .cb i{position:absolute;width:12px;height:12px;background:#fff;border:1.5px solid var(--blue);border-radius:3px;margin:-6px}
+.imgcrop .cb i[data-h=nw]{left:0;top:0;cursor:nwse-resize}.imgcrop .cb i[data-h=n]{left:50%;top:0;cursor:ns-resize}.imgcrop .cb i[data-h=ne]{left:100%;top:0;cursor:nesw-resize}
+.imgcrop .cb i[data-h=e]{left:100%;top:50%;cursor:ew-resize}.imgcrop .cb i[data-h=se]{left:100%;top:100%;cursor:nwse-resize}.imgcrop .cb i[data-h=s]{left:50%;top:100%;cursor:ns-resize}
+.imgcrop .cb i[data-h=sw]{left:0;top:100%;cursor:nesw-resize}.imgcrop .cb i[data-h=w]{left:0;top:50%;cursor:ew-resize}
+.imgcrop .cb b{position:absolute;left:6px;top:6px;font-size:11px;font-weight:600;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:1px 5px;pointer-events:none}
+.cropbar{z-index:62}
 </style>
 </head>
 <body>
@@ -1337,6 +1355,6 @@ body.unfold nav{animation-delay:.08s}body.unfold .list{animation-delay:.2s}body.
   </div>
 </div>
 <div class="toast" id="toast"><span id="toastT"></span><button id="toastUndo" hidden>되돌리기</button></div>
-<script src="mail-c.js?v=1793247667"></script>
+<script src="mail-c.js?v=1793248313"></script>
 </body>
 </html>

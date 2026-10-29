@@ -28,7 +28,7 @@ const IP = {
   pop: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',
   close: 'M6 6l12 12M18 6L6 18',
   gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
-  plus: 'M12 5v14M5 12h14', dl: 'M12 4v11M7 10l5 5 5-5M5 20h14',
+  plus: 'M12 5v14M5 12h14', crop: 'M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14', dl: 'M12 4v11M7 10l5 5 5-5M5 20h14',
   alL: 'M4 6h16M4 10h10M4 14h16M4 18h10', alC: 'M4 6h16M7 10h10M4 14h16M7 18h10', alR: 'M4 6h16M10 10h10M4 14h16M10 18h10',
   ul: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01', ol: 'M10 6h10M10 12h10M10 18h10M4 5h1v3M4 18h2l-2-2.5a1 1 0 0 1 2-1',
   ind: 'M4 6h16M10 10h10M10 14h10M4 18h16M4 10l3 2-3 2', outd: 'M4 6h16M10 10h10M10 14h10M4 18h16M7 10l-3 2 3 2',
@@ -1219,11 +1219,15 @@ function painterStart(sticky) {
 }
 function painterStop() { painter.on = false; painter.sticky = false; const b = $('#fPaint'); if (b) b.classList.remove('on'); document.body.classList.remove('painting'); }
 // 그림 크기: 그림을 누르면 아래에 가로·세로(px) 칸 — 비율 고정 켜면 한쪽만 바꿔도 다른 쪽이 따라감
+// 그림 수정 메뉴: 그림을 누르면 아래에 — 크기(px·비율 고정) · 테두리 · 자르기 · 원래대로
+const IMG_BD = { w: 0, c: store.get('img-bd-c', '#bfbfbf') };
 function imgSizeBox() {
-  let bx = $('#imgsz'); if (!selImg) { if (bx) bx.remove(); return; }
+  let bx = $('#imgsz'); if (!selImg || $('#imgcrop')) { if (bx) bx.remove(); return; }
   if (!bx) {
     bx = document.createElement('div'); bx.id = 'imgsz'; bx.className = 'imgsz';
-    bx.innerHTML = '<label>가로<input type="number" id="imgW" min="10" max="3000"></label><label>세로<input type="number" id="imgH" min="10" max="3000"></label><label class="lk"><input type="checkbox" id="imgLock" checked>비율 고정</label><button id="imgOrig" title="원래 크기로">원본</button>';
+    bx.innerHTML = `<span class="gt">크기</span><label>가로<input type="number" id="imgW" min="10" max="3000"></label><label>세로<input type="number" id="imgH" min="10" max="3000"></label><label class="lk"><input type="checkbox" id="imgLock" checked>비율 고정</label>
+      <span class="vs"></span><span class="gt">테두리</span><button data-bd="0" title="테두리 없음">없음</button><button data-bd="1" title="얇은 테두리">얇게</button><button data-bd="2" title="굵은 테두리">굵게</button><label class="bdc" title="테두리 색"><input type="color" id="imgBdC" value="${IMG_BD.c}"></label>
+      <span class="vs"></span><button id="imgCrop" title="그림 자르기">${ico('crop', 14)} 자르기</button><button id="imgOrig" title="자르기·크기·테두리를 처음 넣었을 때로">원래대로</button>`;
     document.body.append(bx);
     const W = $('#imgW', bx), H = $('#imgH', bx), L = $('#imgLock', bx);
     const apply = which => { if (!selImg) return; const r = selImg.getBoundingClientRect(), ratio = r.height / r.width || 1; let w = +W.value, h = +H.value;
@@ -1231,12 +1235,64 @@ function imgSizeBox() {
       selImg.style.maxWidth = 'none'; selImg.style.width = w + 'px'; selImg.style.height = L.checked ? 'auto' : h + 'px'; if (!L.checked) selImg.setAttribute('height', h); W.value = w; H.value = h; posImgSel(); dirty(); };
     W.addEventListener('change', () => apply('w')); H.addEventListener('change', () => apply('h'));
     [W, H].forEach(x => x.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); apply(x === W ? 'w' : 'h'); } }));
-    $('#imgOrig', bx).addEventListener('click', () => { if (!selImg) return; selImg.style.width = ''; selImg.style.height = ''; selImg.removeAttribute('width'); selImg.removeAttribute('height'); selImg.style.maxWidth = '100%'; posImgSel(); dirty(); });
-    bx.addEventListener('mousedown', e => e.stopPropagation());
+    const setBd = w => { if (!selImg) return; IMG_BD.w = w; selImg.style.border = w ? `${w}px solid ${IMG_BD.c}` : ''; posImgSel(); dirty(); };
+    bx.addEventListener('click', e => { const b = e.target.closest('[data-bd]'); if (b) setBd(+b.dataset.bd); });
+    $('#imgBdC', bx).addEventListener('input', e => { IMG_BD.c = e.target.value; store.set('img-bd-c', IMG_BD.c); if (selImg) { const w = parseFloat(selImg.style.borderWidth) || 1; setBd(w); } });
+    $('#imgCrop', bx).addEventListener('click', () => cropStart());
+    $('#imgOrig', bx).addEventListener('click', () => { if (!selImg) return; const o = selImg.getAttribute('data-orig'); if (o) { selImg.src = o; selImg.removeAttribute('data-orig'); }
+      selImg.style.width = ''; selImg.style.height = ''; selImg.style.border = ''; selImg.removeAttribute('width'); selImg.removeAttribute('height'); selImg.style.maxWidth = '100%'; setTimeout(posImgSel, 60); dirty(); });
+    bx.addEventListener('mousedown', e => { if (e.target.tagName !== 'INPUT') e.preventDefault(); e.stopPropagation(); });
   }
   const r = selImg.getBoundingClientRect();
   if (document.activeElement !== $('#imgW') && document.activeElement !== $('#imgH')) { $('#imgW').value = Math.round(r.width); $('#imgH').value = Math.round(r.height); }
-  bx.style.left = Math.max(8, r.left) + 'px'; bx.style.top = Math.min(innerHeight - 44, r.bottom + 8) + 'px';
+  const bw = parseFloat(selImg.style.borderWidth) || 0; $$('[data-bd]', bx).forEach(b => b.classList.toggle('on', +b.dataset.bd === (bw >= 2 ? 2 : bw > 0 ? 1 : 0)));
+  bx.style.left = Math.max(8, Math.min(innerWidth - bx.offsetWidth - 8, r.left)) + 'px'; bx.style.top = Math.min(innerHeight - 50, r.bottom + 8) + 'px';
+}
+// 자르기: 그림 위에 자를 상자 → 모서리·변을 끌어 범위를 정하고 '자르기 적용' (그림 자체를 잘라서 넣으니 받는 쪽에서도 잘린 그대로 보임)
+function cropStart() {
+  const img = selImg; if (!img) return;
+  if (!img.complete || !img.naturalWidth) { toast('그림을 아직 불러오는 중이에요'); return; }
+  const r = img.getBoundingClientRect(), bw = parseFloat(getComputedStyle(img).borderLeftWidth) || 0;
+  const R = { x: r.left + bw, y: r.top + bw, w: r.width - bw * 2, h: r.height - bw * 2 };
+  const ov = document.createElement('div'); ov.id = 'imgcrop'; ov.className = 'imgcrop';
+  Object.assign(ov.style, { left: R.x + 'px', top: R.y + 'px', width: R.w + 'px', height: R.h + 'px' });
+  ov.innerHTML = '<div class="sh"><div class="cs"></div></div><div class="cb">' + ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map(h => `<i data-h="${h}"></i>`).join('') + '<b></b></div>';
+  const bar = document.createElement('div'); bar.className = 'imgsz cropbar'; bar.innerHTML = '<span class="gt">자르기</span><span>모서리·변을 끌어 범위를 정하세요</span><span class="vs"></span><button class="ok on">자르기 적용</button><button class="no">취소</button>';
+  Object.assign(bar.style, { left: Math.max(8, R.x) + 'px', top: Math.min(innerHeight - 50, R.y + R.h + 10) + 'px' });
+  document.body.append(ov, bar); imgSizeBox();
+  const cb = $('.cb', ov), cs2 = $('.cs', ov); let c = { x: 0, y: 0, w: R.w, h: R.h };
+  const draw = () => { [cb, cs2].forEach(el => Object.assign(el.style, { left: c.x + 'px', top: c.y + 'px', width: c.w + 'px', height: c.h + 'px' })); $('b', cb).textContent = `${Math.round(c.w * img.naturalWidth / R.w)} × ${Math.round(c.h * img.naturalHeight / R.h)}`; };
+  draw();
+  let drag = null;
+  cb.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); drag = { h: (e.target.dataset && e.target.dataset.h) || 'move', x: e.clientX, y: e.clientY, c: { ...c } }; cb.setPointerCapture(e.pointerId); });
+  cb.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y, o = drag.c, h = drag.h, M = 12; let { x, y, w, h: hh } = o;
+    if (h === 'move') { x = Math.max(0, Math.min(R.w - w, o.x + dx)); y = Math.max(0, Math.min(R.h - hh, o.y + dy)); }
+    else {
+      if (h.includes('w')) { x = Math.max(0, Math.min(o.x + o.w - M, o.x + dx)); w = o.x + o.w - x; }
+      if (h.includes('e')) { w = Math.max(M, Math.min(R.w - o.x, o.w + dx)); }
+      if (h.includes('n')) { y = Math.max(0, Math.min(o.y + o.h - M, o.y + dy)); hh = o.y + o.h - y; }
+      if (h.includes('s')) { hh = Math.max(M, Math.min(R.h - o.y, o.h + dy)); }
+    }
+    c = { x, y, w, h: hh }; draw(); });
+  cb.addEventListener('pointerup', () => { drag = null; });
+  const end = () => { ov.remove(); bar.remove(); document.removeEventListener('keydown', key, true); if (selImg) posImgSel(); };
+  const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); end(); } if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); ok(); } };
+  document.addEventListener('keydown', key, true);
+  const ok = () => {
+    const fx = img.naturalWidth / R.w, fy = img.naturalHeight / R.h, sw = Math.max(1, Math.round(c.w * fx)), sh = Math.max(1, Math.round(c.h * fy));
+    if (sw >= img.naturalWidth - 1 && sh >= img.naturalHeight - 1) { end(); return; }
+    try {
+      const cv = document.createElement('canvas'); cv.width = sw; cv.height = sh;
+      cv.getContext('2d').drawImage(img, Math.round(c.x * fx), Math.round(c.y * fy), sw, sh, 0, 0, sw, sh);
+      const jpg = /^data:image\/jpe?g/i.test(img.src), url = cv.toDataURL(jpg ? 'image/jpeg' : 'image/png', .92);
+      if (!img.getAttribute('data-orig')) img.setAttribute('data-orig', img.src);
+      const dispW = Math.round(c.w); img.src = url; img.style.maxWidth = '100%'; img.style.width = dispW + 'px'; img.style.height = 'auto'; img.removeAttribute('width'); img.removeAttribute('height');
+      dirty(); toast('그림을 잘랐어요 — 되돌리려면 Ctrl+Z 또는 \'원래대로\'');
+    } catch (er) { toast('이 그림은 자를 수 없어요 (다른 사이트에서 불러온 그림이에요)'); }
+    end(); setTimeout(posImgSel, 60);
+  };
+  $('.ok', bar).addEventListener('click', ok); $('.no', bar).addEventListener('click', end);
+  [ov, bar].forEach(x => x.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); }));
 }
 // 받는사람 칩 이름: 'C3-KR-B-3'처럼 코드 같은 이름이거나 같은 이름이 둘 이상이면 메일 주소 앞부분을 같이 보여 줌
 function chipLabel(p, all) {
@@ -4263,7 +4319,7 @@ function wire() {
     else if (e.code === 'KeyV' && fmtClip) { e.preventDefault(); e.stopPropagation(); pasteFormat(); }
   }, true);
   body.addEventListener('mousedown', e => { if (e.target.tagName === 'IMG') { e.preventDefault(); selectImg(e.target); } });
-  document.addEventListener('mousedown', e => { if (selImg && e.target !== selImg && !e.target.closest('#imgsel')) { selImg = null; posImgSel(); } }, true);
+  document.addEventListener('mousedown', e => { if (selImg && e.target !== selImg && !e.target.closest('#imgsel, #imgsz, #imgcrop, .cropbar')) { selImg = null; posImgSel(); } }, true);
   document.addEventListener('scroll', posImgSel, true);
   window.addEventListener('resize', posImgSel);
   body.addEventListener('input', () => { dirty(); runTypo(); });
