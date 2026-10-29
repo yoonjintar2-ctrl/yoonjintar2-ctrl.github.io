@@ -4716,6 +4716,19 @@ if (hash === '#compose') {
     m.addEventListener('click', e => { const k = e.target.closest('[data-k]'); if (!k) return; if (k.dataset.k === 'noauto') { store.set('prefer-ext', false); k.remove(); return; } m.remove(); });
   }
 })();
+// 답장·새 메일을 이 창(오른쪽 칸)에서 쓰는 중: 검색 중일 때처럼 칸 둘레로 푸른 빛이 은은하게 퍼짐 (팝업 작성 창은 제외)
+(function composeGlow() {
+  const rd = $('#read'), bd = rd && rd.parentElement; if (!rd || !bd) return;
+  const g = document.createElement('div'); g.id = 'rglow'; bd.prepend(g);
+  const sync = () => {
+    const on = rd.classList.contains('composing') && !document.body.classList.contains('popmode') && rd.offsetWidth > 0;
+    g.classList.toggle('on', on); if (!on) return;
+    Object.assign(g.style, { left: rd.offsetLeft + 'px', top: rd.offsetTop + 'px', width: rd.offsetWidth + 'px', height: rd.offsetHeight + 'px' });
+  };
+  new MutationObserver(sync).observe(rd, { attributes: true, attributeFilter: ['class'] });
+  try { new ResizeObserver(sync).observe(rd); new ResizeObserver(sync).observe(bd); } catch (e) { addEventListener('resize', sync); }
+  sync();
+})();
 // 새 버전이 올라오면 알아서 적용 (홈페이지 캐시 때문에 옛 화면이 10분쯤 남는 것 방지). 메일을 쓰는 중이면 묻기
 (function verCheck() {
   if (IS_EXT || location.protocol !== 'https:') return;
