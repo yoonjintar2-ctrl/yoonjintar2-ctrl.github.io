@@ -269,6 +269,8 @@ function boxMenu(anchor, id, at) {
   const b = boxById(id); if (!b) return;
   const row = $(`.ni[data-box="${id}"]`); if (row) row.classList.add('menu-open');
   const m = menuAt(anchor, [
+    { html: ico('plus', 16) + ' 하위 편지함 만들기', act: () => { const nb = { id: 'b' + Date.now(), name: '새 편지함', parent: id }; BOXES.push(nb); if (st.collapsed.delete(id)) store.set('collapsed', [...st.collapsed]); if (b.hidden) nb.hidden = true; saveAll(); renderNav(); renameBox(nb.id); } },
+    '-',
     { html: ico('read2', 16) + ' 모두 읽음으로 표시', act: () => { const ids = descIds(id); const hit = MAILS.filter(x => ids.includes(x.box) && x.unread && !x.deleted); hit.forEach(x => { x.unread = 0; jSet(x, { u: 0 }); }); renderNav(); renderList(); toast(`'${b.name}' 메일 ${hit.length}통을 읽음으로 표시했어요`); } },
     { html: ico('rename', 16) + ' 이름 바꾸기', act: () => renameBox(id) },
     { html: ico('where', 16) + ' 자동 분류 규칙', act: () => openRules(id) },
