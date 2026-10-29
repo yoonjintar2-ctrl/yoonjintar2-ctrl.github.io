@@ -1531,7 +1531,7 @@ function loadDraft(d) {
   cs.initial = null; setTimeout(() => { cs.initial = composeSig(); });
   // 새 메일·전달은 받는사람부터. 커서 자리 표시는 남겨 두고, 나중에 Tab으로 본문에 오면 그 자리로
   if (d.kind === 'new' || d.kind === 'fwd' || !d.to.length) $('#toBox input').focus(); else caretAt(mk);
-  runTypo(); uhReset();
+  runTypo(); uhReset(); GT.node = null; GT.auto = null; setTimeout(() => greetFix(), 60);
 }
 // 작성 칸 기본 글꼴 (설정 > 일반)
 function applyBaseFont() {
@@ -1542,8 +1542,26 @@ function applyBaseFont() {
 // 풋터 안에서 글을 쓸 자리: 글자가 나온 뒤 첫 빈 줄(빈 문단 또는 <br><br>). 없으면 풋터 위에 한 줄 만듦
 // 숨은참조 칸: 필요할 때만 (넣은 사람이 있으면 계속 보임)
 function showBcc(on) { $('#bccFld').hidden = !on; $('#bccTog').hidden = on; }
+// '…윤석진입니다.' 같은 자기소개 줄이 있으면 그 다음다음 줄에서 시작 (소개 줄 · 빈 줄 · [여기서 시작])
+function introCaret(f, mk) {
+  const tw = document.createTreeWalker(f, NodeFilter.SHOW_TEXT); let intro = null;
+  for (let n = tw.nextNode(), seen = 0; n && seen < 400; seen += n.nodeValue.length, n = tw.nextNode()) if (/입니다\.?\s*$/.test(n.nodeValue.trim()) && (n.nodeValue.includes((ME.name || '').trim() || '\u0000') || /^(SM|에스엠)|C&C/i.test(n.nodeValue.trim()))) { intro = n; break; }
+  if (!intro) return false;
+  // 소개 줄 끝의 <br> (글자가 span·font 안에 있으면 바깥으로 올라가며 찾음)
+  let x = intro; while (x && !x.nextSibling && x.parentNode !== f) x = x.parentNode;
+  let br = x && x.nextSibling; while (br && br.nodeType === 3 && !br.nodeValue.trim()) br = br.nextSibling;
+  if (!br || br.nodeName !== 'BR') return false;
+  const brs = [br]; let y = br.nextSibling;
+  while (y) { if (y.nodeType === 3 && !y.nodeValue.trim()) { y = y.nextSibling; continue; } if (y.nodeName === 'BR') { brs.push(y); y = y.nextSibling; continue; } break; }
+  const blank = brs.length - 1;  // 소개 줄 아래 빈 줄 수
+  const mkBr = () => document.createElement('br');
+  if (blank >= 2) { brs[2].before(mk); return true; }
+  if (blank === 1) { brs[1].after(mk, mkBr(), mkBr()); return true; }
+  br.after(mkBr(), mk, mkBr(), mkBr()); return true;
+}
 function caretInFooter(f) {
   const mk = document.createElement('span'); mk.id = 'gpCaret';
+  if (introCaret(f, mk)) return mk;
   const isEmptyBlock = n => n.nodeType === 1 && /^(DIV|P)$/.test(n.tagName) && !n.textContent.replace(/[\s\u00a0]/g, '') && !n.querySelector('img,table,hr');
   let seen = false, spot = null;
   const tw = document.createTreeWalker(f, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
@@ -1557,6 +1575,46 @@ function caretInFooter(f) {
   if (spot) spot(); else { const d = document.createElement('div'); d.append(mk, document.createElement('br')); f.before(d); }
   return mk;
 }
+// 호칭 추천: 내가 보낸 메일의 '안녕하세요 ○○님'을 받는사람(첫 번째)마다 모아 두고, 새로 쓸 때 가장 많이 쓴 호칭을 넣어 줌
+let TBOOK = null;
+const GREET_RE = /안녕하세요[,\s]*([가-힣A-Za-z][가-힣A-Za-z ]{0,13}?)\s?님/;
+function titleBook() {
+  if (TBOOK && TBOOK.n === MAILS.length && TBOOK.ref === MAILS) return TBOOK.map;
+  const map = new Map();
+  MAILS.forEach(m => { if (!m.sent || !isMe(m.from) || m.deleted) return; const t = ((m.body || '') + ' ' + (m.snippet || '')).slice(0, 400).match(GREET_RE); const to = (m.to || [])[0];
+    if (!t || !to || !to.email) return; const k = to.email.toLowerCase(), title = t[1].trim(); if (!map.has(k)) map.set(k, new Map()); const c = map.get(k); c.set(title, (c.get(title) || 0) + 1); });
+  TBOOK = { n: MAILS.length, ref: MAILS, map }; return map;
+}
+const GT = { node: null, auto: null };
+function greetNode() {
+  const b = $('#cbody'); if (!b) return null; const stop = $('.quote', b);
+  const tw = document.createTreeWalker(b, NodeFilter.SHOW_TEXT);
+  for (let n = tw.nextNode(); n; n = tw.nextNode()) { if (stop && stop.contains(n)) break; const m = n.nodeValue.match(GREET_RE); if (m) return { n, m }; }
+  return null;
+}
+function greetFix(force) {
+  const pop = $('#gtPop'); const g = greetNode(); const to = chipsOf($('#toBox'))[0];
+  if (!g || !to || !$('#read').classList.contains('composing')) { if (pop) pop.remove(); return; }
+  const cur = g.m[1].trim();
+  if (GT.auto && GT.node === g.n && cur !== GT.auto && !force) { if (pop) pop.remove(); return; }  // 직접 고쳤으면 그대로
+  const book = titleBook().get(to.email.toLowerCase()); if (!book) { if (pop) pop.remove(); return; }
+  const top = [...book.entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]);
+  const want = top[0];
+  if (cur !== want && (!GT.auto || GT.node !== g.n || cur === GT.auto)) { const i = g.m.index + g.m[0].indexOf(g.m[1]); g.n.nodeValue = g.n.nodeValue.slice(0, i) + want + g.n.nodeValue.slice(i + g.m[1].length); dirty(); }
+  GT.node = g.n; GT.auto = want;
+  greetPop(g.n, top.slice(0, 4), want, to);
+}
+function greetPop(node, tops, cur, to) {
+  let pop = $('#gtPop'); if (!pop) { pop = document.createElement('div'); pop.id = 'gtPop'; pop.className = 'gtpop'; document.body.append(pop);
+    pop.addEventListener('mousedown', e => { e.preventDefault(); const t = e.target.closest('[data-t]'); if (t) { const g = greetNode(); if (g) { const i = g.m.index + g.m[0].indexOf(g.m[1]); g.n.nodeValue = g.n.nodeValue.slice(0, i) + t.dataset.t + g.n.nodeValue.slice(i + g.m[1].length); GT.node = g.n; GT.auto = t.dataset.t; dirty(); greetFix(); } } if (e.target.closest('.x')) pop.remove(); }); }
+  pop.innerHTML = `<span class="k">${esc(to.name || to.email)}님께 쓰던 호칭</span>${tops.map(t => `<button data-t="${esc(t)}" class="${t === cur ? 'on' : ''}">${esc(t)}님</button>`).join('')}<button class="x" title="닫기">✕</button>`;
+  const r = document.createRange(); r.selectNodeContents(node); const rc = r.getBoundingClientRect();
+  if (!rc.width) { pop.remove(); return; }
+  pop.style.left = Math.max(8, rc.left) + 'px'; pop.style.top = Math.max(8, rc.top - 34) + 'px';
+}
+document.addEventListener('keydown', e => { const p = $('#gtPop'); if (p && e.target.id === 'cbody') p.remove(); }, true);
+document.addEventListener('mousedown', e => { const p = $('#gtPop'); if (p && !p.contains(e.target)) p.remove(); }, true);
+document.addEventListener('scroll', () => { const p = $('#gtPop'); if (p) p.remove(); }, true);
 // 본문에 처음 들어올 때: Tab 등 키보드로 오면 커서 자리로, 마우스로 누른 곳이 있으면 거기 그대로
 let cbodyMouse = 0; const lastEdit = { r: null };
 document.addEventListener('input', e => { if (e.target.id === 'cbody') { const s = getSelection(); if (s.rangeCount) lastEdit.r = s.getRangeAt(0).cloneRange(); } }, true);
@@ -1678,6 +1736,7 @@ function applyFooter(id) {
   if (moved.length && moved[moved.length - 1].isConnected) { const last = moved[moved.length - 1]; const r = document.createRange(); if (last.nodeType === 3) r.setStartAfter(last); else r.selectNodeContents(last); r.collapse(last.nodeType === 3); if (last.lastChild && last.lastChild.nodeName === 'BR') { r.setStartBefore(last.lastChild); r.collapse(true); } const s = getSelection(); s.removeAllRanges(); s.addRange(r); $$('#gpCaret', b).forEach(x => x.remove()); }
   else if (mk.isConnected) caretAt(mk);
   cs.footer = id; renderFooterBar(); dirty();
+  setTimeout(() => { GT.node = null; GT.auto = null; greetFix(); }, 30);
 }
 /* 첨부: 첨부 칸을 눌러 고르거나, 작성 화면 어디에든 끌어다 놓기 */
 const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
@@ -4435,6 +4494,7 @@ function uhKey(e) {
   uhFlush();
 }
 /* ───────── 시작 ───────── */
+setTimeout(() => { const tb = $('#toBox'); if (tb) new MutationObserver(() => { clearTimeout(greetFix.t); greetFix.t = setTimeout(() => greetFix(), 120); }).observe(tb, { childList: true }); });
 // 보고 있는 메일: 목록 칸 밖까지 살짝 튀어나온 판 (목록은 스크롤 칸이라 위에 따로 띄움 — 클릭은 아래 실제 줄로 그대로 감)
 const SELF = { el: null, src: null, sig: '' };
 function selFloat() {
