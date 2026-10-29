@@ -3117,7 +3117,15 @@ function startTSize(e) {
 document.addEventListener('scroll', () => { placeTSize(); if ($('#tbar')) tableBar(); }, true);
 
 /* ───────── 설정 (일반 · 풋터 · 편지함 · 계정) ───────── */
-function saveAll() { if (!real.on) store.set('sample-boxes', BOXES); else if (J.data) { J.data.boxes = BOXES.map(b => ({ id: b.id, name: b.name, parent: b.parent, hidden: !!b.hidden })); jSave(); } store.set('footers2', FOOTERS); store.set('settings', SET); }
+function saveAll() { const at = Date.now(); store.set('footers2', FOOTERS); store.set('settings', SET); store.set('prefs-at', at);
+  if (!real.on) store.set('sample-boxes', BOXES); else if (J.data) { J.data.boxes = BOXES.map(b => ({ id: b.id, name: b.name, parent: b.parent, hidden: !!b.hidden })); J.data.prefs = { footers: FOOTERS, set: SET, at }; jSave(); } }
+// 풋터·설정: 드라이브 기록이 더 최신이면 가져오고(다른 PC·확장 프로그램판과 같게), 이 PC가 더 최신이면 올림
+function prefsSync() {
+  if (!J.data) return false; const r = J.data.prefs, la = store.get('prefs-at', 0);
+  if (r && r.at > la && Array.isArray(r.footers) && r.footers.length) { FOOTERS = r.footers; SET = Object.assign(SET, r.set || {}); store.set('footers2', FOOTERS); store.set('settings', SET); store.set('prefs-at', r.at); return true; }
+  if (!r || la > r.at) { J.data.prefs = { footers: FOOTERS, set: SET, at: la || Date.now() }; jSave(); }
+  return false;
+}
 // 저장 폴더: 브라우저가 고른 폴더 권한을 기억 (IndexedDB)
 const idb = (op, val) => new Promise(res => { try { const rq = indexedDB.open('jin-mail', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('kv'); rq.onsuccess = () => { const tx = rq.result.transaction('kv', op === 'get' ? 'readonly' : 'readwrite'); const s = tx.objectStore('kv'); const r = op === 'get' ? s.get('dir') : s.put(val, 'dir'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }; rq.onerror = () => res(null); } catch (e) { res(null); } });
 // 로그아웃: 이 브라우저의 로그인 정보를 지움 (구글 계정의 지니메일 허락은 그대로 → 다음엔 한 번 누르면 바로 로그인)
@@ -3716,6 +3724,7 @@ async function loadReal(interactive, token) {
       J.data = { v: 1, initAt: Date.now(), boxes: user.map(l => { const k = l.name.lastIndexOf('/'); return { id: l.id, name: k < 0 ? l.name : l.name.slice(k + 1), parent: k < 0 ? null : (byName.get(l.name.slice(0, k)) || null), hidden: hid.has(l.id) }; }), m: {}, rules: [] };
     }
     BOXES = J.data.boxes.map(b => Object.assign({}, b));
+    prefsSync();
     real.labReady = false;
     const db = await dbP; const cArr = await cacheP; const cached = new Map(cArr.map(x => [x.gid, x]));
     real.texts = real.texts || new Map();
@@ -3758,7 +3767,7 @@ async function loadReal(interactive, token) {
     };
     // 0단계: 이 PC에 있던 것으로 먼저 화면에 (몇 초 걸리던 Gmail 목록 확인을 기다리지 않음)
     if (first && hasJ && metas.size) show();
-    if (J.remoteP) J.remoteP.then(changed => { if (changed && gen === real.gen) { BOXES = J.data.boxes.map(b => Object.assign({}, b)); show(); toast('다른 PC에서 바뀐 편지함 정보를 불러왔어요'); } });
+    if (J.remoteP) J.remoteP.then(changed => { if (changed && gen === real.gen && prefsSync() && $('#read').classList.contains('composing')) renderFooterBar(); if (changed && gen === real.gen) { BOXES = J.data.boxes.map(b => Object.assign({}, b)); show(); toast('다른 PC에서 바뀐 편지함 정보를 불러왔어요'); } });
     // 1단계: 최근 1주 (금방) → 바로 화면에
     prog('최근 메일 불러오는 중…');
     const stage = async (q, label) => {
