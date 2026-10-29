@@ -731,7 +731,7 @@ function scopePop(on) {
   if (!on || !pre || ['all', 'srch', 'conv', 'inbox'].includes(pre)) { if (pp) pp.remove(); return; }
   if (!pp) { pp = document.createElement('div'); pp.id = 'scopePop'; pp.className = 'scopepop'; document.body.append(pp);
     pp.addEventListener('click', e => { const b = e.target.closest('[data-sp]'); if (!b) return; if (b.dataset.sp === 'pre' && st.preFolder) st.folder = st.preFolder; else st.folder = 'srch'; pp.remove(); renderNav(); renderTop(); renderList(); }); }
-  pp.innerHTML = `<span class="ic">${ico('folder', 15)}</span><span class="tx">지금 보던 <b>‘${esc(folderName(pre))}’</b>에서만 찾을까요?</span><button data-sp="pre" class="yes">여기서만</button><button data-sp="all">모든 편지함</button>`;
+  pp.innerHTML = `<span class="ic">${ico('folder', 15)}</span><span class="tx">지금 보던 <b>‘${esc(folderName(pre))}’</b>에서만 찾을까요?</span><button data-sp="pre" class="yes">여기서만 <small class="kb">Enter</small></button><button data-sp="all">모든 편지함</button>`;
   const r = $('.sbox').getBoundingClientRect(); pp.style.left = r.left + 'px'; pp.style.top = (r.bottom + 10) + 'px';
   scopePop.t = setTimeout(() => { const x = $('#scopePop'); if (x) { x.classList.add('out'); setTimeout(() => x.remove(), 250); } }, 8000);
 }
@@ -4205,6 +4205,8 @@ function wire() {
   q.addEventListener('compositionend', () => { clearTimeout(qT); qT = setTimeout(preview, 40); });
   q.addEventListener('focus', () => { renderSugg(); warmSearch(); });
   q.addEventListener('blur', () => setTimeout(() => $('#sugg').classList.remove('on'), 150));
+  // 검색 범위 팝업이 떠 있으면 Enter = '여기서만'
+  q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { const sp = $('#scopePop [data-sp=pre]'); if (sp) sp.click(); } }, true);
   q.addEventListener('keydown', e => { if (e.key === 'Enter') { setTimeout(() => { applyQ(); suggClose(); const first = visible()[0]; if (first) openMail(first.id); }, 0); } if (e.key === 'Escape') { qClearNow(); } });
   $('#goSearch').addEventListener('click', () => { suggClose(); applyQ(); });
   const qClearNow = () => { clearTimeout(qT); q.value = ''; suggClose(); qPend(false); setQuery(''); };
