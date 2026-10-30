@@ -1,5 +1,5 @@
 // src/symbols.js
-var SEARCH_NAMES = { SOXL: "Direxion semiconductor bull \uBC18\uB3C4\uCCB4 \uB808\uBC84\uB9AC\uC9C0", SOXS: "Direxion semiconductor bear \uC778\uBC84\uC2A4", NVDA: "Nvidia", AMD: "Advanced Micro Devices", AVGO: "Broadcom", TSM: "Taiwan Semiconductor TSMC", MU: "Micron", ARM: "Arm Holdings", ASML: "ASML", MSFT: "Microsoft", GOOGL: "Google Alphabet \uAD6C\uAE00", AMZN: "Amazon", META: "Meta Facebook \uD398\uC774\uC2A4\uBD81", PLTR: "Palantir", AAPL: "Apple", TSLA: "Tesla", SPY: "SPDR S&P500 \uC5D0\uC2A4\uC564\uD53C", QQQ: "Invesco Nasdaq \uB098\uC2A4\uB2E5", IWM: "Russell \uB7EC\uC140", JPM: "JPMorgan Chase \uC81C\uC774\uD53C\uBAA8\uAC74", KO: "Coca Cola", XOM: "Exxon Mobil", GLD: "Gold \uAE08" };
+var SEARCH_NAMES = { SOXL: "Direxion semiconductor bull \uBC18\uB3C4\uCCB4 \uB808\uBC84\uB9AC\uC9C0", SOXS: "Direxion semiconductor bear \uC778\uBC84\uC2A4", NVDA: "Nvidia", AMD: "Advanced Micro Devices", AVGO: "Broadcom", TSM: "Taiwan Semiconductor TSMC", MU: "Micron", ARM: "Arm Holdings", ASML: "ASML", MSFT: "Microsoft", GOOGL: "Google Alphabet \uAD6C\uAE00", AMZN: "Amazon", META: "Meta Facebook \uD398\uC774\uC2A4\uBD81", PLTR: "Palantir", AAPL: "Apple", TSLA: "Tesla", SPY: "SPDR S&P500 \uC5D0\uC2A4\uC564\uD53C", QQQ: "Invesco Nasdaq \uB098\uC2A4\uB2E5", TQQQ: "ProShares UltraPro QQQ \uB098\uC2A4\uB2E5 \uB808\uBC84\uB9AC\uC9C0 \uD2F0\uD050\uD050\uD050", SNDK: "SanDisk \uC0CC\uB514\uC2A4\uD06C \uBA54\uBAA8\uB9AC", IONQ: "IonQ \uC544\uC774\uC628\uD050 \uC591\uC790", IWM: "Russell \uB7EC\uC140", JPM: "JPMorgan Chase \uC81C\uC774\uD53C\uBAA8\uAC74", KO: "Coca Cola", XOM: "Exxon Mobil", GLD: "Gold \uAE08" };
 var US_STOCKS = [
   ["SOXL", "\uBC18\uB3C4\uCCB4 3\xD7", true],
   ["SOXS", "\uBC18\uB3C4\uCCB4 \uC778\uBC84\uC2A4 3\xD7", true],
@@ -19,6 +19,9 @@ var US_STOCKS = [
   ["TSLA", "\uD14C\uC2AC\uB77C", true],
   ["SPY", "S&P 500", false],
   ["QQQ", "\uB098\uC2A4\uB2E5 100", false],
+  ["TQQQ", "\uB098\uC2A4\uB2E5 3\xD7", false],
+  ["SNDK", "\uC0CC\uB514\uC2A4\uD06C", true],
+  ["IONQ", "\uC544\uC774\uC628\uD050", true],
   ["IWM", "\uB7EC\uC140 2000", false],
   ["JPM", "JP\uBAA8\uAC74", false],
   ["KO", "\uCF54\uCE74\uCF5C\uB77C", false],
