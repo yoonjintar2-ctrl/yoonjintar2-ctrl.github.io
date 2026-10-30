@@ -198,7 +198,7 @@ export class Renderer{
  }
  render(){
   const c=this.ctx,g=this.game,s=this.width*this.dpr/W,t=g.time;c.setTransform(s,0,0,s,0,0);c.globalAlpha=1;c.drawImage(this.bg,0,0,W,this.viewHeight);
-  const north=this.point(216,42),south=this.point(216,g.height-80);text(c,'NORTH / 매도 진영',north.x,north.y,8,'#7b5c43');text(c,isAIStock(g.market?.symbol||g.settings.symbol||'SOXL')?'SOUTH / 반도체 보급':'SOUTH / 양봉 지원',south.x,south.y,8,'#3c6342');
+  const north=this.point(300,Math.max(150,g.height*.26)),south=this.point(216,g.height-80);text(c,'NORTH / 매도 진영',north.x,north.y,8,'#7b5c43');text(c,isAIStock(g.market?.symbol||g.settings.symbol||'SOXL')?'SOUTH / 반도체 보급':'SOUTH / 양봉 지원',south.x,south.y,8,'#3c6342');
   for(const z of g.zones){const p=this.point(z.x,z.y);c.save();c.globalAlpha=Math.min(.35,z.life*.2);c.fillStyle='#7da522';c.beginPath();c.ellipse(p.x,p.y,z.radius*.92,z.radius*DEPTH_SCALE,0,0,TAU);c.fill();c.restore();}
   if(g.selected){const u=g.selected,st=cannonStats(u.type,u.level),pos=g.cannonPosition(u);this.range(c,pos.x,pos.y,st.range,u.type==='drone'?'#8be2fa':'#f0f6b8');}
   this.effects(c,false);

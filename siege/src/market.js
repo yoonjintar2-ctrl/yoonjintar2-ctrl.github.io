@@ -1,5 +1,6 @@
 import{validSymbol,stockFor}from'./symbols.js';
 import{apiUrl}from'./api.js';
+import{estimateCandleFlow}from'./candle-flow.js';
 import { SYMBOL, SCENARIOS, clamp } from './config.js';
 /** Provider contract: subscribe(snapshot), update(realSeconds), destroy().
  * Snapshot: source/status/symbol/market/price/previousClose/changePct/time,
@@ -38,7 +39,11 @@ export class LiveMarketDataProvider extends MarketDataProvider{
   if(s.source!==(stockFor(this.symbol).market==='KR'?'NAVER_KR':'YAHOO_CHART')||s.symbol!==this.symbol||!Number.isFinite(s.price)||s.price<=0||!Number.isFinite(s.priceTime)||!Number.isFinite(s.receivedAt)||!Array.isArray(s.candles)||s.tradeClassification!=='estimated-candle-flow')throw Object.assign(Error('invalid_data'),{code:'invalid_data'});
   if(this.last.volumeTime&&s.volumeTime<this.last.volumeTime)return;const receivedAt=s.receivedAt+Math.max(0,this.now()-started),c=s.candle,validFlow=c&&Number.isSafeInteger(c.volume)&&c.volume>0&&Number.isSafeInteger(s.buyVolume)&&s.buyVolume>=0&&Number.isSafeInteger(s.sellVolume)&&s.sellVolume>=0&&s.buyVolume+s.sellVolume===c.volume;
   let barEvent=null;if(validFlow&&s.volumeStatus==='minute'&&s.playbackStart<=receivedAt&&receivedAt<s.playbackEnd&&!this.seen.has(c.time)){barEvent={time:c.time,volume:c.volume,buyVolume:s.buyVolume,sellVolume:s.sellVolume,baselineVolume:s.baselineVolume,playbackStart:s.playbackStart,playbackEnd:s.playbackEnd,receivedAt,estimated:true};this.seen.add(c.time);while(this.seen.size>100)this.seen.delete(this.seen.values().next().value);}
-  this.interval=s.market==='KR'?7:5;this.publish({...s,priceError:null,volumeError:null,barEvent,barEvents:barEvent?[barEvent]:[]});
+  // Extended-hours minutes often arrive with volume 0. Instead of an empty field, spawn a lighter
+  // army sized by that minute's price movement, clearly labelled as price-driven (not volume).
+  const silent=c&&['zero_volume','no_volume'].includes(s.volumeStatus)&&[c.open,c.high,c.low,c.close].every(Number.isFinite)&&c.close>0;let volumeNote=s.volumeNote;
+  if(silent){volumeNote='거래량 0 제공 · 가격 변동으로 군집 생성';if(!barEvent&&s.playbackStart<=receivedAt&&receivedAt<s.playbackEnd&&!this.seen.has(c.time)){const prev=(s.candles||[]).filter(x=>x.time<c.time&&Number.isFinite(x.close)).at(-1),move=Math.max(c.high-c.low,Math.abs(c.close-(prev?.close??c.open)))/c.close*100,base=1000,volume=Math.round(base*clamp(move/.12,.15,2.5)),flow=estimateCandleFlow({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close,volume},prev?{open:prev.open??prev.close,high:prev.high??prev.close,low:prev.low??prev.close,close:prev.close,volume:0}:null);if(flow){barEvent={time:c.time,volume,buyVolume:flow.buyVolume,sellVolume:flow.sellVolume,baselineVolume:base,playbackStart:s.playbackStart,playbackEnd:s.playbackEnd,receivedAt,estimated:true,priceDriven:true};this.seen.add(c.time);while(this.seen.size>100)this.seen.delete(this.seen.values().next().value);}}}
+  this.interval=s.market==='KR'?7:5;this.publish({...s,volumeNote,priceError:null,volumeError:null,barEvent,barEvents:barEvent?[barEvent]:[]});
  }catch(e){if(!this.destroyed){const code=e.code||'network_unavailable';this.interval=code==='provider_rate_limited'?60:15;this.publish({status:'unavailable',priceStatus:'unavailable',volumeStatus:'unavailable',priceError:code,volumeError:code});}}finally{clearTimeout(timer);this.controllers.delete(controller);this.busy=false;}}
  update(dt){this.clock+=dt;if(this.clock>=this.interval)this.refresh();}
  destroy(){this.destroyed=true;for(const c of this.controllers)c.abort();this.controllers.clear();super.destroy();}
