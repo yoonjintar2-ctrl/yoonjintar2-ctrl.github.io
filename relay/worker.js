@@ -542,7 +542,7 @@ async function handleMarketRequest(request, env = {}, options = {}) {
 }
 
 // worker/public-api.js
-var ALLOWED = ["https://yoonjintar2-ctrl.github.io", "http://localhost:8090", "http://localhost:8081"];
+var ALLOWED = ["https://jintar.co.kr", "https://yoonjintar2-ctrl.github.io", "http://localhost:8090", "http://localhost:8081"];
 var ROUTES = ["/api/market", "/api/market/stocks", "/api/market/selection"];
 function cors(origin) {
   return { "access-control-allow-origin": ALLOWED.includes(origin) ? origin : ALLOWED[0], "access-control-allow-methods": "GET, OPTIONS", "access-control-allow-headers": "content-type", "access-control-max-age": "86400", "vary": "Origin" };
