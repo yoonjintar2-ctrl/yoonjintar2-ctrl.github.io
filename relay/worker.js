@@ -94,14 +94,19 @@ function normalizeYahooChart(payload, { symbol = "SOXL", now = Date.now() } = {}
 }
 async function fetchYahooSnapshot({ symbol = "SOXL", fetcher = fetch, now } = {}) {
   if (!validSymbol(symbol)) throw new ChartError("invalid_symbol", 400);
-  const url = new URL("/v8/finance/chart/" + symbol, "https://query1.finance.yahoo.com");
-  url.search = new URLSearchParams({ interval: "1m", range: "1d", includePrePost: "true" });
   let r;
-  try {
-    r = await fetcher(url.href, { headers: { accept: "application/json", "user-agent": "StockSiege/1.0" }, redirect: "manual", signal: AbortSignal.timeout(12e3) });
-  } catch {
-    throw new ChartError("network_unavailable");
+  for (const host of ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"]) {
+    const url = new URL("/v8/finance/chart/" + symbol, host);
+    url.search = new URLSearchParams({ interval: "1m", range: "1d", includePrePost: "true" });
+    try {
+      r = await fetcher(url.href, { headers: { accept: "application/json", "user-agent": "StockSiege/1.0" }, redirect: "manual", signal: AbortSignal.timeout(12e3) });
+    } catch {
+      r = null;
+      continue;
+    }
+    if (r.status !== 429 && r.ok) break;
   }
+  if (!r) throw new ChartError("network_unavailable");
   if (r.status === 429) throw new ChartError("provider_rate_limited", 429);
   if (!r.ok || r.status >= 300 && r.status < 400) throw new ChartError("provider_unavailable");
   let payload;
@@ -553,10 +558,20 @@ var public_api_default = { async fetch(request, env) {
   if (url.pathname === "/") return new Response("STOCK SIEGE market relay", { headers: { ...h, "content-type": "text/plain; charset=utf-8" } });
   if (request.method !== "GET" || !ROUTES.includes(url.pathname)) return new Response(JSON.stringify({ error: "not_found" }), { status: 404, headers: { ...h, "content-type": "application/json" } });
   if (url.pathname === "/api/market" && (url.searchParams.get("provider") || "yahoo") !== "yahoo") return new Response(JSON.stringify({ error: "not_found" }), { status: 404, headers: { ...h, "content-type": "application/json" } });
+  const ttl = url.pathname === "/api/market/stocks" ? 25 : url.pathname === "/api/market/selection" ? 8 : 4, cache3 = globalThis.caches?.default, key = new Request(url.origin + url.pathname + url.search, { method: "GET" });
+  if (cache3) {
+    const hit = await cache3.match(key);
+    if (hit) {
+      const out2 = new Response(hit.body, hit);
+      for (const [k, v] of Object.entries(h)) out2.headers.set(k, v);
+      return out2;
+    }
+  }
   const res = await handleMarketRequest(request, env || {});
-  const out = new Response(res.body, res);
-  for (const [k, v] of Object.entries(h)) out.headers.set(k, v);
+  const body = await res.arrayBuffer(), out = new Response(body, { status: res.status, headers: res.headers });
   out.headers.delete("set-cookie");
+  if (cache3 && res.status === 200) await cache3.put(key, new Response(body, { status: 200, headers: { "content-type": res.headers.get("content-type") || "application/json", "cache-control": "public, max-age=" + ttl } }));
+  for (const [k, v] of Object.entries(h)) out.headers.set(k, v);
   return out;
 } };
 export {
