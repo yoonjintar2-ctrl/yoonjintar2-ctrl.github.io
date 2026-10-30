@@ -95,3 +95,9 @@ body{gap:60px}#app{height:100dvh;max-height:none;width:min(100%,500px);border-ra
 .course-hud small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:350px){.course-active .compact-hud .compact-quote{max-width:46vw}.course-hud{width:108px;padding:5px 7px 9px;right:calc(42px + env(safe-area-inset-right))!important}.course-hud>span{font-size:11px}.course-hud strong{font-size:9px}.float-controls{top:calc(112px + env(safe-area-inset-top))}}
 @media(max-width:350px){.course-active .compact-hud .demo-badge{display:none}}
+/* v17 · no double-tap zoom; reserve-tower install buttons */
+body *{touch-action:manipulation}
+#battle{touch-action:none}
+.shop-install{display:block;width:calc(100% - 4px);min-height:31px;margin:5px 2px 0;border-radius:7px;border:1px solid #e9d796;background:linear-gradient(#ffe7a4,#e6bd5e);color:#4a3412;font:850 11px system-ui;box-shadow:0 2px #8a6a2c}
+.shop-card.reserve{outline:2px solid #f2cf6f;outline-offset:1px}
+.placement-banner{left:calc(54px + env(safe-area-inset-left))!important}

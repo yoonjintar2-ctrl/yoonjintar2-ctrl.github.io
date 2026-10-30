@@ -1,7 +1,7 @@
-import{campaignProgress}from'./campaign-courses.js?v=706f46bf80';
-import{SETTINGS,CANNONS,DRONE,WORLD_WIDTH,validPlacement,clamp}from'./config.js?v=706f46bf80';
-import{validSymbol}from'./symbols.js?v=706f46bf80';
-import{legacySlotXP,playerLevelFor,towerSlots,WALL_MAX_XP}from'./progression.js?v=706f46bf80';
+import{campaignProgress}from'./campaign-courses.js?v=87308430e0';
+import{SETTINGS,CANNONS,DRONE,WORLD_WIDTH,validPlacement,clamp}from'./config.js?v=87308430e0';
+import{validSymbol}from'./symbols.js?v=87308430e0';
+import{legacySlotXP,playerLevelFor,towerSlots,WALL_MAX_XP}from'./progression.js?v=87308430e0';
 // Some hosts throw on localStorage access itself (private windows, sandboxed frames).
 const memoryStore=new Map();export const memoryStorage={getItem:k=>memoryStore.get(k)??null,setItem:(k,v)=>memoryStore.set(k,String(v)),removeItem:k=>memoryStore.delete(k)};
 export function safeStorage(){try{const s=globalThis.localStorage;if(!s)return memoryStorage;return s;}catch{return memoryStorage;}}
