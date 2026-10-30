@@ -41,6 +41,53 @@ var STOCKS = [...US_STOCKS, ...KR_STOCKS];
 var stockFor = (symbol) => STOCKS.find((s) => s.symbol === symbol);
 var validSymbol = (symbol) => !!stockFor(symbol);
 
+// server/us-session.js
+var CLOSED = { 2026: ["01-01", "01-19", "02-16", "04-03", "05-25", "06-19", "07-03", "09-07", "11-26", "12-25"], 2027: ["01-01", "01-18", "02-15", "03-26", "05-31", "06-18", "07-05", "09-06", "11-25", "12-24"] };
+var EARLY = /* @__PURE__ */ new Set(["2026-11-27", "2026-12-24", "2027-11-26"]);
+var ny = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+function nyParts(epoch) {
+  const p = Object.fromEntries(ny.formatToParts(new Date(epoch)).filter((p2) => p2.type !== "literal").map((p2) => [p2.type, p2.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, year: +p.year, hour: +p.hour, minute: +p.minute, second: +p.second };
+}
+function epochAt(date, hour, minute = 0) {
+  const [y, m, d] = date.split("-").map(Number), guess = Date.UTC(y, m - 1, d, hour + 5, minute), p = nyParts(guess), [py, pm, pd] = p.date.split("-").map(Number);
+  return guess + Date.UTC(y, m - 1, d, hour, minute) - Date.UTC(py, pm - 1, pd, p.hour, p.minute);
+}
+function tradingDate(date) {
+  const year = +date.slice(0, 4), day = (/* @__PURE__ */ new Date(date + "T12:00:00Z")).getUTCDay();
+  return !!CLOSED[year] && day !== 0 && day !== 6 && !CLOSED[year].includes(date.slice(5));
+}
+function usSession(now = Date.now()) {
+  const p = nyParts(now), known = !!CLOSED[p.year], trading = tradingDate(p.date), early = EARLY.has(p.date), regularClose = early ? 13 : 16, postClose = early ? 17 : 20, minute = p.hour * 60 + p.minute;
+  let phase = "closed", start = null, end = null;
+  if (trading) {
+    if (minute >= 240 && minute < 570) {
+      phase = "pre";
+      start = epochAt(p.date, 4);
+      end = epochAt(p.date, 9, 30);
+    } else if (minute >= 570 && minute < regularClose * 60) {
+      phase = "regular";
+      start = epochAt(p.date, 9, 30);
+      end = epochAt(p.date, regularClose);
+    } else if (minute >= regularClose * 60 && minute < postClose * 60) {
+      phase = "post";
+      start = epochAt(p.date, regularClose);
+      end = epochAt(p.date, postClose);
+    }
+  }
+  let nextOpenAt = null;
+  for (let i = 0; i < 15; i++) {
+    const date = new Date(Date.parse(p.date + "T12:00:00Z") + i * 864e5).toISOString().slice(0, 10);
+    if (!tradingDate(date)) continue;
+    const open = epochAt(date, 4);
+    if (open > now) {
+      nextOpenAt = open;
+      break;
+    }
+  }
+  return { phase, isOpen: phase !== "closed", label: { pre: "\uD504\uB9AC\uC7A5", regular: "\uC815\uADDC\uC7A5", post: "\uC560\uD504\uD130\uC7A5", closed: "\uD734\uC7A5" }[phase], date: p.date, confirmed: known, earlyClose: early, start, end, nextOpenAt, nextChangeAt: end ?? nextOpenAt, checkedAt: now };
+}
+
 // src/config.js
 var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 var WALL = Object.freeze({ north: -10, back: -28, south: 18, deck: -19, elevation: 34, hitHeight: 31, mountDepth: 20, mountOffset: 8, mountShoulder: 10, mountRadius: 30, cannonScale: 0.62 });
@@ -87,7 +134,10 @@ function normalizeYahooChart(payload, { symbol = "SOXL", now = Date.now() } = {}
     price = meta.regularMarketPrice;
     priceTime = meta.regularMarketTime * 1e3;
   }
-  const previousClose = meta.previousClose ?? meta.chartPreviousClose;
+  const today = nyParts(now).date, regularClose = candles.filter((c) => {
+    const p = nyParts(c.time), m = p.hour * 60 + p.minute;
+    return p.date < today && m >= 570 && m < 960;
+  }).at(-1), previousClose = regularClose?.close ?? meta.previousClose ?? meta.chartPreviousClose;
   if (!Number.isFinite(previousClose) || previousClose <= 0) throw new ChartError("previous_close_unavailable", 503);
   const flow = estimateCandleFlow(candle, previous), playbackStart = candle ? candle.time + 6e4 : null, playbackEnd = candle ? candle.time + 12e4 : null, fresh = !!candle && now >= playbackStart && now < playbackEnd, volumeStatus = !fresh ? "no_recent_trades" : candle.volume == null ? "no_volume" : candle.volume === 0 ? "zero_volume" : "minute", priceStatus = now - priceTime > 12e4 ? "last_bar" : "minute", prior = candle ? completed.filter((c) => c.time < candle.time && c.volume > 0).slice(-59) : [], baselineVolume = prior.length ? prior.reduce((n, c) => n + c.volume, 0) / prior.length : candle?.volume || null;
   return { source: "YAHOO_CHART", symbol, market: "US", status: fresh ? "ready" : "no_recent_trades", price, previousClose, changePct: (price / previousClose - 1) * 100, time: priceTime, priceTime, volumeTime: candle?.time ?? null, receivedAt: now, priceStatus, volumeStatus, priceSource: "YAHOO_CHART", volumeSource: "YAHOO_1MIN", marketState, pricePollSeconds: 5, delayMinutes: null, interval: "1m", candle, candles, baselineVolume, buyVolume: flow?.buyVolume ?? null, sellVolume: flow?.sellVolume ?? null, estimate: flow, tradeClassification: "estimated-candle-flow", playbackStart, playbackEnd, volumeNote: volumeStatus === "zero_volume" && marketState !== "regular" ? "\uC2DC\uAC04\uC678 \uAC70\uB798\uB7C9\uC774 0\uC73C\uB85C \uC81C\uACF5\uB428" : volumeStatus === "zero_volume" ? "\uD574\uB2F9 \uBD84\uBD09 \uAC70\uB798\uB7C9 0" : volumeStatus === "no_volume" ? "\uD574\uB2F9 \uBD84\uBD09 \uAC70\uB798\uB7C9 \uBBF8\uC81C\uACF5" : !fresh ? "\uC0C8 \uC644\uB8CC \uBD84\uBD09 \uB300\uAE30" : "\uC9C1\uC804 \uC644\uB8CC \uBD84\uBD09", attribution: "Yahoo Finance public chart \xB7 provider timing/availability applies", referenceUrl: "https://finance.yahoo.com/quote/" + symbol + "/" };
@@ -97,7 +147,7 @@ async function fetchYahooSnapshot({ symbol = "SOXL", fetcher = fetch, now } = {}
   let r;
   for (const host of ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"]) {
     const url = new URL("/v8/finance/chart/" + symbol, host);
-    url.search = new URLSearchParams({ interval: "1m", range: "1d", includePrePost: "true" });
+    url.search = new URLSearchParams({ interval: "1m", range: "2d", includePrePost: "true" });
     try {
       r = await fetcher(url.href, { headers: { accept: "application/json", "user-agent": "StockSiege/1.0" }, redirect: "manual", signal: AbortSignal.timeout(12e3) });
     } catch {
@@ -220,53 +270,6 @@ async function cachedKoreaSnapshot({ symbol, now, fetcher = fetch } = {}) {
 // server/market-snapshot.js
 function marketSnapshot(options) {
   return stockFor(options.symbol)?.market === "KR" ? cachedKoreaSnapshot(options) : cachedYahooSnapshot(options);
-}
-
-// server/us-session.js
-var CLOSED = { 2026: ["01-01", "01-19", "02-16", "04-03", "05-25", "06-19", "07-03", "09-07", "11-26", "12-25"], 2027: ["01-01", "01-18", "02-15", "03-26", "05-31", "06-18", "07-05", "09-06", "11-25", "12-24"] };
-var EARLY = /* @__PURE__ */ new Set(["2026-11-27", "2026-12-24", "2027-11-26"]);
-var ny = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
-function nyParts(epoch) {
-  const p = Object.fromEntries(ny.formatToParts(new Date(epoch)).filter((p2) => p2.type !== "literal").map((p2) => [p2.type, p2.value]));
-  return { date: `${p.year}-${p.month}-${p.day}`, year: +p.year, hour: +p.hour, minute: +p.minute, second: +p.second };
-}
-function epochAt(date, hour, minute = 0) {
-  const [y, m, d] = date.split("-").map(Number), guess = Date.UTC(y, m - 1, d, hour + 5, minute), p = nyParts(guess), [py, pm, pd] = p.date.split("-").map(Number);
-  return guess + Date.UTC(y, m - 1, d, hour, minute) - Date.UTC(py, pm - 1, pd, p.hour, p.minute);
-}
-function tradingDate(date) {
-  const year = +date.slice(0, 4), day = (/* @__PURE__ */ new Date(date + "T12:00:00Z")).getUTCDay();
-  return !!CLOSED[year] && day !== 0 && day !== 6 && !CLOSED[year].includes(date.slice(5));
-}
-function usSession(now = Date.now()) {
-  const p = nyParts(now), known = !!CLOSED[p.year], trading = tradingDate(p.date), early = EARLY.has(p.date), regularClose = early ? 13 : 16, postClose = early ? 17 : 20, minute = p.hour * 60 + p.minute;
-  let phase = "closed", start = null, end = null;
-  if (trading) {
-    if (minute >= 240 && minute < 570) {
-      phase = "pre";
-      start = epochAt(p.date, 4);
-      end = epochAt(p.date, 9, 30);
-    } else if (minute >= 570 && minute < regularClose * 60) {
-      phase = "regular";
-      start = epochAt(p.date, 9, 30);
-      end = epochAt(p.date, regularClose);
-    } else if (minute >= regularClose * 60 && minute < postClose * 60) {
-      phase = "post";
-      start = epochAt(p.date, regularClose);
-      end = epochAt(p.date, postClose);
-    }
-  }
-  let nextOpenAt = null;
-  for (let i = 0; i < 15; i++) {
-    const date = new Date(Date.parse(p.date + "T12:00:00Z") + i * 864e5).toISOString().slice(0, 10);
-    if (!tradingDate(date)) continue;
-    const open = epochAt(date, 4);
-    if (open > now) {
-      nextOpenAt = open;
-      break;
-    }
-  }
-  return { phase, isOpen: phase !== "closed", label: { pre: "\uD504\uB9AC\uC7A5", regular: "\uC815\uADDC\uC7A5", post: "\uC560\uD504\uD130\uC7A5", closed: "\uD734\uC7A5" }[phase], date: p.date, confirmed: known, earlyClose: early, start, end, nextOpenAt, nextChangeAt: end ?? nextOpenAt, checkedAt: now };
 }
 
 // server/stock-catalog.js
