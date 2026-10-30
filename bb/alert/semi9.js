@@ -39,10 +39,15 @@
       //   검증: ⑨ 신호 때 선물 쌈 13건 2010년대 +3.7% vs 나머지 +16.8%, 2020년대 −2.3% vs +8.7% (장부 '선물·현물 가격 차이')
       let bs = null; try { const r = await fetch('https://api.github.com/repos/yoonjintar2-ctrl/stock/contents/c/basis.json?ref=main', { headers: { Accept: 'application/vnd.github.raw' }, cache: 'no-store' }); if (r.ok) { const j = await r.json(); bs = j.m[day] || (day > j.last ? j.next : null); } } catch (e) {}
       const cheap = !!(bs && bs.p < 1 / 3);
+      // 2026-10-31: 신호 다음 날 장이 이미 열렸으면(검증상 매수 시점 = 그날 시가) 가격 기준을 어제 종가가 아니라 오늘 시가로.
+      //   10/30처럼 시가부터 −20% 갭하락하면 어제 종가 기준 손절가가 현재가보다 위에 찍혀 헷갈렸음
+      let base = pL, baseTxt = '';
+      try { const j0 = await get(`${INFO}/api/v2/stock-infos/code-or-symbol/SOXL`); const cd = j0.result.code || j0.result.stockCode; const jt = await get(`${INFO}/api/v1/c-chart/us-s/${cd}/day:1?count=1&useAdjustedRate=true`); const t0 = (jt.result.candles || [])[0]; const et = etNow();
+        if (t0 && t0.dt.slice(0, 10) === et.d && et.h < 16 && t0.open > 0) { base = t0.open; baseTxt = `오늘 시가 ${fu(t0.open)} 기준(이미 장 시작 · 지금 ${fu(t0.close)}). `; } } catch (e) {}
       cards.push({ g: cheap ? 'B+' : 'A', dn: cheap ? 1 : undefined, m: 'US', n: 'SOXL', kn: '반도체 3배', s: '⑨ 반도체 급락 반등', semi: 1, px: fu(pL), ch: pct(chL), ln: lnL,
-        buy: fu(pL * 1.03), tgt: fu(pL * 1.40), tp: '+40%', stop: fu(pL * 0.80), sp: '−20%(필수)', rr: '2.0',
+        buy: fu(base * 1.03), tgt: fu(base * 1.40), tp: '+40%', stop: fu(base * 0.80), sp: '−20%(필수)', rr: '2.0',
         when: '오늘 밤 정규장 시가(또는 지금 데이마켓)', hold: '최대 15거래일 · 실제 산 값 기준 +40% 익절 / −20% 손절(자동 주문 걸기) · 15일째 종가 매도',
-        why: `${late}${day.slice(5)} SOXX ${pct(dd)}(20일 최고 종가 대비) — 빠르게 빠진 반도체는 다시 오르는 일이 많았음. 2012~26 아무 날보다 건당 +9.2 / +1.5 / +7.7%p(기간별), 승률 57~67%${rk && rk.sh ? ` · 추가 하락 가능성 ${['낮음', '보통', '높음'][rk.sh.t]}` : ''}${risk ? '\n⚠ 위험 모드(반반도체지수 ' + rk.v + '): 평소의 절반만' : ''}${cheap ? '\n나스닥 선물이 정상가보다 싸게 거래 중(최근 1년 하위 ' + Math.round(bs.p * 100) + '%, 헤지 매도 많음) → 한 단계 낮춤. 이럴 때 ⑨ 반등이 약했음(2010년대 +3.7% vs +16.8%, 2020년대 −2.3% vs +8.7%)' : ''}` });
+        why: `${baseTxt}${late}${day.slice(5)} SOXX ${pct(dd)}(20일 최고 종가 대비) — 빠르게 빠진 반도체는 다시 오르는 일이 많았음. 2012~26 아무 날보다 건당 +9.2 / +1.5 / +7.7%p(기간별), 승률 57~67%${rk && rk.sh ? ` · 추가 하락 가능성 ${['낮음', '보통', '높음'][rk.sh.t]}` : ''}${risk ? '\n⚠ 위험 모드(반반도체지수 ' + rk.v + '): 평소의 절반만' : ''}${cheap ? '\n나스닥 선물이 정상가보다 싸게 거래 중(최근 1년 하위 ' + Math.round(bs.p * 100) + '%, 헤지 매도 많음) → 한 단계 낮춤. 이럴 때 ⑨ 반등이 약했음(2010년대 +3.7% vs +16.8%, 2020년대 −2.3% vs +8.7%)' : ''}` });
     }
     // ⑨ 단타(관찰 C+): −9% 이상이면 SOXL 5거래일 +12% / −12% — 2010~2026 165건 58% 성공 평균 +1.8%, 연 10번쯤. 2019~22에 약해 C+로 시작
     // 2026-10-15 재점검: ⑨ 단타는 조합 48개 중 40%만 플러스(효과 없음) → 끔(NINE_S = true로 다시 켤 수 있음)
