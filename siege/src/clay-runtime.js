@@ -1,4 +1,4 @@
-import {CANNONS,ENEMIES,SUPPLIES,WALL,WORLD_WIDTH,ACTOR_STYLE} from './config.js';
+import {CANNONS,ENEMIES,SUPPLIES,WALL,WORLD_WIDTH,ACTOR_STYLE} from './config.js?v=706f46bf80';
 export const ENEMY_ART=['enemy-small','enemy-tall','enemy-fat','enemy-giant'];
 export const SUPPLY_ART=['supply-dram','supply-processor','supply-wafer','supply-optical','supply-connector','supply-substrate'];
 export const WALL_ART=Array.from({length:8},(_,i)=>'castle-wall-'+i);

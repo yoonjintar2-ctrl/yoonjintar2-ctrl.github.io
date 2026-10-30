@@ -1,12 +1,12 @@
-import{campaignProgress}from'./campaign-courses.js';
-import { SETTINGS, CANNONS, ENEMIES, SUPPLIES, WORLD_WIDTH, DRONE, WALL, CAMERA_DEPTH, ACTOR_STYLE, cannonStats, upgradeCost, energyMultiplier, wallYFor, priceBand, validPlacement, validDronePlacement, clamp } from './config.js';
-import { wallMountDepth } from './fortification.js';
-import { marketArmy,estimatedArmy } from './market-army.js';
-import {playerLevelFor,towerSlots,wallLevelFor,wallPower,money,WALL_MAX_XP} from './progression.js';
-import{TerrainField}from'./terrain.js';
+import{campaignProgress}from'./campaign-courses.js?v=706f46bf80';
+import { SETTINGS, CANNONS, ENEMIES, SUPPLIES, WORLD_WIDTH, DRONE, WALL, CAMERA_DEPTH, ACTOR_STYLE, cannonStats, upgradeCost, energyMultiplier, wallYFor, priceBand, validPlacement, validDronePlacement, clamp } from './config.js?v=706f46bf80';
+import { wallMountDepth } from './fortification.js?v=706f46bf80';
+import { marketArmy,estimatedArmy } from './market-army.js?v=706f46bf80';
+import {playerLevelFor,towerSlots,wallLevelFor,wallPower,money,WALL_MAX_XP} from './progression.js?v=706f46bf80';
+import{TerrainField}from'./terrain.js?v=706f46bf80';
 const WALL_SLOT=8;
-import{isAIStock}from'./symbols.js';
-import {weaponMuzzle} from './weapon-geometry.js';
+import{isAIStock}from'./symbols.js?v=706f46bf80';
+import {weaponMuzzle} from './weapon-geometry.js?v=706f46bf80';
 export class Game {
   constructor(state, { height = 620, random = Math.random,now=Date.now,rewardMultiplier=1 } = {}) {
     this.campaign=campaignProgress(state.campaign);this.rewardMultiplier=clamp(rewardMultiplier,0,1);this.now=now;this.random = random; this.height = height; this.gold = state.gold; this.settings = { ...state.settings };
