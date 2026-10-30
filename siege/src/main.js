@@ -1,6 +1,6 @@
 import{CampaignView}from'./campaign-view.js';
 import{CampaignDataProvider,newCourseRun,readCourseRun,checkpointCourse,storeCourseRun,removeCourseRun,restoreCourseCombat,settleCourse}from'./campaign.js';
-import{courseFor,courseTime,CAMPAIGN_REWARD_RATE}from'./campaign-courses.js';
+import{courseFor,courseTime,CAMPAIGN_REWARD_RATE,campaignProgress}from'./campaign-courses.js';
 import{stockFor}from'./symbols.js';
 import{StockPicker}from'./stock-picker.js';
 import{drawSessionChart}from'./session-chart.js';
@@ -58,7 +58,7 @@ function marketUI(s){
  chart(s);
 }
 function bindProvider(){provider.subscribe(s=>{game.onMarket(s);marketUI(s);});game.onMarket(provider.last);marketUI(provider.last);if(marketChosen)provider.start?.();}
-picker=new StockPicker($('stock-picker'),{onCampaign:()=>openCampaignMap(),onChoose:async symbol=>{provider.destroy();game.settings.symbol=symbol;game.resetMarket();marketChosen=true;provider=makeProvider(symbol);$('stock-select').textContent=(stockFor(symbol)?.market==='KR'?stockFor(symbol).name:symbol)+' ⌄';$('stock-select').title=symbol;$('data-mode').value='live';$('simulation-controls').hidden=true;bindProvider();game.dirty=true;save();updateUI();},onClose:({selected})=>{$('stock-select').setAttribute('aria-expanded','false');$('stock-select').focus({preventScroll:true});if(!selected&&marketChosen)provider.refresh?.();}});
+picker=new StockPicker($('stock-picker'),{onCampaign:()=>openCampaignMap(),missions:()=>{const home=homeGame||game;return{progress:campaignProgress(home.campaign),pending:readCourseRun(snapshotGame(home),courseStorage)};},onMission:id=>{const home=homeGame||game,pending=readCourseRun(snapshotGame(home),courseStorage);if(pending&&pending.courseId!==id){openCampaignMap();return;}beginCourse(id,!!pending);},onChoose:async symbol=>{provider.destroy();game.settings.symbol=symbol;game.resetMarket();marketChosen=true;provider=makeProvider(symbol);$('stock-select').textContent=(stockFor(symbol)?.market==='KR'?stockFor(symbol).name:symbol)+' ⌄';$('stock-select').title=symbol;$('data-mode').value='live';$('simulation-controls').hidden=true;bindProvider();game.dirty=true;save();updateUI();},onClose:({selected})=>{$('stock-select').setAttribute('aria-expanded','false');$('stock-select').focus({preventScroll:true});if(!selected&&marketChosen)provider.refresh?.();}});
 $('stock-select').onclick=()=>{if(courseRun){openCampaignMap();return;}closePanel();$('stock-select').setAttribute('aria-expanded','true');picker.open({mandatory:!marketChosen});};
 $('market-provider').value=game.settings.marketProvider||'yahoo';$('market-provider').addEventListener('change',e=>{provider.destroy();game.settings.marketProvider=e.target.value==='alpaca'?'alpaca':'yahoo';game.resetMarket();provider=makeProvider();$('data-mode').value='live';$('simulation-controls').hidden=true;bindProvider();game.dirty=true;save();updateUI();});
 bindProvider();
