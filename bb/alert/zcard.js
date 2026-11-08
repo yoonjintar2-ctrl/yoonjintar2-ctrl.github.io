@@ -12,7 +12,7 @@
 // await window.__zcard() → [card]
 (function () {
   const ZEV = [
-    { d: '2026-11-18', n: '엔비디아 3분기 실적 발표', est: 1 },
+    { d: '2026-11-17', n: '엔비디아 3분기 실적 발표' },
   ];
   const etDay = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).map(x => [x.type, x.value])); return p.year + '-' + p.month + '-' + p.day; };
   const tradingDaysBetween = (a, b) => { let n = 0; const d = new Date(a + 'T12:00:00Z'), e = new Date(b + 'T12:00:00Z'); while (d < e) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6) n++; } return n; };
