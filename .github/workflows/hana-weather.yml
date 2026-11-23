@@ -1,0 +1,33 @@
+name: hana-map 기상청 실시간 수집
+on:
+  schedule:
+    - cron: '47 * * * *'   # 매시 47분(UTC 기준 매시) — 초단기실황 정시자료 제공 이후
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: hana-weather
+  cancel-in-progress: false
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 기상청·에어코리아 수집
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+        run: python hana-map/feed/fetch_kma.py
+      - name: 변경 시 커밋
+        run: |
+          if git diff --quiet -- hana-map/data/live.json; then echo "no change"; exit 0; fi
+          git config user.name "hana-map-bot"
+          git config user.email "hana-map-bot@users.noreply.github.com"
+          git add hana-map/data/live.json
+          git commit -m "hana-map: 실시간 기상 갱신 $(TZ=Asia/Seoul date '+%m/%d %H:%M')"
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done

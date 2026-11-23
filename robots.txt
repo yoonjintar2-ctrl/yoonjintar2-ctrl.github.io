@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /bb/
 Disallow: /mail/
+Disallow: /hana-map/
 
 Sitemap: https://yoonjintar2-ctrl.github.io/adsnews/sitemap.xml
