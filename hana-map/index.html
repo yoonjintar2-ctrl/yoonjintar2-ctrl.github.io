@@ -169,7 +169,8 @@ input[type=range]{flex:1;accent-color:var(--hana)}
 #wxEff b{font-weight:700}
 /* radius & poi */
 .dmesh{fill:none;stroke:#b8a687;stroke-width:.5;stroke-dasharray:2 2;vector-effect:non-scaling-stroke;opacity:0;transition:opacity .3s}
-.lv4 .dmesh{opacity:.9}
+.focus .dmesh{opacity:.9}
+.focusline{fill:none;stroke:#004a3b;stroke-width:2.2;vector-effect:non-scaling-stroke;pointer-events:none}
 .circ .cp{fill:rgba(0,128,100,.16);stroke:#008064;stroke-width:2;stroke-dasharray:5 3;vector-effect:non-scaling-stroke;cursor:pointer}
 .circ .cc.top3 .cp{fill:rgba(230,0,18,.14);stroke:#e60012;stroke-width:2.4}
 .circ .cdot{fill:#004a3b}.circ .cc.top3 .cdot{fill:#e60012}
@@ -296,7 +297,7 @@ input[type=range]{flex:1;accent-color:var(--hana)}
   <div class="card panel scroll" id="pPoi" style="max-height:62vh">
     <h3>거점 유형·가중치<span class="r">학습값 ×배수</span></h3>
     <div id="pPoiBody"></div>
-    <p class="muted" style="margin:6px 0 0">기본(×1.0)은 서울 425개 행정동 생활인구로 학습한 시간대별 흡인력입니다. 현장 정보가 있으면 배수로 보정하세요. 지도에는 상위 반경 안에서 실제로 인구를 끌어오는 거점과, 지금 체류가 많은 상위 1% 거점(노란 빛)만 표시합니다. 30배 이상 확대하면 모든 거점이 보입니다.</p>
+    <p class="muted" style="margin:6px 0 0">기본(×1.0)은 서울 425개 행정동 생활인구로 학습한 시간대별 흡인력입니다. 현장 정보가 있으면 배수로 보정하세요. 거점은 지도를 8배 이상 확대했을 때 화면 가운데 구 안에서만 표시합니다(상위 반경 안 거점·지금 붐비는 거점·복지관·대형병원·시장). 30배 이상 확대하면 그 구의 모든 거점(경로당·의원 포함)이 보입니다.</p>
     <div class="dl"><button class="btn" data-dl3="pois">거점 목록 CSV</button><button class="btn" data-dl3="dongs">행정동 5064 CSV</button></div>
   </div>
   <div class="card panel" id="pRank">
@@ -564,7 +565,7 @@ const S={k:1,level:1,lvForce:0,live:true,t:kstNow(),dtSel:'auto',wx:'auto',val:'
 const fmt=v=>v>=10000?(v/10000).toFixed(v>=100000?0:1)+'만':v>=1000?(v/1000).toFixed(1)+'천':Math.round(v)+'명';
 const fmtF=v=>Math.round(v).toLocaleString('ko-KR'); const pct=x=>(x>=0?'+':'')+(x*100).toFixed(1)+'%';
 const LVN={1:'시·도',2:'시·군',3:'구·군',4:'행정동'};
-const levelFor=k=>S.lvForce||(k<2.4?1:(k<5.5?2:(k<16?3:4))); const bankScale=k=>k<2.4?.58:k<5.5?.72:Math.min(1.25,.75+k*.06);
+const levelFor=k=>S.lvForce||(k<2.4?1:(k<5.5?2:3)); const bankScale=k=>k<2.4?.58:k<5.5?.72:Math.min(1.25,.75+k*.06);
 let PRED=[], DI=null, WXNOW=null, AGG=[];
 function actualFor(p,t){ if(p.prov!=='11') return null; const i=hourIdx2024(t); if(i<0) return null; const s=SIDX[p.short]; return s==null?null:SACT[i*25+s]*P.seoul.scale; }
 function compute(){
@@ -578,26 +579,29 @@ function compute(){
 }
 function valOf(i){ if(S.val==='act'){ const a=actualFor(geoms[i].properties,S.t); return a==null?PRED[i]:a; } return PRED[i]; }
 function aggregate(level){
+  if(level===3&&S.focus&&typeof DUNITS!=='undefined'){ const out=[];
+    LV[3].forEach(u=>{ if(u.key===S.focus) return; let v=0,base=0; u.idx.forEach(i=>{v+=valOf(i); base+=geoms[i].properties.u.r;}); out.push({u,v,base}); });
+    DUNITS.forEach(u=>{ if(DG.unit[u.dong]===S.focus) out.push({u,v:RS?RS.dp[u.dong]:0,base:DG.r[u.dong]}); }); return out; }
   if(level===4){ const out=DUNITS.map(u=>({u,v:RS?RS.dp[u.dong]:0,base:DG.r[u.dong]})); LV[3].filter(u=>!u.cap).forEach(u=>{let v=0,base=0; u.idx.forEach(i=>{v+=valOf(i); base+=geoms[i].properties.u.r;}); out.push({u,v,base});}); return out; }
   return LV[level].map(u=>{ let v=0,base=0; u.idx.forEach(i=>{v+=valOf(i); base+=geoms[i].properties.u.r;}); return {u,v,base}; }); }
 function render(){
   const level=levelFor(S.k); S.level=level; AGG=aggregate(level); gZoom.classed('lv4',level===4); const vmax=d3.max(AGG,a=>a.v);
   gHit.selectAll('path').data(AGG,a=>a.u.key).join('path').attr('d',a=>a.u.d).classed('sel',a=>S.sel&&S.sel.key===a.u.key)
-    .on('mousemove',(e,a)=>{d3.select(e.currentTarget).classed('on',true).raise(); showRegionTip(e,a);})
+    .on('mouseenter',e=>d3.select(e.currentTarget).classed('on',true).raise()).on('mousemove',(e,a)=>showRegionTip(e,a))
     .on('mouseleave',e=>{d3.select(e.currentTarget).classed('on',false); hideTip();})
     .on('click',(e,a)=>{ S.sel=a.u; S.selC=null; render(); if(a.u.dong!=null) renderDongWhy(); else { renderWhy(); zoomTo(a.u.geom); } openTab('pWhy'); });
   gChoro.style('display',S.choro?null:'none');
   if(S.choro){ const dens=AGG.map(a=>a.v/Math.max(a.u.area,1e-7)), ext=d3.extent(dens);
     const sc=d3.scaleSequentialLog([Math.max(ext[0],1),ext[1]],t=>d3.interpolateRgb('#f1e9dc','#4fb594')(t));
     gChoro.selectAll('path').data(AGG,a=>a.u.key).join('path').attr('d',a=>a.u.d).attr('fill',(a,i)=>sc(Math.max(dens[i],1))).attr('opacity',.75); }
-  const k=S.k, sizeOf=v=>(level===1?18:level===2?12:level===3?11:7)+(level===1?40:level===2?30:level===3?26:16)*Math.sqrt(v/vmax);
+  const k=S.k, vmaxG=d3.max(AGG.filter(a=>a.u.dong==null),a=>a.v)||vmax, vmaxD=d3.max(AGG.filter(a=>a.u.dong!=null),a=>a.v)||1; const sizeOf=(v,a)=>a&&a.u.dong!=null?7+16*Math.sqrt(v/vmaxD):(level===1?18:level===2?12:level===3?11:7)+(level===1?40:level===2?30:level===3?26:16)*Math.sqrt(v/vmaxG);
   const ics=gIcons.style('display',S.icons?null:'none').selectAll('g.ic').data(AGG,a=>a.u.key); ics.exit().remove();
   const en=ics.enter().append('g').attr('class','ic'); en.append('use').attr('href','#person'); en.append('text').attr('class','v').attr('text-anchor','middle'); en.append('text').attr('class','nm').attr('text-anchor','middle');
   const all=en.merge(ics); const hot=d3.quantile(AGG.map(a=>a.v).sort(d3.ascending),.9);
   all.classed('hot',a=>a.v>=hot).classed('ext',a=>S.dimExt&&!a.u.cap).attr('transform',a=>`translate(${a.u.xy[0]},${a.u.xy[1]}) scale(${1/k})`);
-  all.select('use').transition().duration(350).attr('width',a=>sizeOf(a.v)).attr('height',a=>sizeOf(a.v)).attr('x',a=>-sizeOf(a.v)/2).attr('y',a=>-sizeOf(a.v)*.85);
-  all.select('text.v').attr('y',a=>sizeOf(a.v)*.15+12).attr('font-size',level===1?13:11).style('display',S.labels&&(level<4||k>=30)?null:'none').text(a=>fmt(a.v));
-  all.select('text.nm').attr('y',a=>sizeOf(a.v)*.15+24).style('display',S.labels&&(level>1||k>1.4)&&(level<4||k>=30)?null:'none').text(a=>level===1?SHORT[a.u.prov]:a.u.name.replace(/^\S+\s/,''));
+  all.select('use').attr('width',a=>sizeOf(a.v,a)).attr('height',a=>sizeOf(a.v,a)).attr('x',a=>-sizeOf(a.v,a)/2).attr('y',a=>-sizeOf(a.v,a)*.85);
+  all.select('text.v').attr('y',a=>sizeOf(a.v,a)*.15+12).attr('font-size',level===1?13:11).style('display',a=>S.labels&&(a.u.dong==null||k>=14)?null:'none').text(a=>fmt(a.v));
+  all.select('text.nm').attr('y',a=>sizeOf(a.v,a)*.15+24).style('display',a=>S.labels&&(level>1||k>1.4)&&(a.u.dong==null||k>=14)?null:'none').text(a=>level===1?SHORT[a.u.prov]:a.u.name.replace(/^\S+\s/,''));
   gBanks.style('display',S.banks?null:'none'); updateScaleOnly(); gRivers.style('display',S.rivers?null:'none');
   gIcons.raise(); if(typeof gCirc!=='undefined'){ gCirc.raise(); gPoi.raise(); } gBanks.raise();
   document.getElementById('lvlName').textContent=LVN[level]+' 단위';
@@ -626,8 +630,13 @@ function renderShare(){ return; const capA=AGG.filter(a=>a.u.cap); const top=[..
 const tip=document.getElementById('tip');
 function showTip(e,html){ tip.querySelector('.card').innerHTML=html; tip.classList.add('show'); const r=tip.getBoundingClientRect(); let x=e.clientX+16,y=e.clientY+14;
   if(x+r.width>innerWidth-8)x=e.clientX-r.width-16; if(y+r.height>innerHeight-8)y=e.clientY-r.height-14; tip.style.left=x+'px'; tip.style.top=y+'px'; }
-function hideTip(){tip.classList.remove('show')}
-function series(u,t){ const di=S.dtSel==='auto'?dayInfo(t):DI; const pr=[],ac=[];
+function hideTip(){tip.classList.remove('show'); TIPK=null;}
+let TIPK=null; const stamp=()=>[S.t.y,S.t.m,S.t.d,S.t.h,S.dtSel,S.wx,S.pm,S.ev,S.val,JSON.stringify(S.wmul||{}),S.wx==='custom'?[cT.value,cR.value,cH.value,cW.value,cS.value].join():'' ,LIVESRC.updated].join('|');
+function posTip(e){ const r=tip.getBoundingClientRect(); let x=e.clientX+16,y=e.clientY+14; if(x+r.width>innerWidth-8)x=e.clientX-r.width-16; if(y+r.height>innerHeight-8)y=e.clientY-r.height-14; tip.style.left=x+'px'; tip.style.top=y+'px'; }
+function tipSame(k,e){ k=k+'#'+stamp(); if(TIPK===k&&tip.classList.contains('show')){ posTip(e); return true; } TIPK=k; return false; }
+const MEMO=new Map(); function memo(k,fn){ k=k+'#'+stamp(); if(MEMO.has(k)) return MEMO.get(k); if(MEMO.size>400) MEMO.clear(); const v=fn(); MEMO.set(k,v); return v; }
+function series(u,t){ return memo('S'+u.key+'@'+t.y+t.m+t.d,()=>series0(u,t)); }
+function series0(u,t){ const di=S.dtSel==='auto'?dayInfo(t):DI; const pr=[],ac=[];
   for(let h=0;h<24;h++){ const tt={...t,h}; let v=0,a=0,na=0; u.idx.forEach(i=>{const g=geoms[i].properties; v+=predictUnit(g.u,g,tt,h,di,weatherAt(tt,g)); const x=actualFor(g,tt); if(x==null)na++; else a+=x;}); pr.push(v); ac.push(na?null:a); }
   return {pr,ac}; }
 function spark(s,h,W=236,H=46){ const all=s.pr.concat(s.ac.filter(v=>v!=null)); const x=d3.scaleLinear([0,23],[0,W]), y=d3.scaleLinear([d3.min(all)*.97,d3.max(all)*1.02],[H-8,4]);
@@ -635,7 +644,7 @@ function spark(s,h,W=236,H=46){ const all=s.pr.concat(s.ac.filter(v=>v!=null)); 
   const act=s.ac[0]!=null?`<path d="${ln(s.ac)}" fill="none" stroke="#e60012" stroke-width="1.4" stroke-dasharray="3 2"/>`:'';
   return `<svg width="${W}" height="${H}"><path d="${ar(s.pr)}" fill="rgba(0,128,100,.12)"/><path d="${ln(s.pr)}" fill="none" stroke="#008064" stroke-width="1.7"/>${act}
    <circle cx="${x(h)}" cy="${y(s.pr[h])}" r="3.4" fill="#fff" stroke="#008064" stroke-width="2"/><text x="0" y="${H}" font-size="8.5" fill="#8a9a96">0시</text><text x="${W/2}" y="${H}" font-size="8.5" fill="#8a9a96" text-anchor="middle">12시</text><text x="${W}" y="${H}" font-size="8.5" fill="#8a9a96" text-anchor="end">23시</text></svg>`; }
-function showRegionTip(e,a){ if(a.u.dong!=null) return showDongTip(e,a); const s=series(a.u,S.t); const avg=d3.mean(s.pr), dl=(a.v/avg-1)*100; const act=s.ac[S.t.h];
+function showRegionTip(e,a){ if(a.u.dong!=null) return showDongTip(e,a); if(tipSame('R'+a.u.key,e)) return; const s=series(a.u,S.t); const avg=d3.mean(s.pr), dl=(a.v/avg-1)*100; const act=s.ac[S.t.h];
   const src=a.u.cap?(a.u.prov==='11'?'서울 실측 학습':'수도권 전이 모델'):'전국 외삽(참고용)';
   showTip(e,`<div class="t1">${PROV[a.u.prov]} · ${LVN[S.level]} · ${src}</div><div class="t2">${a.u.name}</div>
    <div><span class="big">${fmtF(a.v)}<small>명</small></span><span class="delta" style="color:${dl>=0?'#0a7f5a':'#c2001a'}">${dl>=0?'▲':'▼'} ${Math.abs(dl).toFixed(0)}% <span style="color:#7a8a86;font-weight:300">하루 평균 대비</span></span></div>
@@ -732,11 +741,18 @@ document.getElementById('modal').onclick=e=>{if(e.target.id==='modal') e.current
 /* ===== 13. 줌 ===== */
 const zoom=d3.zoom().scaleExtent([.8,60]).on('start',()=>svg.classed('dragging',true)).on('end',()=>svg.classed('dragging',false))
  .on('zoom',e=>{gZoom.attr('transform',e.transform); S.tr=e.transform; const before=levelFor(S.k); S.k=e.transform.k; if(levelFor(S.k)!==before) render(); else updateScaleOnly();});
-svg.call(zoom).on('dblclick.zoom',null); zoom.on('end.poi',e=>{ S.tr=e.transform; renderPois(); });
+svg.call(zoom).on('dblclick.zoom',null); zoom.on('end.poi',e=>{ S.tr=e.transform; updateFocus(); renderPois(); });
+const gFocus=gZoom.append('path').attr('class','focusline');
+function updateFocus(){ const k=S.k; let f=null;
+  if(k>=8&&!S.lvForce){ const tr=S.tr||d3.zoomIdentity, w=W0(), h=H0(), L=Math.min(330,w*.3), Rr=Math.min(290,w*.28);
+    const ll=proj.invert([tr.invertX((L+(w-Rr))/2),tr.invertY(h/2)]);
+    for(const u of LV[3]){ if(!u.cap) continue; if(d3.geoContains({type:'Feature',geometry:u.geom},ll)){ f=u.key; break; } } }
+  if(f!==S.focus){ S.focus=f; gZoom.classed('focus',!!f); if(typeof setFocusMesh==='function') setFocusMesh();
+    const fu=f&&LV[3].find(u=>u.key===f); gFocus.attr('d',fu?fu.d:null); render(); } }
 function updateScaleOnly(){ const k=S.k;
-  gIcons.selectAll('g.ic').attr('transform',a=>`translate(${a.u.xy[0]},${a.u.xy[1]}) scale(${1/k})`); gIcons.selectAll('text.nm').style('display',a=>S.labels&&(S.level>1||k>1.4)&&(S.level<4||k>=30)?null:'none'); gIcons.selectAll('text.v').style('display',a=>S.labels&&(S.level<4||k>=30)?null:'none');
+  gIcons.selectAll('g.ic').attr('transform',a=>`translate(${a.u.xy[0]},${a.u.xy[1]}) scale(${1/k})`); gIcons.selectAll('text.nm').style('display',a=>S.labels&&(S.level>1||k>1.4)&&(a.u.dong==null||k>=14)?null:'none'); gIcons.selectAll('text.v').style('display',a=>S.labels&&(a.u.dong==null||k>=14)?null:'none');
   bankSel.attr('transform',b=>`translate(${b.xy[0]},${b.xy[1]}) scale(${bankScale(k)/k})`).style('display',b=>(S.seniorOnly&&!b.s)||(!b.s&&k<1.8)?'none':null);
-  document.getElementById('lvl').textContent=`${LVN[S.level]} 단위로 보는 중 · 배율 ${k.toFixed(1)}x${S.lvForce?' (고정)':''}`;
+  const fu=S.focus&&LV[3].find(u=>u.key===S.focus); document.getElementById('lvl').textContent=fu?`${fu.name} 행정동·거점 보는 중 · 다른 구는 구 단위 · ${k.toFixed(1)}x`:`${LVN[S.level]} 단위로 보는 중 · 배율 ${k.toFixed(1)}x${S.lvForce?' (고정)':''}${S.k>=5.5&&!S.focus?' · 8배 이상 확대하면 화면 가운데 구가 동 단위로 열림':''}`;
   if(typeof gCirc!=='undefined'){ gCirc.selectAll('circle.cdot').attr('r',3.2/k); gCirc.selectAll('text.cr').attr('transform',c=>{const p=proj(PLL[c]); return `translate(${p[0]},${p[1]}) scale(${1/k})`});
     gPoi.selectAll('g.pp').attr('transform',i=>{const p=proj(PLL[i]); const s=(ACT.has(i)?1.2:1)*Math.min(1.1,.6+k*.02); return `translate(${p[0]},${p[1]}) scale(${s/k})`;}); } }
 function zoomTo(geom){ const [[x0,y0],[x1,y1]]=path.bounds(geom), w=W0(), h=H0(), L=Math.min(330,w*.3), R=Math.min(290,w*.28);
@@ -812,8 +828,9 @@ function renderWx(){
 }
 async function refreshLive(){ await loadLive(); compute(); }
 
-function dongSeries(j){ const di=S.dtSel==='auto'?dayInfo(S.t):DI; const pr=[]; for(let h=0;h<24;h++) pr.push(dongPredAt(S.t,h,di)[j]); return {pr,ac:pr.map(()=>null)}; }
-function showDongTip(e,a){ const j=a.u.dong, s=dongSeries(j), avg=d3.mean(s.pr), dl=(a.v/avg-1)*100;
+function dongAll24(){ return memo('D24',()=>{ const di=S.dtSel==='auto'?dayInfo(S.t):DI; return [...Array(24).keys()].map(h=>dongPredAt(S.t,h,di)); }); }
+function dongSeries(j){ const A=dongAll24(); const pr=A.map(a=>a[j]); return {pr,ac:pr.map(()=>null)}; }
+function showDongTip(e,a){ if(tipSame('D'+a.u.dong,e)) return; const j=a.u.dong, s=dongSeries(j), avg=d3.mean(s.pr), dl=(a.v/avg-1)*100;
   showTip(e,`<div class="t1">행정동 · ${DG.src[j]?'서울 실측 동 패턴':'거점·밀도 회귀 동 패턴'}</div><div class="t2">${DG.nm[j]}</div>
   <div><span class="big">${fmtF(a.v)}<small>명</small></span><span class="delta" style="color:${dl>=0?'#0a7f5a':'#c2001a'}">${dl>=0?'▲':'▼'} ${Math.abs(dl).toFixed(0)}% <span style="color:#7a8a86;font-weight:300">하루 평균 대비</span></span></div>
   <div class="muted">${pad(S.t.h)}시 50~64세 예측 · 주민등록 5064 ${fmtF(DG.r[j])}명</div>${spark(s,S.t.h)}`); }
@@ -873,7 +890,8 @@ function computeRadius(){
 /* --- 지도 레이어 --- */
 const gDong=gZoom.insert('g','.hit').attr('class','dongmesh'), gCirc=gZoom.append('g').attr('class','circ'), gPoi=gZoom.append('g').attr('class','pois');
 const DTOPO=P2TOPO, dfeat=topojson.feature(DTOPO,DTOPO.objects.d).features;
-gDong.append('path').attr('d',path(topojson.mesh(DTOPO,DTOPO.objects.d,(a,b)=>a!==b))).attr('class','dmesh');
+const dmeshPath=gDong.append('path').attr('class','dmesh'); const MESHC={};
+function setFocusMesh(){ if(!S.focus){ dmeshPath.attr('d',null); return; } if(!MESHC[S.focus]) MESHC[S.focus]=path(topojson.mesh(DTOPO,DTOPO.objects.d,(a,b)=>a!==b&&DG.unit[a.properties.i]===S.focus&&DG.unit[b.properties.i]===S.focus)); dmeshPath.attr('d',MESHC[S.focus]); }
 const DUNITS=dfeat.map(f=>{const j=f.properties.i; const sg=DG.unit[j];
   return {key:'D'+j,name:DG.nm[j],idx:null,dong:j,geom:f.geometry,prov:sg.slice(0,2),cap:true,d:path(f.geometry),xy:proj([DG.lon[j],DG.lat[j]]),area:d3.geoArea(f.geometry)}; });
 function circleGeom(c){ return d3.geoCircle().center(PLL[c]).radius(1/111.2).precision(4)(); }
@@ -887,8 +905,9 @@ function renderCircles(){
   all.on('mousemove',(e,c)=>showCircleTip(e,c)).on('mouseleave',hideTip).on('click',(e,c)=>{ e.stopPropagation(); S.selC=c; S.sel=null; renderCircleWhy(); openTab('pWhy'); });
 }
 let INTOP=new Set();
-function visiblePoi(i,k,[[x0,y0],[x1,y1]]){ const t=PT[Q.poi.t[i]]; if(!S.ptShow[t]&&!(t==='의원가'&&INTOP.has(i))) return false;
-  if(k<30&&!((INTOP.has(i)||ACT.has(i))&&k>=4)) return false;
+function visiblePoi(i,k,[[x0,y0],[x1,y1]]){ if(!S.focus||DG.unit[Q.poi.d[i]]!==S.focus) return false;
+  const t=PT[Q.poi.t[i]]; const all=k>=30;
+  if(all){ if(!S.ptShow[t]) return false; } else if(!(INTOP.has(i)||ACT.has(i)||t==='노인복지관'||t==='대형병원'||t==='전통시장')) return false;
   const p=proj(PLL[i]); return p[0]>=x0&&p[0]<=x1&&p[1]>=y0&&p[1]<=y1; }
 function renderPois(){
   if(!RS) return; const k=S.k, tr=S.tr||d3.zoomIdentity; const vb=[[tr.invertX(0)-20/k,tr.invertY(0)-20/k],[tr.invertX(W0())+20/k,tr.invertY(H0())+20/k]];
@@ -901,14 +920,16 @@ function renderPois(){
   all.on('mousemove',(e,i)=>showPoiTip(e,i)).on('mouseleave',hideTip).on('click',(e,i)=>{e.stopPropagation(); S.selC=i; renderCircleWhy(); openTab('pWhy'); });
 }
 /* --- 툴팁·근거 --- */
-function circleSeries(c){ const di=S.dtSel==='auto'?dayInfo(S.t):DI; const out=[];
+function circleAll24(){ return memo('C24',()=>{ const di=S.dtSel==='auto'?dayInfo(S.t):DI; return [...Array(24).keys()].map(h=>radiusState(S.t,h,di).sc); }); }
+function circleSeries(c){ return circleAll24().map(a=>a[c]); }
+function circleSeries_old(c){ const di=S.dtSel==='auto'?dayInfo(S.t):DI; const out=[];
   for(let h=0;h<24;h++){ const st=radiusState(S.t,h,di); out.push(st.sc[c]); } return out; }
 const pnm=i=>`${Q.poi.nm[i]}`;
-function showCircleTip(e,c){ const r=TOP.indexOf(c)+1, sc=RS.sc[c], pp=RS.poiPart[c];
+function showCircleTip(e,c){ if(tipSame('C'+c,e)) return; const r=TOP.indexOf(c)+1, sc=RS.sc[c], pp=RS.poiPart[c];
   showTip(e,`<div class="t1">YouTube 반경 후보 ${r?r+'위':''} · 1km · ${PTN[PT[Q.poi.t[c]]]} 중심</div><div class="t2">${pnm(c)}</div>
   <div><span class="big">${fmtF(sc)}<small>명</small></span></div><div class="muted">${pad(S.t.h)}시 반경 1km 안 50~64세 예측<br>거점 유입분 ${fmtF(pp)}명 (${(pp/sc*100).toFixed(0)}%) · 동네 체류 ${fmtF(sc-pp)}명<br>${Q.poi.ad[c]}</div>
   <div class="chips"><span>클릭하면 반경 근거</span></div>`); }
-function showPoiTip(e,i){ const t=PT[Q.poi.t[i]]; const di=DTS.indexOf(DI.type); const a=RS.vis[i];
+function showPoiTip(e,i){ if(tipSame('P'+i,e)) return; const t=PT[Q.poi.t[i]]; const di=DTS.indexOf(DI.type); const a=RS.vis[i];
   const prof=[...Array(24).keys()].map(h=>t==='의원가'?poiG(i,h,di):gBase(BT.indexOf(t),h,di)); const mx=Math.max(...prof)||1;
   showTip(e,`<div class="t1">${PTN[t]}${ACT.has(i)?' · <b style="color:#c2001a">지금 붐빔</b>':''}</div><div class="t2">${pnm(i)}</div>
    <div><span class="big" style="font-size:20px">${fmtF(a)}<small>명 추정 체류(5064)</small></span></div><div class="muted">${Q.poi.ad[i]}<br>소속 행정동 ${DG.nm[Q.poi.d[i]]}</div>
