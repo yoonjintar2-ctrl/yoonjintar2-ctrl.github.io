@@ -1,6 +1,11 @@
 name: hana-map 거점 좌표 수집 (OSM)
 on:
   workflow_dispatch:
+    inputs:
+      types:
+        description: '수집할 유형(공백 구분, 비우면 전체)'
+        required: false
+        default: ''
 permissions:
   contents: write
 jobs:
@@ -14,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python hana-map/feed/osm_pois.py
+      - run: python hana-map/feed/osm_pois.py ${{ github.event.inputs.types }}
       - name: 커밋
         run: |
           git config user.name "hana-map-bot"
