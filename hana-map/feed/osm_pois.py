@@ -25,11 +25,7 @@ if os.path.exists('hana-map/data/osm_pois.json'):
 for t,b in Q.items():
     if t not in ONLY: continue
     if b=='TILES':
-        els=[]
-        for la in range(33,39):
-            for lo in range(124,132):
-                bb=f'({la},{lo},{la+1},{lo+1})'
-                els+=run(f'way["leisure"="park"]["name"]{bb};relation["leisure"="park"]["name"]{bb};',area=False); time.sleep(2)
+        els=run('way(area.kr)["leisure"="park"]["name"](if: length() > 1500);relation(area.kr)["leisure"="park"]["name"];')
     else: els=run(b)
     rows=[]
     for e in els:
