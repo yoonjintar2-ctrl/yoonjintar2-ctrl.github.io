@@ -272,6 +272,8 @@ function handle(m){lastBB=Date.now();var a=m.split(" ");if(TEST)console.log("BC 
   case "s": if(qOpen){qItems.push({k:"l",ch:" "});renderQ()}else if(view==="play")togglePlay();break;
   case "h": korean=!korean;renderQ();toast(korean?"한글":"영어");break;
   case "k": if(a[1])typeKey(decodeURIComponent(a[1]));break;
+  case "q": var qq=decodeURIComponent(a.slice(1).join(" ")).trim(); // 아이폰에서 완성된 검색어
+   if(qq){closeQ();if(view==="play"){try{P.stopVideo()}catch(e){}}show("home");load(qq)}break;
  }}
 function state(){return view+(qOpen?"q":"")}
 

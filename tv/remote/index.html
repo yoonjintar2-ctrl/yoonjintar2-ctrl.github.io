@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="리모컨">
+<meta name="theme-color" content="#0c0e13">
+<title>리모컨</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#0c0e13;color:#fff;overflow:hidden;font-family:-apple-system,"Apple SD Gothic Neo",sans-serif;
+ -webkit-user-select:none;user-select:none;overscroll-behavior:none;touch-action:none}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;gap:12px;
+ padding:calc(env(safe-area-inset-top) + 10px) 14px calc(env(safe-area-inset-bottom) + 12px)}
+#top{height:14px;display:flex;align-items:center;justify-content:center;gap:8px;flex:none}
+#dot{width:10px;height:10px;border-radius:50%;background:#555a63;transition:background .3s}
+#dot.ok{background:#2ecc71}#dot.net{background:#f1c40f}
+#code{font-size:11px;color:#5a6270;letter-spacing:.12em}
+#pad{flex:1;min-height:160px;border-radius:22px;background:#161a22;position:relative;overflow:hidden;touch-action:none}
+#pad .ring{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.12);opacity:0;transition:opacity .25s;pointer-events:none}
+#pad.on .ring{opacity:1}
+#grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;flex:none}
+.b{height:74px;border-radius:18px;background:#1a1e26;display:flex;align-items:center;justify-content:center;border:0;touch-action:manipulation}
+.b.pp{background:#2a1518}
+.b:active,.b.hit{background:#3a4252}
+.b svg{width:34px;height:34px;fill:#fff;stroke:#fff}
+#sbar{flex:none;height:54px;border-radius:27px;background:#fff;display:flex;align-items:center;padding:0 8px 0 18px;gap:10px}
+#sbar svg{width:20px;height:20px;flex:none}
+#q{flex:1;border:0;outline:0;font-size:17px;background:none;color:#111;-webkit-user-select:text;user-select:text;touch-action:manipulation}
+#go{flex:none;width:40px;height:40px;border-radius:50%;border:0;background:#ff2e3b;display:flex;align-items:center;justify-content:center}
+#go svg{width:18px;height:18px;fill:#fff}
+</style></head><body>
+<div id="app">
+ <div id="top"><div id="dot"></div><div id="code"></div></div>
+ <div id="pad"><div class="ring" id="ring"></div></div>
+ <div id="grid">
+  <button class="b" data-c="r"><svg viewBox="0 0 24 24"><path d="M11 6v12l-8-6zM20 6v12l-8-6z"/></svg></button>
+  <button class="b pp" data-c="p"><svg viewBox="0 0 24 24" id="ppi"><path d="M7 4l14 8-14 8z"/></svg></button>
+  <button class="b" data-c="f"><svg viewBox="0 0 24 24"><path d="M4 6v12l8-6zM13 6v12l8-6z"/></svg></button>
+  <button class="b" data-c="d"><svg viewBox="0 0 24 24"><path d="M3 9h4l5-4v14l-5-4H3z"/><path d="M15 12h6" fill="none" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+  <button class="b" data-c="b"><svg viewBox="0 0 24 24"><path d="M9 7h7a4 4 0 010 8H8" fill="none" stroke-width="2.6" stroke-linecap="round"/><path d="M3 7l6-4.5v9z"/></svg></button>
+  <button class="b" data-c="u"><svg viewBox="0 0 24 24"><path d="M3 9h4l5-4v14l-5-4H3z"/><path d="M15 12h6M18 9v6" fill="none" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+ </div>
+ <form id="sbar" autocomplete="off">
+  <svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6.5" fill="none" stroke="#666" stroke-width="2.4"/><path d="M15 15l5 5" stroke="#666" stroke-width="2.4" stroke-linecap="round"/></svg>
+  <input id="q" type="search" enterkeyhint="search" placeholder="">
+  <button id="go" type="submit"><svg viewBox="0 0 24 24"><path d="M5 11h10l-4-4 1.4-1.4L19 12l-6.6 6.4L11 17l4-4H5z"/></svg></button>
+ </form>
+</div>
+<script>
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id)};
+
+/* ---------- 연결: TV와 같은 공인 IP 채널 ---------- */
+var BROKERS=["wss://broker.emqx.io:8084/mqtt","wss://broker.hivemq.com:8884/mqtt"];
+var TEST=/[?&]bctest=([^&]+)/.exec(location.search);if(TEST)BROKERS=[decodeURIComponent(TEST[1])];
+var TOPIC=null,IP=null,ws=null,ready=false,buf=new Uint8Array(0),bi=0,lastTv=0,tvState="",rx=0,wait=800;
+function sha256(s){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return(x<16?"0":"")+x.toString(16)}).join("")})}
+function getIP(){if(TEST)return Promise.resolve("1.2.3.4");var srcs=["https://api.ipify.org","https://ipv4.icanhazip.com"],i=0;
+ function nx(){if(i>=srcs.length)return Promise.reject(0);return fetch(srcs[i++],{cache:"no-store"}).then(function(r){return r.text()}).then(function(t){t=t.trim();if(!/^\d+\.\d+\.\d+\.\d+$/.test(t))throw 0;return t}).catch(nx)}return nx()}
+function refreshIP(){getIP().then(function(ip){if(ip===IP)return;IP=ip;return sha256("berrycast|"+ip).then(function(h){TOPIC="bc1/"+h.slice(0,24);$("code").textContent=h.slice(0,4).toUpperCase();if(ws)ws.close()})})
+ .catch(function(){if(!TOPIC)setTimeout(refreshIP,5000)})}
+function enc(s){return new TextEncoder().encode(s)}
+function strF(s){var b=enc(s),o=new Uint8Array(b.length+2);o[0]=b.length>>8;o[1]=b.length&255;o.set(b,2);return o}
+function pkt(h,parts){var n=0;parts.forEach(function(p){n+=p.length});var len=[],x=n;do{var d=x%128;x=Math.floor(x/128);if(x>0)d|=128;len.push(d)}while(x>0);
+ var o=new Uint8Array(1+len.length+n);o[0]=h;o.set(len,1);var k=1+len.length;parts.forEach(function(p){o.set(p,k);k+=p.length});return o}
+function open(){if(!TOPIC||document.hidden){setTimeout(open,700);return}
+ var w,topic=TOPIC;try{w=new WebSocket(BROKERS[bi%BROKERS.length],["mqtt"])}catch(e){bi++;setTimeout(open,wait);return}
+ w.binaryType="arraybuffer";ws=w;buf=new Uint8Array(0);rx=Date.now();
+ w.onopen=function(){w.send(pkt(0x10,[new Uint8Array([0,4,77,81,84,84,4,2,0,30]),strF("bcph"+Math.random().toString(36).slice(2,10))]))};
+ w.onmessage=function(ev){rx=Date.now();var a=new Uint8Array(ev.data),b=new Uint8Array(buf.length+a.length);b.set(buf);b.set(a,buf.length);buf=b;
+  for(;;){b=buf;if(b.length<2)return;var mul=1,len=0,i=1,d;do{if(i>=b.length)return;d=b[i++];len+=(d&127)*mul;mul*=128}while(d&128);
+   if(b.length<i+len)return;var body=b.subarray(i,i+len),t=b[0]>>4;buf=b.slice(i+len);
+   if(t===2){ready=true;wait=800;w.send(pkt(0x82,[new Uint8Array([0,1]),strF(topic+"/s"),new Uint8Array([0])]));send("hi")}
+   else if(t===3){var tl=(body[0]<<8)|body[1],off=2+tl+(((b[0]>>1)&3)?2:0);var m=new TextDecoder().decode(body.subarray(off));
+    if(m.indexOf("on ")===0){lastTv=Date.now();tvState=m.slice(3);ui()}}}};
+ w.onclose=w.onerror=function(){if(ws!==w)return;ws=null;ready=false;ui();if(!(Date.now()-lastTv<8000))bi++;setTimeout(open,wait);wait=Math.min(wait*2,8000)};
+}
+function send(s){if(ready&&ws&&ws.readyState===1)ws.send(pkt(0x30,[strF(TOPIC+"/c"),enc(s)]))}
+setInterval(function(){if(ready&&ws&&ws.readyState===1)ws.send(new Uint8Array([0xC0,0]))},20000);
+setInterval(function(){if(ws&&Date.now()-rx>45000)ws.close();ui()},2000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden){refreshIP();if(ws&&Date.now()-rx>25000)ws.close()}});
+var PLAY='<path d="M7 4l14 8-14 8z"/>',PAUSE='<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
+function ui(){var ok=Date.now()-lastTv<8000;$("dot").className=ok?"ok":(ready?"net":"");$("code").style.opacity=ok?0:1;
+ var pp=/^play/.test(tvState)&&ok;$("ppi").innerHTML=pp?PAUSE:PLAY}
+
+/* ---------- 버튼 ---------- */
+Array.prototype.forEach.call(document.querySelectorAll(".b"),function(b){
+ b.addEventListener("click",function(){send(b.getAttribute("data-c"))})});
+
+/* ---------- 터치패드: 밀면 커서 이동, 톡 치면 클릭 ---------- */
+var pad=$("pad"),ring=$("ring"),pid=null,lx=0,ly=0,sx=0,sy=0,st=0,moved=0,ax=0,ay=0;
+pad.addEventListener("pointerdown",function(e){pid=e.pointerId;lx=sx=e.clientX;ly=sy=e.clientY;st=Date.now();moved=0;
+ pad.classList.add("on");ring.style.left=e.offsetX+"px";ring.style.top=e.offsetY+"px";try{pad.setPointerCapture(pid)}catch(_){}});
+pad.addEventListener("pointermove",function(e){if(e.pointerId!==pid)return;var dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;
+ var r=pad.getBoundingClientRect();ring.style.left=(e.clientX-r.left)+"px";ring.style.top=(e.clientY-r.top)+"px";
+ moved+=Math.abs(dx)+Math.abs(dy);var sp=Math.sqrt(dx*dx+dy*dy),k=2.2+Math.min(3,sp/8); // 빠르게 밀면 더 멀리
+ ax+=dx*k;ay+=dy*k});
+function up(e){if(e.pointerId!==pid)return;pid=null;pad.classList.remove("on");
+ if(moved<10&&Date.now()-st<350)send("c")}
+pad.addEventListener("pointerup",up);pad.addEventListener("pointercancel",up);
+setInterval(function(){var x=Math.round(ax),y=Math.round(ay);if(x||y){send("m "+x+" "+y);ax-=x;ay-=y}},33);
+
+/* ---------- 검색: 아이폰 키보드로 입력 ---------- */
+$("sbar").addEventListener("submit",function(e){e.preventDefault();var t=$("q").value.trim();if(!t)return;
+ send("q "+encodeURIComponent(t));$("q").value="";$("q").blur()});
+
+refreshIP();setInterval(refreshIP,120000);open();ui();
+if(TEST)window.__rm={send:send};
+})();
+</script>
+</body></html>
