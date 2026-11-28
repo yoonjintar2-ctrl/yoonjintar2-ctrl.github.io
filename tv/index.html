@@ -22,7 +22,7 @@ html,body{width:100%;height:100%;background:#000;color:#fff;overflow:hidden;
 #bar .logo:after{content:"";position:absolute;left:38%;top:28%;border-left:1.4vh solid #fff;border-top:.8vh solid transparent;border-bottom:.8vh solid transparent}
 #ttl{font-size:3vh;font-weight:600;color:#e8ecf2}
 #grid{flex:1;overflow:hidden;position:relative}
-#cards{position:absolute;left:0;right:0;top:0;padding:0 3vw 6vh;display:grid;grid-template-columns:repeat(4,1fr);gap:3vh 1.6vw;will-change:transform}
+#cards{position:absolute;left:0;right:0;top:0;padding:1vh 3vw 16vh;display:grid;grid-template-columns:repeat(4,1fr);gap:3vh 1.6vw;will-change:transform}
 .card{border-radius:1.2vh;overflow:hidden;background:#151922;transition:transform .12s,box-shadow .12s}
 .card .th{position:relative;padding-top:56.25%;background:#222 center/cover no-repeat}
 .card .du{position:absolute;right:.8vh;bottom:.8vh;background:rgba(0,0,0,.8);font-size:1.8vh;padding:.2vh .7vh;border-radius:.5vh}
@@ -30,6 +30,9 @@ html,body{width:100%;height:100%;background:#000;color:#fff;overflow:hidden;
 .card .t{font-size:2.2vh;line-height:1.3;height:5.7vh;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#f1f3f6}
 .card .c{font-size:1.8vh;color:#8b95a5;margin-top:.6vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card.hov{transform:scale(1.045);box-shadow:0 0 0 .45vh #fff;z-index:2}
+#info{position:fixed;left:0;right:0;bottom:0;padding:2.4vh 3vw 3vh;background:linear-gradient(transparent,rgba(5,7,11,.96) 35%);z-index:5;pointer-events:none}
+#info .it{font-size:3.4vh;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#info .ic{font-size:2.2vh;color:#9aa4b2;margin-top:.6vh}
 #msg{position:absolute;left:0;right:0;top:30vh;text-align:center;font-size:3vh;color:#7c8696}
 #q{position:fixed;left:50%;top:3vh;transform:translateX(-50%);min-width:46vw;max-width:80vw;height:8vh;border-radius:4vh;
  background:#fff;color:#111;display:flex;align-items:center;padding:0 3vh;gap:2vh;font-size:3.6vh;z-index:30;box-shadow:0 1vh 4vh rgba(0,0,0,.6)}
@@ -48,6 +51,7 @@ html,body{width:100%;height:100%;background:#000;color:#fff;overflow:hidden;
 #osd .tm{display:flex;justify-content:space-between;font-size:2vh;color:#c9ced6;margin-top:1.2vh}
 #big{position:fixed;left:50%;top:50%;width:16vh;height:16vh;margin:-8vh 0 0 -8vh;border-radius:50%;background:rgba(0,0,0,.6);z-index:21;display:flex;align-items:center;justify-content:center;font-size:5vh;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none}
 #big svg{width:8vh;height:8vh;fill:#fff}
+#mute{position:fixed;left:3vw;top:3vh;font-size:4vh;z-index:22;padding:1vh 1.6vh;border-radius:2vh;background:rgba(0,0,0,.55)}
 #vol{position:fixed;right:4vw;top:50%;transform:translateY(-50%);width:1.4vh;height:30vh;background:rgba(255,255,255,.25);border-radius:1vh;z-index:21;opacity:0;transition:opacity .25s;overflow:hidden}
 #vol i{position:absolute;left:0;right:0;bottom:0;background:#fff}
 .show{opacity:1!important}
@@ -74,6 +78,7 @@ html,body{width:100%;height:100%;background:#000;color:#fff;overflow:hidden;
 <div id="home" class="hide">
  <div id="bar"><div class="logo"></div><div id="ttl">인기 동영상</div></div>
  <div id="grid"><div id="cards"></div><div id="msg" class="hide"></div></div>
+ <div id="info" class="hide"><div class="it" id="it"></div><div class="ic" id="ic"></div></div>
 </div>
 
 <div id="q" class="hide"><div class="ic"></div><div id="qt"></div><div id="qm">한</div></div>
@@ -82,6 +87,7 @@ html,body{width:100%;height:100%;background:#000;color:#fff;overflow:hidden;
 <div id="osd"><div class="nm" id="onm"></div><div class="pb"><i id="opb"></i></div><div class="tm"><span id="ot1">0:00</span><span id="ot2">0:00</span></div></div>
 <div id="big"></div>
 <div id="vol"><i id="voli"></i></div>
+<div id="mute" class="hide">🔇</div>
 <div id="cur" class="hide"></div>
 <div id="dot"></div>
 <div id="toast"></div>
@@ -123,10 +129,10 @@ var view="idle";          // idle | home | play
 var lastBB=0;             // 블랙베리 신호 마지막 시각
 function show(v){view=v;
  $("idle").classList.toggle("hide",v!=="idle");
- $("home").classList.toggle("hide",v==="idle");
+ $("home").classList.toggle("hide",v==="idle");if(v==="home"&&sel>=0)$("info").classList.remove("hide");
  $("pw").classList.toggle("hide",v!=="play");
  if(v!=="play"){$("osd").classList.remove("show");}
- curShow();
+ curShow();if(window.pubState){pubState();pubTitle()}
 }
 setInterval(function(){ // 10분 동안 블랙베리 소식 없고 재생 중 아니면 대기 화면
  var ok=Date.now()-lastBB<8000; $("dot").className=ok?"ok":(mq.some(function(c){return c.ready})?"net":"");
@@ -145,7 +151,7 @@ function details(ids){if(!ids.length)return Promise.resolve([]);
   return ids.map(function(i){return by[i]}).filter(function(v){return v&&v.status&&v.status.embeddable!==false})})}
 function load(query,more){
  if(more&&(loading||!nextTok))return;loading=true;var my=++reqNo;
- if(!more){list=[];nextTok=null;curQuery=query;$("cards").innerHTML="";scrollY=0;applyScroll();msg("불러오는 중…");
+ if(!more){list=[];nextTok=null;curQuery=query;$("cards").innerHTML="";sel=-1;$("info").classList.add("hide");scrollY=0;applyScroll();msg("불러오는 중…");
   $("ttl").textContent=query?("‘"+query+"’ 검색 결과"):"인기 동영상";}
  var p;
  if(query){p=api("search",{part:"id",type:"video",maxResults:24,q:query,regionCode:"KR",relevanceLanguage:"ko",videoEmbeddable:"true",pageToken:more?nextTok:""})
@@ -160,17 +166,17 @@ function addCards(items){var c=$("cards"),h="";
  items.forEach(function(v){var i=list.length;list.push(v);var s=v.snippet||{},th=(s.thumbnails&&(s.thumbnails.high||s.thumbnails.medium||s.thumbnails.default))||{};
   h+='<div class="card" data-i="'+i+'"><div class="th" style="background-image:url(\''+esc(th.url||"")+'\')"><span class="du">'+isoDur(v.contentDetails&&v.contentDetails.duration)+'</span></div>'+
    '<div class="tx"><div class="t">'+esc(s.title||"")+'</div><div class="c">'+esc(s.channelTitle||"")+'</div></div></div>'});
- c.insertAdjacentHTML("beforeend",h)}
+ c.insertAdjacentHTML("beforeend",h);if(sel<0&&list.length)setSel(0);else if(sel>=0&&c.children[sel])c.children[sel].classList.add("hov")}
 
 /* 목록 스크롤: 커서가 위/아래 끝에서 더 밀리면 스크롤 */
 var scrollY=0;
 function maxScroll(){return Math.max(0,$("cards").scrollHeight-$("grid").clientHeight)}
 function applyScroll(){scrollY=Math.max(0,Math.min(maxScroll(),scrollY));$("cards").style.transform="translateY("+(-scrollY)+"px)";
- if(maxScroll()-scrollY<window.innerHeight*0.6)load(curQuery,true)}
+ if(maxScroll()-scrollY<window.innerHeight*0.6||(sel>=0&&sel>=list.length-COLS*2))load(curQuery,true)}
 
 /* ---------------- 가상 커서 ---------------- */
 var cx=innerWidth/2,cy=innerHeight/2,curT=0,hov=null;
-function curShow(){var c=$("cur");var on=!(view==="idle")&&(view!=="play"||Date.now()-curT<2500);c.classList.toggle("hide",!on)}
+function curShow(){var c=$("cur");var on=!(view==="idle")&&Date.now()-curT<4000;c.classList.toggle("hide",!on)}
 setInterval(curShow,500);
 function moveCur(dx,dy){
  if(view==="idle"){show("home");if(!list.length)load(null);return}
@@ -181,12 +187,25 @@ function moveCur(dx,dy){
  var c=$("cur");c.style.left=cx+"px";c.style.top=cy+"px";curShow();hover();
  if(view==="play")osd();
 }
-function hover(){var h=null;if(view==="home"){var el=document.elementFromPoint(cx,cy);h=el&&el.closest?el.closest(".card"):null}
- if(h!==hov){if(hov)hov.classList.remove("hov");hov=h;if(h)h.classList.add("hov")}}
+function hover(){if(view!=="home")return;var el=document.elementFromPoint(cx,cy),h=el&&el.closest?el.closest(".card"):null;
+ if(h)setSel(+h.getAttribute("data-i"),true)}
+var sel=-1,COLS=4;
+function setSel(i,fromCursor){if(!list.length){sel=-1;$("info").classList.add("hide");return}
+ i=Math.max(0,Math.min(list.length-1,i));var cs=$("cards").children;
+ if(sel>=0&&cs[sel])cs[sel].classList.remove("hov");sel=i;hov=cs[i]||null;if(hov)hov.classList.add("hov");
+ var v=list[i],sn=(v&&v.snippet)||{};$("it").textContent=sn.title||"";$("ic").textContent=(sn.channelTitle||"")+"  ·  "+isoDur(v&&v.contentDetails&&v.contentDetails.duration);
+ $("info").classList.remove("hide");if(!fromCursor)ensureVisible(i);pubTitle()}
+function ensureVisible(i){var el=$("cards").children[i];if(!el)return;var gh=$("grid").clientHeight-window.innerHeight*0.15,top=el.offsetTop,h=el.offsetHeight;
+ if(top-scrollY<0)scrollY=top-10;else if(top+h-scrollY>gh)scrollY=top+h-gh+10;applyScroll()}
+function dpad(d){curT=0;curShow();
+ if(view==="idle"){show("home");if(!list.length)load(null);return}
+ if(view==="play"){if(d==="L")seek(-15);else if(d==="R")seek(15);else osd();return}
+ if(qOpen)return;if(sel<0){setSel(0);return}
+ setSel(sel+({L:-1,R:1,U:-COLS,D:COLS}[d]||0))}
 function click(){var c=$("cur");c.classList.add("dn");setTimeout(function(){c.classList.remove("dn")},120);
  if(view==="idle"){show("home");if(!list.length)load(null);return}
  if(view==="play"){togglePlay();return}
- hover();if(hov)play(+hov.getAttribute("data-i"))}
+ if(Date.now()-curT<3000)hover();if(sel>=0)play(sel)}
 
 /* ---------------- 플레이어 ---------------- */
 var P=null,pReady=false,unlocked=false,curVid=null,volume=100;
@@ -205,7 +224,10 @@ function play(i){var v=list[i];if(!v||!P||!pReady)return;curVid=v.id;$("onm").te
 function togglePlay(){if(!P)return;var s=P.getPlayerState();if(s===1){P.pauseVideo();big("pause")}else{P.playVideo();big("play")}}
 function seek(d){if(!P||view!=="play")return;var t=(P.getCurrentTime()||0)+d;P.seekTo(Math.max(0,t),true);big(d>0?"+15":"-15");osd()}
 var IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
-function vol(d){if(!P)return;if(IOS){if(d<0){P.mute();big('<span style="font-size:3vh">🔇</span>')}else{P.unMute();big('<span style="font-size:3vh">🔊</span>')}return}volume=Math.max(0,Math.min(100,volume+d));P.unMute();P.setVolume(volume);if(volume===0)P.mute();
+var muted=false;
+function volMsg(){return "v "+(muted?"m":(IOS?"on":volume))}
+function vol(d){if(!P)return;if(IOS){muted=d<0;if(muted)P.mute();else P.unMute();big('<span style="font-size:6vh">'+(muted?"🔇":"🔊")+'</span>');$("mute").classList.toggle("hide",!muted);pubAll(volMsg());return}volume=Math.max(0,Math.min(100,volume+d));P.unMute();P.setVolume(volume);muted=volume===0;if(muted)P.mute();
+ $("mute").classList.toggle("hide",!muted);big('<span style="font-size:5vh">'+volume+'%</span>');pubAll(volMsg());
  $("voli").style.height=volume+"%";var v=$("vol");v.classList.add("show");clearTimeout(vol.t);vol.t=setTimeout(function(){v.classList.remove("show")},1500)}
 var ICON={play:'<svg viewBox="0 0 24 24"><path d="M7 4l14 8-14 8z"/></svg>',pause:'<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>'};
 function big(k){var b=$("big");b.innerHTML=ICON[k]||k;b.classList.add("show");clearTimeout(big.t);big.t=setTimeout(function(){b.classList.remove("show")},700)}
@@ -260,14 +282,16 @@ function enter(){if(qOpen){var t=qText().trim();closeQ();if(t){if(view==="play")
 /* ---------------- 명령 처리 ---------------- */
 var isOff=false;
 function powerOff(){isOff=true;closeQ();if(view==="play"){try{P.stopVideo()}catch(e){}}show("idle");$("off").classList.remove("hide");
- try{if(wake){wake.release();wake=null}}catch(e){}}
-function powerOn(){if(!isOff)return;isOff=false;$("off").classList.add("hide");lockWake();show("home");if(!list.length)load(null)}
+ try{if(wake){wake.release();wake=null}}catch(e){}pubState()}
+function powerOn(){if(!isOff)return;isOff=false;setTimeout(pubState,0);$("off").classList.add("hide");lockWake();show("home");if(!list.length)load(null)}
 function handle(m){lastBB=Date.now();var a=m.split(" ");if(TEST)console.log("BC "+m);
- if(a[0]==="o"){powerOff();return}
+ if(a[0]==="o"){if(isOff)powerOn();else powerOff();return}
+ if(a[0]==="O"){powerOn();return}
  if(isOff){if(a[0]==="hi")return;powerOn();if(a[0]!=="m")return}
  switch(a[0]){
   case "hi": if(view==="idle"){show("home");if(!list.length)load(null)}break;
   case "m": moveCur(+a[1]||0,+a[2]||0);break;
+  case "a": dpad(a[1]);break;
   case "c": click();break;
   case "p": if(view==="play")togglePlay();else click();break;
   case "f": seek(15);break;
@@ -284,6 +308,11 @@ function handle(m){lastBB=Date.now();var a=m.split(" ");if(TEST)console.log("BC 
    if(qq){closeQ();if(view==="play"){try{P.stopVideo()}catch(e){}}show("home");load(qq)}break;
  }}
 function state(){return isOff?"off":view+(qOpen?"q":"")}
+window.pubState=null;function pubAll(m){mq.forEach(function(c){c.pub(m)})}
+function curTitle(){if(view==="play"){return $("onm").textContent}var v=sel>=0&&list[sel];return v&&v.snippet?v.snippet.title:""}
+function pubTitle(){pubAll("t "+curTitle())}
+function pubState(){pubAll("on "+state())}
+window.pubState=pubState;
 
 /* ---------------- 같은 와이파이 연결 (공인 IP 기준 채널 + MQTT) ---------------- */
 var BROKERS=["wss://broker.emqx.io:8084/mqtt","wss://broker.hivemq.com:8884/mqtt"];
@@ -321,7 +350,7 @@ function Conn(url){var self=this;this.url=url;this.ws=null;this.ready=false;this
  setInterval(function(){if(self.ws&&Date.now()-self.rx>50000)self.restart()},10000);
  open();
 }
-setInterval(function(){mq.forEach(function(c){c.pub("on "+state())})},3000);
+setInterval(function(){pubState();pubTitle();pubAll(volMsg())},3000);
 
 /* ---------------- 시작 ---------------- */
 var wake=null;function lockWake(){try{if(navigator.wakeLock)navigator.wakeLock.request("screen").then(function(w){wake=w}).catch(function(){})}catch(e){}}
@@ -339,9 +368,9 @@ $("start").onclick=function(){lockWake();if(!pReady||!list.length){toast(lastErr
  readyCue();$("setup").classList.add("hide");$("pw").classList.remove("hide");$("tapbar").classList.remove("hide")};
 // 시험용: 키보드로도 조작 (맥/PC 브라우저에서 확인할 때)
 document.addEventListener("keydown",function(e){if(!$("setup").classList.contains("hide"))return;var k=e.key;
- var M={ArrowLeft:"m -60 0",ArrowRight:"m 60 0",ArrowUp:"m 0 -60",ArrowDown:"m 0 60",Enter:"e",Backspace:"x",Escape:"b"," ":"s"};
+ var M={ArrowLeft:"a L",ArrowRight:"a R",ArrowUp:"a U",ArrowDown:"a D",Enter:"e",Backspace:"x",Escape:"b"," ":"s"};
  if(M[k])handle(M[k]);else if(k.length===1)handle("k "+encodeURIComponent(k));e.preventDefault()});
-if(TEST)window.__bc={isOff:function(){return isOff},handle:handle,compose:compose,addCards:addCards,show:show,msg:msg};
+if(TEST)window.__bc={sel:function(){return sel},isOff:function(){return isOff},handle:handle,compose:compose,addCards:addCards,show:show,msg:msg};
 boot();
 })();
 </script>

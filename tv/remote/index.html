@@ -21,9 +21,20 @@ html,body{height:100%;background:#0c0e13;color:#fff;overflow:hidden;font-family:
 #pw{position:absolute;right:14px;top:calc(env(safe-area-inset-top) + 2px);width:40px;height:40px;border-radius:50%;border:0;background:#1a1e26;display:flex;align-items:center;justify-content:center;transition:background .2s}
 #pw svg{width:20px;height:20px;fill:none;stroke:#8a93a3;stroke-width:2.4;stroke-linecap:round}
 #pw.arm{background:#e0242f}#pw.arm svg{stroke:#fff}
-#pad{flex:1;min-height:160px;border-radius:22px;background:#161a22;position:relative;overflow:hidden;touch-action:none}
-#pad .ring{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.12);opacity:0;transition:opacity .25s;pointer-events:none}
-#pad.on .ring{opacity:1}
+#ti{flex:none;min-height:46px;font-size:15px;line-height:1.45;color:#c9ced6;text-align:center;padding:0 8px;
+ display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#dwrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:200px}
+#dp{position:relative;width:min(78vw,40vh);aspect-ratio:1;border-radius:50%;background:#161a22}
+#dp button{position:absolute;border:0;background:none;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
+#dp .ar{width:34%;height:34%}
+#dp .ar svg{width:44%;height:44%;fill:#8a93a3}
+#dp .ar.hit svg,#dp .ar:active svg{fill:#fff}
+#dU{left:33%;top:0}#dD{left:33%;bottom:0}#dL{left:0;top:33%}#dR{right:0;top:33%}
+#dOK{left:30%;top:30%;width:40%;height:40%;border-radius:50%;background:#252b36!important;font-size:19px;font-weight:700;color:#fff}
+#dOK:active,#dOK.hit{background:#3a4252!important}
+#mut{position:absolute;left:14px;top:calc(env(safe-area-inset-top) + 12px);font-size:18px;opacity:0;transition:opacity .2s}
+#mut.on{opacity:1}
+#pw.on svg{stroke:#2ecc71}
 #grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;flex:none}
 .b{height:74px;border-radius:18px;background:#1a1e26;display:flex;align-items:center;justify-content:center;border:0;touch-action:manipulation}
 .b.pp{background:#2a1518}
@@ -38,7 +49,15 @@ html,body{height:100%;background:#0c0e13;color:#fff;overflow:hidden;font-family:
 <div id="app">
  <div id="top"><div id="dot"></div><div id="code"></div></div>
  <button id="pw"><svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.4 6.6a8 8 0 1011.2 0"/></svg></button>
- <div id="pad"><div class="ring" id="ring"></div></div>
+ <div id="mut">🔇</div>
+ <div id="ti"></div>
+ <div id="dwrap"><div id="dp">
+  <button class="ar" id="dU" data-d="U"><svg viewBox="0 0 24 24"><path d="M12 5l9 11H3z"/></svg></button>
+  <button class="ar" id="dL" data-d="L"><svg viewBox="0 0 24 24"><path d="M5 12l11-9v18z"/></svg></button>
+  <button id="dOK">OK</button>
+  <button class="ar" id="dR" data-d="R"><svg viewBox="0 0 24 24"><path d="M19 12L8 3v18z"/></svg></button>
+  <button class="ar" id="dD" data-d="D"><svg viewBox="0 0 24 24"><path d="M12 19l9-11H3z"/></svg></button>
+ </div></div>
  <div id="grid">
   <button class="b" data-c="r"><svg viewBox="0 0 24 24"><path d="M11 6v12l-8-6zM20 6v12l-8-6z"/></svg></button>
   <button class="b pp" data-c="p"><svg viewBox="0 0 24 24" id="ppi"><path d="M7 4l14 8-14 8z"/></svg></button>
@@ -80,7 +99,9 @@ function open(){if(!TOPIC||document.hidden){setTimeout(open,700);return}
    if(b.length<i+len)return;var body=b.subarray(i,i+len),t=b[0]>>4;buf=b.slice(i+len);
    if(t===2){ready=true;wait=800;w.send(pkt(0x82,[new Uint8Array([0,1]),strF(topic+"/s"),new Uint8Array([0])]));send("hi")}
    else if(t===3){var tl=(body[0]<<8)|body[1],off=2+tl+(((b[0]>>1)&3)?2:0);var m=new TextDecoder().decode(body.subarray(off));
-    if(m.indexOf("on ")===0){lastTv=Date.now();tvState=m.slice(3);ui()}}}};
+    if(m.indexOf("on ")===0){lastTv=Date.now();tvState=m.slice(3);ui()}
+    else if(m.indexOf("t ")===0){$("ti").textContent=m.slice(2)}
+    else if(m.indexOf("v ")===0){$("mut").className=m.slice(2)==="m"?"on":""}}}};
  w.onclose=w.onerror=function(){if(ws!==w)return;ws=null;ready=false;ui();if(!(Date.now()-lastTv<8000))bi++;setTimeout(open,wait);wait=Math.min(wait*2,8000)};
 }
 function send(s){if(ready&&ws&&ws.readyState===1)ws.send(pkt(0x30,[strF(TOPIC+"/c"),enc(s)]))}
@@ -89,29 +110,23 @@ setInterval(function(){if(ws&&Date.now()-rx>45000)ws.close();ui()},2000);
 document.addEventListener("visibilitychange",function(){if(!document.hidden){refreshIP();if(ws&&Date.now()-rx>25000)ws.close()}});
 var PLAY='<path d="M7 4l14 8-14 8z"/>',PAUSE='<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
 function ui(){var ok=Date.now()-lastTv<8000;$("dot").className=ok?"ok":(ready?"net":"");$("code").style.opacity=ok?0:1;
- var pp=/^play/.test(tvState)&&ok;$("ppi").innerHTML=pp?PAUSE:PLAY}
+ var pp=/^play/.test(tvState)&&ok;$("ppi").innerHTML=pp?PAUSE:PLAY;
+ $("pw").className=ok&&tvState!=="off"?"on":"";if(!ok||tvState==="off")$("ti").textContent=""}
 
 /* ---------- 종료: 두 번 눌러야 꺼짐 ---------- */
-var armT=0;$("pw").addEventListener("click",function(){var b=$("pw");
- if(Date.now()<armT){armT=0;b.classList.remove("arm");send("o");return}
- armT=Date.now()+2500;b.classList.add("arm");setTimeout(function(){if(Date.now()>=armT)b.classList.remove("arm")},2600)});
+$("pw").addEventListener("click",function(){send("o");var on=tvState!=="off";tvState=on?"off":"home";ui()});
 /* ---------- 버튼 ---------- */
 Array.prototype.forEach.call(document.querySelectorAll(".b"),function(b){
  b.addEventListener("click",function(){send(b.getAttribute("data-c"))})});
 
-/* ---------- 터치패드: 밀면 커서 이동, 톡 치면 클릭 ---------- */
-var pad=$("pad"),ring=$("ring"),pid=null,lx=0,ly=0,sx=0,sy=0,st=0,moved=0,ax=0,ay=0;
-pad.addEventListener("pointerdown",function(e){pid=e.pointerId;lx=sx=e.clientX;ly=sy=e.clientY;st=Date.now();moved=0;
- pad.classList.add("on");ring.style.left=e.offsetX+"px";ring.style.top=e.offsetY+"px";try{pad.setPointerCapture(pid)}catch(_){}});
-pad.addEventListener("pointermove",function(e){if(e.pointerId!==pid)return;var dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;
- var r=pad.getBoundingClientRect();ring.style.left=(e.clientX-r.left)+"px";ring.style.top=(e.clientY-r.top)+"px";
- moved+=Math.abs(dx)+Math.abs(dy);var sp=Math.sqrt(dx*dx+dy*dy),k=2.2+Math.min(3,sp/8); // 빠르게 밀면 더 멀리
- ax+=dx*k;ay+=dy*k});
-function up(e){if(e.pointerId!==pid)return;pid=null;pad.classList.remove("on");
- if(moved<10&&Date.now()-st<350)send("c")}
-pad.addEventListener("pointerup",up);pad.addEventListener("pointercancel",up);
-setInterval(function(){var x=Math.round(ax),y=Math.round(ay);if(x||y){send("m "+x+" "+y);ax-=x;ay-=y}},33);
-
+/* ---------- 방향키: 누르고 있으면 반복 ---------- */
+var rep=null;
+function stopRep(){if(rep){clearTimeout(rep);rep=null}}
+Array.prototype.forEach.call(document.querySelectorAll("#dp .ar"),function(b){var d=b.getAttribute("data-d");
+ b.addEventListener("pointerdown",function(e){e.preventDefault();stopRep();b.classList.add("hit");send("a "+d);
+  var go=function(){send("a "+d);rep=setTimeout(go,140)};rep=setTimeout(go,420)});
+ ["pointerup","pointercancel","pointerleave"].forEach(function(t){b.addEventListener(t,function(){b.classList.remove("hit");stopRep()})})});
+$("dOK").addEventListener("click",function(){send("c")});
 /* ---------- 검색: 아이폰 키보드로 입력 ---------- */
 $("sbar").addEventListener("submit",function(e){e.preventDefault();var t=$("q").value.trim();if(!t)return;
  send("q "+encodeURIComponent(t));$("q").value="";$("q").blur()});
