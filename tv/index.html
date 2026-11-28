@@ -56,6 +56,7 @@ html,body{width:100%;height:100%;background:#000;color:#fff;overflow:hidden;
 #cur.dn{transform:scale(.7)}
 #dot{position:fixed;right:1.4vh;top:1.4vh;width:1.2vh;height:1.2vh;border-radius:50%;background:#555;z-index:60;transition:background .3s}
 #dot.ok{background:#2ecc71}#dot.net{background:#f1c40f}
+#off{position:fixed;inset:0;background:#000;z-index:200;cursor:none}
 #toast{position:fixed;left:50%;bottom:8vh;transform:translateX(-50%);background:rgba(30,30,30,.92);padding:1.4vh 3vh;border-radius:3vh;font-size:2.4vh;z-index:70;opacity:0;transition:opacity .3s}
 /* 시작 화면(아이패드에서 한 번) */
 #setup{position:fixed;inset:0;background:#0b0d12;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px;text-align:center}
@@ -84,6 +85,7 @@ html,body{width:100%;height:100%;background:#000;color:#fff;overflow:hidden;
 <div id="cur" class="hide"></div>
 <div id="dot"></div>
 <div id="toast"></div>
+<div id="off" class="hide"></div>
 
 <div id="setup">
  <div id="s1" class="hide">
@@ -128,7 +130,7 @@ function show(v){view=v;
 }
 setInterval(function(){ // 10분 동안 블랙베리 소식 없고 재생 중 아니면 대기 화면
  var ok=Date.now()-lastBB<8000; $("dot").className=ok?"ok":(mq.some(function(c){return c.ready})?"net":"");
- if(view==="home"&&Date.now()-lastBB>600000&&!qOpen)show("idle");
+ if(!isOff&&view==="home"&&Date.now()-lastBB>600000&&!qOpen)show("idle");
 },2000);
 
 /* ---------------- 유튜브 데이터 ---------------- */
@@ -256,7 +258,13 @@ function bksp(){if(!qOpen)return;qItems.pop();if(!qItems.length){closeQ();return
 function enter(){if(qOpen){var t=qText().trim();closeQ();if(t){if(view==="play"){try{P.stopVideo()}catch(e){}}show("home");load(t)}return}click()}
 
 /* ---------------- 명령 처리 ---------------- */
+var isOff=false;
+function powerOff(){isOff=true;closeQ();if(view==="play"){try{P.stopVideo()}catch(e){}}show("idle");$("off").classList.remove("hide");
+ try{if(wake){wake.release();wake=null}}catch(e){}}
+function powerOn(){if(!isOff)return;isOff=false;$("off").classList.add("hide");lockWake();show("home");if(!list.length)load(null)}
 function handle(m){lastBB=Date.now();var a=m.split(" ");if(TEST)console.log("BC "+m);
+ if(a[0]==="o"){powerOff();return}
+ if(isOff){if(a[0]==="hi")return;powerOn();if(a[0]!=="m")return}
  switch(a[0]){
   case "hi": if(view==="idle"){show("home");if(!list.length)load(null)}break;
   case "m": moveCur(+a[1]||0,+a[2]||0);break;
@@ -275,7 +283,7 @@ function handle(m){lastBB=Date.now();var a=m.split(" ");if(TEST)console.log("BC 
   case "q": var qq=decodeURIComponent(a.slice(1).join(" ")).trim(); // 아이폰에서 완성된 검색어
    if(qq){closeQ();if(view==="play"){try{P.stopVideo()}catch(e){}}show("home");load(qq)}break;
  }}
-function state(){return view+(qOpen?"q":"")}
+function state(){return isOff?"off":view+(qOpen?"q":"")}
 
 /* ---------------- 같은 와이파이 연결 (공인 IP 기준 채널 + MQTT) ---------------- */
 var BROKERS=["wss://broker.emqx.io:8084/mqtt","wss://broker.hivemq.com:8884/mqtt"];
@@ -317,7 +325,7 @@ setInterval(function(){mq.forEach(function(c){c.pub("on "+state())})},3000);
 
 /* ---------------- 시작 ---------------- */
 var wake=null;function lockWake(){try{if(navigator.wakeLock)navigator.wakeLock.request("screen").then(function(w){wake=w}).catch(function(){})}catch(e){}}
-document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")lockWake()});
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&!isOff)lockWake()});
 function boot(){
  if(!KEY){$("s1").classList.remove("hide");$("s2").classList.add("hide");return}
  $("s1").classList.add("hide");$("s2").classList.remove("hide");
@@ -333,7 +341,7 @@ $("start").onclick=function(){lockWake();if(!pReady||!list.length){toast(lastErr
 document.addEventListener("keydown",function(e){if(!$("setup").classList.contains("hide"))return;var k=e.key;
  var M={ArrowLeft:"m -60 0",ArrowRight:"m 60 0",ArrowUp:"m 0 -60",ArrowDown:"m 0 60",Enter:"e",Backspace:"x",Escape:"b"," ":"s"};
  if(M[k])handle(M[k]);else if(k.length===1)handle("k "+encodeURIComponent(k));e.preventDefault()});
-if(TEST)window.__bc={handle:handle,compose:compose,addCards:addCards,show:show,msg:msg};
+if(TEST)window.__bc={isOff:function(){return isOff},handle:handle,compose:compose,addCards:addCards,show:show,msg:msg};
 boot();
 })();
 </script>

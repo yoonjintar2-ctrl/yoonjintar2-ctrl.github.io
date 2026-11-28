@@ -14,10 +14,13 @@ html,body{height:100%;background:#0c0e13;color:#fff;overflow:hidden;font-family:
  -webkit-user-select:none;user-select:none;overscroll-behavior:none;touch-action:none}
 #app{position:fixed;inset:0;display:flex;flex-direction:column;gap:12px;
  padding:calc(env(safe-area-inset-top) + 10px) 14px calc(env(safe-area-inset-bottom) + 12px)}
-#top{height:14px;display:flex;align-items:center;justify-content:center;gap:8px;flex:none}
+#top{height:40px;display:flex;align-items:center;justify-content:center;gap:8px;flex:none}
 #dot{width:10px;height:10px;border-radius:50%;background:#555a63;transition:background .3s}
 #dot.ok{background:#2ecc71}#dot.net{background:#f1c40f}
 #code{font-size:11px;color:#5a6270;letter-spacing:.12em}
+#pw{position:absolute;right:14px;top:calc(env(safe-area-inset-top) + 2px);width:40px;height:40px;border-radius:50%;border:0;background:#1a1e26;display:flex;align-items:center;justify-content:center;transition:background .2s}
+#pw svg{width:20px;height:20px;fill:none;stroke:#8a93a3;stroke-width:2.4;stroke-linecap:round}
+#pw.arm{background:#e0242f}#pw.arm svg{stroke:#fff}
 #pad{flex:1;min-height:160px;border-radius:22px;background:#161a22;position:relative;overflow:hidden;touch-action:none}
 #pad .ring{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.12);opacity:0;transition:opacity .25s;pointer-events:none}
 #pad.on .ring{opacity:1}
@@ -34,6 +37,7 @@ html,body{height:100%;background:#0c0e13;color:#fff;overflow:hidden;font-family:
 </style></head><body>
 <div id="app">
  <div id="top"><div id="dot"></div><div id="code"></div></div>
+ <button id="pw"><svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.4 6.6a8 8 0 1011.2 0"/></svg></button>
  <div id="pad"><div class="ring" id="ring"></div></div>
  <div id="grid">
   <button class="b" data-c="r"><svg viewBox="0 0 24 24"><path d="M11 6v12l-8-6zM20 6v12l-8-6z"/></svg></button>
@@ -87,6 +91,10 @@ var PLAY='<path d="M7 4l14 8-14 8z"/>',PAUSE='<path d="M6 4h4v16H6zM14 4h4v16h-4
 function ui(){var ok=Date.now()-lastTv<8000;$("dot").className=ok?"ok":(ready?"net":"");$("code").style.opacity=ok?0:1;
  var pp=/^play/.test(tvState)&&ok;$("ppi").innerHTML=pp?PAUSE:PLAY}
 
+/* ---------- 종료: 두 번 눌러야 꺼짐 ---------- */
+var armT=0;$("pw").addEventListener("click",function(){var b=$("pw");
+ if(Date.now()<armT){armT=0;b.classList.remove("arm");send("o");return}
+ armT=Date.now()+2500;b.classList.add("arm");setTimeout(function(){if(Date.now()>=armT)b.classList.remove("arm")},2600)});
 /* ---------- 버튼 ---------- */
 Array.prototype.forEach.call(document.querySelectorAll(".b"),function(b){
  b.addEventListener("click",function(){send(b.getAttribute("data-c"))})});
