@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="베리캐스트">
+<title>베리캐스트</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:#000;color:#fff;overflow:hidden;
+ font-family:-apple-system,"Apple SD Gothic Neo","Pretendard",sans-serif;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.hide{display:none!important}
+#idle{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#05070b}
+#clock{font-size:14vh;font-weight:200;letter-spacing:.02em;color:#cfd6e0}
+#date{font-size:3.2vh;color:#6b7686;margin-top:1vh}
+#code{position:fixed;right:3.4vh;top:.9vh;font-size:1.6vh;color:#3d4450;letter-spacing:.1em}
+#home{position:fixed;inset:0;background:#0b0d12;display:flex;flex-direction:column}
+#bar{height:9vh;display:flex;align-items:center;padding:0 3vw;gap:1.4vw;flex:none}
+#bar .logo{width:3.6vh;height:3.6vh;border-radius:1vh;background:#ff2e3b;position:relative}
+#bar .logo:after{content:"";position:absolute;left:38%;top:28%;border-left:1.4vh solid #fff;border-top:.8vh solid transparent;border-bottom:.8vh solid transparent}
+#ttl{font-size:3vh;font-weight:600;color:#e8ecf2}
+#grid{flex:1;overflow:hidden;position:relative}
+#cards{position:absolute;left:0;right:0;top:0;padding:0 3vw 6vh;display:grid;grid-template-columns:repeat(4,1fr);gap:3vh 1.6vw;will-change:transform}
+.card{border-radius:1.2vh;overflow:hidden;background:#151922;transition:transform .12s,box-shadow .12s}
+.card .th{position:relative;padding-top:56.25%;background:#222 center/cover no-repeat}
+.card .du{position:absolute;right:.8vh;bottom:.8vh;background:rgba(0,0,0,.8);font-size:1.8vh;padding:.2vh .7vh;border-radius:.5vh}
+.card .tx{padding:1.2vh 1.2vh 1.6vh}
+.card .t{font-size:2.2vh;line-height:1.3;height:5.7vh;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#f1f3f6}
+.card .c{font-size:1.8vh;color:#8b95a5;margin-top:.6vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.hov{transform:scale(1.045);box-shadow:0 0 0 .45vh #fff;z-index:2}
+#msg{position:absolute;left:0;right:0;top:30vh;text-align:center;font-size:3vh;color:#7c8696}
+#q{position:fixed;left:50%;top:3vh;transform:translateX(-50%);min-width:46vw;max-width:80vw;height:8vh;border-radius:4vh;
+ background:#fff;color:#111;display:flex;align-items:center;padding:0 3vh;gap:2vh;font-size:3.6vh;z-index:30;box-shadow:0 1vh 4vh rgba(0,0,0,.6)}
+#q .ic{width:3.4vh;height:3.4vh;border:.5vh solid #555;border-radius:50%;position:relative;flex:none}
+#q .ic:after{content:"";position:absolute;width:.5vh;height:1.6vh;background:#555;right:-1vh;bottom:-1.3vh;transform:rotate(-45deg)}
+#qt{flex:1;white-space:nowrap;overflow:hidden}
+#qt:after{content:"";display:inline-block;width:.35vh;height:4.2vh;background:#1a73e8;vertical-align:middle;margin-left:.2vh;animation:bl 1s steps(1) infinite}
+#qm{font-size:2vh;font-weight:700;color:#fff;background:#1a73e8;border-radius:1vh;padding:.4vh 1vh;flex:none}
+@keyframes bl{50%{opacity:0}}
+#pw{position:fixed;inset:0;background:#000;z-index:10}
+#pw iframe,#yt{position:absolute;inset:0;width:100%!important;height:100%!important;border:0}
+#osd{position:fixed;left:0;right:0;bottom:0;padding:4vh 4vw 5vh;background:linear-gradient(transparent,rgba(0,0,0,.85));z-index:20;transition:opacity .3s;pointer-events:none;opacity:0}
+#osd .nm{font-size:2.8vh;margin-bottom:2vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#osd .pb{height:.8vh;background:rgba(255,255,255,.25);border-radius:.4vh;overflow:hidden}
+#osd .pb i{display:block;height:100%;width:0;background:#ff2e3b}
+#osd .tm{display:flex;justify-content:space-between;font-size:2vh;color:#c9ced6;margin-top:1.2vh}
+#big{position:fixed;left:50%;top:50%;width:16vh;height:16vh;margin:-8vh 0 0 -8vh;border-radius:50%;background:rgba(0,0,0,.6);z-index:21;display:flex;align-items:center;justify-content:center;font-size:5vh;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none}
+#big svg{width:8vh;height:8vh;fill:#fff}
+#vol{position:fixed;right:4vw;top:50%;transform:translateY(-50%);width:1.4vh;height:30vh;background:rgba(255,255,255,.25);border-radius:1vh;z-index:21;opacity:0;transition:opacity .25s;overflow:hidden}
+#vol i{position:absolute;left:0;right:0;bottom:0;background:#fff}
+.show{opacity:1!important}
+#cur{position:fixed;left:0;top:0;width:3.4vh;height:3.4vh;margin:-1.7vh 0 0 -1.7vh;border-radius:50%;background:rgba(255,255,255,.95);
+ box-shadow:0 0 0 .4vh rgba(0,0,0,.45),0 .4vh 1.4vh rgba(0,0,0,.5);z-index:50;pointer-events:none;transition:opacity .3s,transform .08s}
+#cur.dn{transform:scale(.7)}
+#dot{position:fixed;right:1.4vh;top:1.4vh;width:1.2vh;height:1.2vh;border-radius:50%;background:#555;z-index:60;transition:background .3s}
+#dot.ok{background:#2ecc71}#dot.net{background:#f1c40f}
+#toast{position:fixed;left:50%;bottom:8vh;transform:translateX(-50%);background:rgba(30,30,30,.92);padding:1.4vh 3vh;border-radius:3vh;font-size:2.4vh;z-index:70;opacity:0;transition:opacity .3s}
+/* 시작 화면(아이패드에서 한 번) */
+#setup{position:fixed;inset:0;background:#0b0d12;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px;text-align:center}
+#setup>div{display:flex;flex-direction:column;align-items:center;gap:22px}
+#setup h1{font-size:28px;font-weight:700}
+#setup p{font-size:16px;color:#9aa4b2;line-height:1.6;max-width:560px}
+#setup input{width:min(560px,90vw);font-size:18px;padding:14px 16px;border-radius:12px;border:0;background:#1d222c;color:#fff;-webkit-user-select:text;user-select:text}
+#setup button{font-size:20px;font-weight:700;padding:16px 40px;border-radius:14px;border:0;background:#ff2e3b;color:#fff}
+#setup .sub{background:none;color:#6b7686;font-size:14px;padding:6px}
+#tapbar{position:fixed;left:0;right:0;top:0;padding:18px;text-align:center;font-size:20px;font-weight:700;background:#ff2e3b;z-index:85}
+</style></head><body>
+
+<div id="idle"><div id="clock">--:--</div><div id="date"></div><div id="code"></div></div>
+
+<div id="home" class="hide">
+ <div id="bar"><div class="logo"></div><div id="ttl">인기 동영상</div></div>
+ <div id="grid"><div id="cards"></div><div id="msg" class="hide"></div></div>
+</div>
+
+<div id="q" class="hide"><div class="ic"></div><div id="qt"></div><div id="qm">한</div></div>
+
+<div id="pw" class="hide"><div id="yt"></div></div>
+<div id="osd"><div class="nm" id="onm"></div><div class="pb"><i id="opb"></i></div><div class="tm"><span id="ot1">0:00</span><span id="ot2">0:00</span></div></div>
+<div id="big"></div>
+<div id="vol"><i id="voli"></i></div>
+<div id="cur" class="hide"></div>
+<div id="dot"></div>
+<div id="toast"></div>
+
+<div id="setup">
+ <div id="s1" class="hide">
+  <h1>유튜브 API 키</h1>
+  <p>검색과 인기 동영상 목록에 쓰여요. 이 아이패드에만 저장돼요.</p>
+  <p><input id="key" placeholder="AIza…" autocomplete="off" autocapitalize="off" spellcheck="false"></p>
+  <p><button id="saveKey">저장</button></p>
+ </div>
+ <div id="s2" class="hide">
+  <h1>베리캐스트</h1>
+  <p>아래 버튼을 누른 다음, 나오는 영상의 ▶ 를 한 번 눌러 주세요.<br>그 뒤 이 창을 모니터로 옮기면 끝이에요.</p>
+  <p><button id="start">시작</button></p>
+  <p><button class="sub" id="resetKey">API 키 다시 넣기</button></p>
+ </div>
+</div>
+<div id="tapbar" class="hide">영상 가운데 ▶ 를 눌러 주세요</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id)};
+var KEY=null; try{KEY=localStorage.getItem("bc_ytkey")}catch(e){}
+
+/* ---------------- 공통 ---------------- */
+function toast(t){var e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(function(){e.classList.remove("show")},2200)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function fmt(s){s=Math.max(0,Math.floor(s||0));var h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return(h?h+":"+(m<10?"0":""):"")+m+":"+(x<10?"0":"")+x}
+function isoDur(d){var m=/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(d||"");if(!m)return"";return fmt((+m[1]||0)*3600+(+m[2]||0)*60+(+m[3]||0))}
+function tick(){var d=new Date(),h=d.getHours(),m=d.getMinutes();$("clock").textContent=(h<10?"0":"")+h+":"+(m<10?"0":"")+m;
+ $("date").textContent=(d.getMonth()+1)+"월 "+d.getDate()+"일 "+"일월화수목금토"[d.getDay()]+"요일"}
+setInterval(tick,5000);tick();
+
+/* ---------------- 화면 상태 ---------------- */
+var view="idle";          // idle | home | play
+var lastBB=0;             // 블랙베리 신호 마지막 시각
+function show(v){view=v;
+ $("idle").classList.toggle("hide",v!=="idle");
+ $("home").classList.toggle("hide",v==="idle");
+ $("pw").classList.toggle("hide",v!=="play");
+ if(v!=="play"){$("osd").classList.remove("show");}
+ curShow();
+}
+setInterval(function(){ // 10분 동안 블랙베리 소식 없고 재생 중 아니면 대기 화면
+ var ok=Date.now()-lastBB<8000; $("dot").className=ok?"ok":(mq.some(function(c){return c.ready})?"net":"");
+ if(view==="home"&&Date.now()-lastBB>600000&&!qOpen)show("idle");
+},2000);
+
+/* ---------------- 유튜브 데이터 ---------------- */
+var list=[],nextTok=null,curQuery=null,loading=false,reqNo=0;
+var lastErr="";
+function api(path,params){params.key=KEY;var u="https://www.googleapis.com/youtube/v3/"+path+"?"+Object.keys(params).map(function(k){return k+"="+encodeURIComponent(params[k])}).join("&");
+ var ac=window.AbortController?new AbortController():null;if(ac)setTimeout(function(){ac.abort()},15000);
+ return fetch(u,ac?{signal:ac.signal}:{}).then(function(r){return r.json()}).then(function(j){if(j.error)throw new Error(j.error.message||"API 오류");return j})}
+function details(ids){if(!ids.length)return Promise.resolve([]);
+ return api("videos",{part:"snippet,contentDetails,status",id:ids.join(",")}).then(function(j){
+  var by={};(j.items||[]).forEach(function(v){by[v.id]=v});
+  return ids.map(function(i){return by[i]}).filter(function(v){return v&&v.status&&v.status.embeddable!==false})})}
+function load(query,more){
+ if(more&&(loading||!nextTok))return;loading=true;var my=++reqNo;
+ if(!more){list=[];nextTok=null;curQuery=query;$("cards").innerHTML="";scrollY=0;applyScroll();msg("불러오는 중…");
+  $("ttl").textContent=query?("‘"+query+"’ 검색 결과"):"인기 동영상";}
+ var p;
+ if(query){p=api("search",{part:"id",type:"video",maxResults:24,q:query,regionCode:"KR",relevanceLanguage:"ko",videoEmbeddable:"true",pageToken:more?nextTok:""})
+   .then(function(j){nextTok=j.nextPageToken||null;return details((j.items||[]).map(function(i){return i.id.videoId}).filter(Boolean))})}
+ else{p=api("videos",{part:"snippet,contentDetails,status",chart:"mostPopular",regionCode:"KR",maxResults:24,pageToken:more?nextTok:""})
+   .then(function(j){nextTok=j.nextPageToken||null;return(j.items||[]).filter(function(v){return!v.status||v.status.embeddable!==false})})}
+ p.then(function(items){if(my!==reqNo)return;loading=false;msg(null);addCards(items);if(!list.length)msg("결과가 없어요")})
+  .catch(function(e){if(my!==reqNo)return;loading=false;lastErr=e.message;msg("목록을 못 불러왔어요 · "+e.message)});
+}
+function msg(t){var m=$("msg");m.classList.toggle("hide",!t);if(t)m.textContent=t}
+function addCards(items){var c=$("cards"),h="";
+ items.forEach(function(v){var i=list.length;list.push(v);var s=v.snippet||{},th=(s.thumbnails&&(s.thumbnails.high||s.thumbnails.medium||s.thumbnails.default))||{};
+  h+='<div class="card" data-i="'+i+'"><div class="th" style="background-image:url(\''+esc(th.url||"")+'\')"><span class="du">'+isoDur(v.contentDetails&&v.contentDetails.duration)+'</span></div>'+
+   '<div class="tx"><div class="t">'+esc(s.title||"")+'</div><div class="c">'+esc(s.channelTitle||"")+'</div></div></div>'});
+ c.insertAdjacentHTML("beforeend",h)}
+
+/* 목록 스크롤: 커서가 위/아래 끝에서 더 밀리면 스크롤 */
+var scrollY=0;
+function maxScroll(){return Math.max(0,$("cards").scrollHeight-$("grid").clientHeight)}
+function applyScroll(){scrollY=Math.max(0,Math.min(maxScroll(),scrollY));$("cards").style.transform="translateY("+(-scrollY)+"px)";
+ if(maxScroll()-scrollY<window.innerHeight*0.6)load(curQuery,true)}
+
+/* ---------------- 가상 커서 ---------------- */
+var cx=innerWidth/2,cy=innerHeight/2,curT=0,hov=null;
+function curShow(){var c=$("cur");var on=!(view==="idle")&&(view!=="play"||Date.now()-curT<2500);c.classList.toggle("hide",!on)}
+setInterval(curShow,500);
+function moveCur(dx,dy){
+ if(view==="idle"){show("home");if(!list.length)load(null);return}
+ curT=Date.now();var W=innerWidth,H=innerHeight;var nx=cx+dx,ny=cy+dy;
+ if(view==="home"){var g=$("grid").getBoundingClientRect();
+  if(ny>H-2&&dy>0){scrollY+=dy;applyScroll()} else if(ny<g.top+2&&dy<0&&scrollY>0){scrollY+=dy;applyScroll()}}
+ cx=Math.max(0,Math.min(W-1,nx));cy=Math.max(0,Math.min(H-1,ny));
+ var c=$("cur");c.style.left=cx+"px";c.style.top=cy+"px";curShow();hover();
+ if(view==="play")osd();
+}
+function hover(){var h=null;if(view==="home"){var el=document.elementFromPoint(cx,cy);h=el&&el.closest?el.closest(".card"):null}
+ if(h!==hov){if(hov)hov.classList.remove("hov");hov=h;if(h)h.classList.add("hov")}}
+function click(){var c=$("cur");c.classList.add("dn");setTimeout(function(){c.classList.remove("dn")},120);
+ if(view==="idle"){show("home");if(!list.length)load(null);return}
+ if(view==="play"){togglePlay();return}
+ hover();if(hov)play(+hov.getAttribute("data-i"))}
+
+/* ---------------- 플레이어 ---------------- */
+var P=null,pReady=false,unlocked=false,curVid=null,volume=100;
+window.onYouTubeIframeAPIReady=function(){
+ P=new YT.Player("yt",{width:"100%",height:"100%",playerVars:{playsinline:1,controls:0,rel:0,modestbranding:1,iv_load_policy:3,fs:0,disablekb:1,origin:location.origin},
+  events:{onReady:function(){pReady=true;readyCue()},
+   onStateChange:function(e){
+    if(e.data===1&&!unlocked){unlocked=true;P.pauseVideo();P.seekTo(0,true);$("tapbar").classList.add("hide");$("setup").classList.add("hide");show("idle");toast("준비 완료 · 이제 창을 모니터로 옮겨 주세요");return}
+    if(e.data===0&&view==="play")back();
+    if(e.data===1||e.data===2)osd()},
+   onError:function(e){if(view==="play"){toast("이 영상은 여기서 재생할 수 없어요");back()}}}});
+};
+function readyCue(){if(pReady&&!unlocked&&list.length&&!curVid){curVid=list[0].id;P.cueVideoById(curVid)}}
+function play(i){var v=list[i];if(!v||!P||!pReady)return;curVid=v.id;$("onm").textContent=(v.snippet&&v.snippet.title)||"";
+ show("play");P.loadVideoById(v.id);curT=0;osd()}
+function togglePlay(){if(!P)return;var s=P.getPlayerState();if(s===1){P.pauseVideo();big("pause")}else{P.playVideo();big("play")}}
+function seek(d){if(!P||view!=="play")return;var t=(P.getCurrentTime()||0)+d;P.seekTo(Math.max(0,t),true);big(d>0?"+15":"-15");osd()}
+var IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+function vol(d){if(!P)return;if(IOS){if(d<0){P.mute();big('<span style="font-size:3vh">🔇</span>')}else{P.unMute();big('<span style="font-size:3vh">🔊</span>')}return}volume=Math.max(0,Math.min(100,volume+d));P.unMute();P.setVolume(volume);if(volume===0)P.mute();
+ $("voli").style.height=volume+"%";var v=$("vol");v.classList.add("show");clearTimeout(vol.t);vol.t=setTimeout(function(){v.classList.remove("show")},1500)}
+var ICON={play:'<svg viewBox="0 0 24 24"><path d="M7 4l14 8-14 8z"/></svg>',pause:'<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>'};
+function big(k){var b=$("big");b.innerHTML=ICON[k]||k;b.classList.add("show");clearTimeout(big.t);big.t=setTimeout(function(){b.classList.remove("show")},700)}
+function osd(){if(view!=="play")return;var o=$("osd");o.classList.add("show");clearTimeout(osd.t);osd.t=setTimeout(function(){if(P&&P.getPlayerState&&P.getPlayerState()!==2)o.classList.remove("show")},3000)}
+setInterval(function(){if(view==="play"&&P&&P.getDuration){var d=P.getDuration()||0,t=P.getCurrentTime()||0;
+ $("opb").style.width=(d?t/d*100:0)+"%";$("ot1").textContent=fmt(t);$("ot2").textContent=fmt(d)}},500);
+function back(){
+ if(qOpen){closeQ();return}
+ if(view==="play"){try{P.stopVideo()}catch(e){}show("home");return}
+ if(view==="home"&&curQuery){load(null);return}
+}
+
+/* ---------------- 검색창 + 두벌식 한글 ---------------- */
+var qOpen=false,qItems=[],korean=true;
+var KMAP={q:"ㅂ",w:"ㅈ",e:"ㄷ",r:"ㄱ",t:"ㅅ",y:"ㅛ",u:"ㅕ",i:"ㅑ",o:"ㅐ",p:"ㅔ",a:"ㅁ",s:"ㄴ",d:"ㅇ",f:"ㄹ",g:"ㅎ",h:"ㅗ",j:"ㅓ",k:"ㅏ",l:"ㅣ",
+ z:"ㅋ",x:"ㅌ",c:"ㅊ",v:"ㅍ",b:"ㅠ",n:"ㅜ",m:"ㅡ",Q:"ㅃ",W:"ㅉ",E:"ㄸ",R:"ㄲ",T:"ㅆ",O:"ㅒ",P:"ㅖ"};
+var CHO="ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ",JUNG="ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ",
+ JONG=["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"],
+ VV={"ㅗㅏ":"ㅘ","ㅗㅐ":"ㅙ","ㅗㅣ":"ㅚ","ㅜㅓ":"ㅝ","ㅜㅔ":"ㅞ","ㅜㅣ":"ㅟ","ㅡㅣ":"ㅢ"},
+ FF={"ㄱㅅ":"ㄳ","ㄴㅈ":"ㄵ","ㄴㅎ":"ㄶ","ㄹㄱ":"ㄺ","ㄹㅁ":"ㄻ","ㄹㅂ":"ㄼ","ㄹㅅ":"ㄽ","ㄹㅌ":"ㄾ","ㄹㅍ":"ㄿ","ㄹㅎ":"ㅀ","ㅂㅅ":"ㅄ"};
+function isC(ch){return CHO.indexOf(ch)>=0}function isV(ch){return JUNG.indexOf(ch)>=0}
+function compose(items){var out="",cur=null;
+ function flush(){if(!cur)return;var f=cur.f.length===2?FF[cur.f[0]+cur.f[1]]:(cur.f[0]||"");
+  if(cur.c&&cur.v)out+=String.fromCharCode(0xAC00+(CHO.indexOf(cur.c)*21+JUNG.indexOf(cur.v))*28+JONG.indexOf(f));
+  else out+=(cur.c||"")+(cur.v||"");cur=null}
+ items.forEach(function(it){var t=it.ch;
+  if(it.k!=="j"){flush();out+=t;return}
+  if(isC(t)){
+   if(!cur){cur={c:t,v:"",f:[]};return}
+   if(cur.c&&!cur.v){flush();cur={c:t,v:"",f:[]};return}
+   if(cur.c&&cur.v&&!cur.f.length){if(JONG.indexOf(t)>0){cur.f=[t];return}flush();cur={c:t,v:"",f:[]};return}
+   if(cur.f.length===1&&FF[cur.f[0]+t]){cur.f=[cur.f[0],t];return}
+   flush();cur={c:t,v:"",f:[]};return}
+  // 모음
+  if(!cur){cur={c:"",v:t,f:[]};return}
+  if(!cur.v){cur.v=t;return}
+  if(!cur.f.length){if(VV[cur.v+t]){cur.v=VV[cur.v+t];return}flush();cur={c:"",v:t,f:[]};return}
+  var mv=cur.f.pop();flush();cur={c:mv,v:t,f:[]}; // 받침을 다음 글자 초성으로
+ });flush();return out}
+// compose 안에서 cur.f.pop() 후 flush가 남은 받침으로 계산되도록 위 순서 유지
+function qText(){return compose(qItems)}
+function openQ(){if(!qOpen){qOpen=true;$("q").classList.remove("hide")}}
+function closeQ(){qOpen=false;qItems=[];$("q").classList.add("hide");renderQ()}
+function renderQ(){$("qt").textContent=qText();$("qm").textContent=korean?"한":"EN"}
+function typeKey(ch){if(view==="idle"){show("home")}openQ();
+ if(korean&&KMAP[ch]!==undefined)qItems.push({k:"j",ch:KMAP[ch]});
+ else if(korean&&/[A-Z]/.test(ch)&&KMAP[ch.toLowerCase()])qItems.push({k:"j",ch:KMAP[ch.toLowerCase()]});
+ else qItems.push({k:"l",ch:ch});renderQ()}
+function bksp(){if(!qOpen)return;qItems.pop();if(!qItems.length){closeQ();return}renderQ()}
+function enter(){if(qOpen){var t=qText().trim();closeQ();if(t){if(view==="play"){try{P.stopVideo()}catch(e){}}show("home");load(t)}return}click()}
+
+/* ---------------- 명령 처리 ---------------- */
+function handle(m){lastBB=Date.now();var a=m.split(" ");if(TEST)console.log("BC "+m);
+ switch(a[0]){
+  case "hi": if(view==="idle"){show("home");if(!list.length)load(null)}break;
+  case "m": moveCur(+a[1]||0,+a[2]||0);break;
+  case "c": click();break;
+  case "p": if(view==="play")togglePlay();else click();break;
+  case "f": seek(15);break;
+  case "r": seek(-15);break;
+  case "u": vol(10);break;
+  case "d": vol(-10);break;
+  case "b": back();break;
+  case "e": enter();break;
+  case "x": bksp();break;
+  case "s": if(qOpen){qItems.push({k:"l",ch:" "});renderQ()}else if(view==="play")togglePlay();break;
+  case "h": korean=!korean;renderQ();toast(korean?"한글":"영어");break;
+  case "k": if(a[1])typeKey(decodeURIComponent(a[1]));break;
+ }}
+function state(){return view+(qOpen?"q":"")}
+
+/* ---------------- 같은 와이파이 연결 (공인 IP 기준 채널 + MQTT) ---------------- */
+var BROKERS=["wss://broker.emqx.io:8084/mqtt","wss://broker.hivemq.com:8884/mqtt"];
+var IP=null,TOPIC=null,mq=[];
+var TEST=/[?&]bctest=([^&]+)/.exec(location.search); // 점검용: 로컬 중계 서버 + 고정 IP
+if(TEST){BROKERS=[decodeURIComponent(TEST[1])];}
+function sha256(s){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return(x<16?"0":"")+x.toString(16)}).join("")})}
+function getIP(){if(TEST)return Promise.resolve("1.2.3.4");var srcs=["https://api.ipify.org","https://ipv4.icanhazip.com"];var i=0;
+ function nx(){if(i>=srcs.length)return Promise.reject(new Error("ip"));return fetch(srcs[i++],{cache:"no-store"}).then(function(r){return r.text()}).then(function(t){t=t.trim();if(!/^\d+\.\d+\.\d+\.\d+$/.test(t))throw 0;return t}).catch(nx)}
+ return nx()}
+function refreshIP(){getIP().then(function(ip){if(ip===IP)return;IP=ip;return sha256("berrycast|"+ip).then(function(h){TOPIC="bc1/"+h.slice(0,24);$("code").textContent=h.slice(0,4).toUpperCase();mq.forEach(function(c){c.restart()})})}).catch(function(){if(!TOPIC)setTimeout(refreshIP,10000)})}
+setInterval(refreshIP,120000);
+
+function enc(s){return new TextEncoder().encode(s)}
+function strF(s){var b=enc(s);var o=new Uint8Array(b.length+2);o[0]=b.length>>8;o[1]=b.length&255;o.set(b,2);return o}
+function pkt(h,parts){var n=0;parts.forEach(function(p){n+=p.length});var len=[],x=n;do{var d=x%128;x=Math.floor(x/128);if(x>0)d|=128;len.push(d)}while(x>0);
+ var o=new Uint8Array(1+len.length+n);o[0]=h;o.set(len,1);var k=1+len.length;parts.forEach(function(p){o.set(p,k);k+=p.length});return o}
+function Conn(url){var self=this;this.url=url;this.ws=null;this.ready=false;this.buf=new Uint8Array(0);this.wait=1000;
+ this.restart=function(){try{self.ws&&self.ws.close()}catch(e){}};
+ function open(){if(!TOPIC){setTimeout(open,1000);return}
+  var ws;try{ws=new WebSocket(url,["mqtt"])}catch(e){setTimeout(open,self.wait);return}
+  ws.binaryType="arraybuffer";self.ws=ws;self.topic=TOPIC;self.buf=new Uint8Array(0);self.rx=Date.now();
+  ws.onopen=function(){var id="bctv"+Math.random().toString(36).slice(2,10);
+   ws.send(pkt(0x10,[new Uint8Array([0,4,77,81,84,84,4,2,0,30]),strF(id)]))};
+  ws.onmessage=function(ev){self.rx=Date.now();var a=new Uint8Array(ev.data),b=new Uint8Array(self.buf.length+a.length);b.set(self.buf);b.set(a,self.buf.length);self.buf=b;parse()};
+  ws.onclose=ws.onerror=function(){if(self.ws!==ws)return;self.ws=null;self.ready=false;setTimeout(open,self.wait);self.wait=Math.min(self.wait*2,15000)};
+ }
+ function parse(){for(;;){var b=self.buf;if(b.length<2)return;var mul=1,len=0,i=1,d;do{if(i>=b.length)return;d=b[i++];len+=(d&127)*mul;mul*=128}while(d&128);
+  if(b.length<i+len)return;var body=b.subarray(i,i+len),t=b[0]>>4;self.buf=b.slice(i+len);
+  if(t===2){self.ready=true;self.wait=1000;self.ws.send(pkt(0x82,[new Uint8Array([0,1]),strF(self.topic+"/c"),new Uint8Array([0])]));self.pub("on "+state())}
+  else if(t===3){var tl=(body[0]<<8)|body[1],qos=(b[0]>>1)&3,off=2+tl+(qos?2:0);try{handle(new TextDecoder().decode(body.subarray(off)))}catch(e){}}
+ }}
+ this.pub=function(s){if(self.ready&&self.ws&&self.ws.readyState===1)self.ws.send(pkt(0x30,[strF(self.topic+"/s"),enc(s)]))};
+ setInterval(function(){if(self.ready&&self.ws&&self.ws.readyState===1)self.ws.send(new Uint8Array([0xC0,0]))},20000);
+ setInterval(function(){if(self.ws&&Date.now()-self.rx>50000)self.restart()},10000);
+ open();
+}
+setInterval(function(){mq.forEach(function(c){c.pub("on "+state())})},3000);
+
+/* ---------------- 시작 ---------------- */
+var wake=null;function lockWake(){try{if(navigator.wakeLock)navigator.wakeLock.request("screen").then(function(w){wake=w}).catch(function(){})}catch(e){}}
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")lockWake()});
+function boot(){
+ if(!KEY){$("s1").classList.remove("hide");$("s2").classList.add("hide");return}
+ $("s1").classList.add("hide");$("s2").classList.remove("hide");
+ load(null);
+ var s=document.createElement("script");s.src="https://www.youtube.com/iframe_api";document.head.appendChild(s);
+ refreshIP();mq=BROKERS.map(function(u){return new Conn(u)});
+}
+$("saveKey").onclick=function(){var k=$("key").value.trim();if(k.length<20){toast("키를 확인해 주세요");return}try{localStorage.setItem("bc_ytkey",k)}catch(e){}KEY=k;boot()};
+$("resetKey").onclick=function(){try{localStorage.removeItem("bc_ytkey")}catch(e){}location.reload()};
+$("start").onclick=function(){lockWake();if(!pReady||!list.length){toast(lastErr?("API 오류: "+lastErr):"잠깐만요, 아직 불러오는 중이에요");if(lastErr)load(null);readyCue();return}
+ readyCue();$("setup").classList.add("hide");$("pw").classList.remove("hide");$("tapbar").classList.remove("hide")};
+// 시험용: 키보드로도 조작 (맥/PC 브라우저에서 확인할 때)
+document.addEventListener("keydown",function(e){if(!$("setup").classList.contains("hide"))return;var k=e.key;
+ var M={ArrowLeft:"m -60 0",ArrowRight:"m 60 0",ArrowUp:"m 0 -60",ArrowDown:"m 0 60",Enter:"e",Backspace:"x",Escape:"b"," ":"s"};
+ if(M[k])handle(M[k]);else if(k.length===1)handle("k "+encodeURIComponent(k));e.preventDefault()});
+if(TEST)window.__bc={handle:handle,compose:compose,addCards:addCards,show:show,msg:msg};
+boot();
+})();
+</script>
+</body></html>

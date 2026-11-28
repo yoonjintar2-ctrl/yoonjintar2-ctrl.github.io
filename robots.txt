@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /bb/
+Disallow: /tv/
 Disallow: /mail/
 Disallow: /hana-map/
 
